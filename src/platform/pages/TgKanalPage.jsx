@@ -1277,16 +1277,100 @@ function BuildCard({ t }) {
   );
 }
 
+// Группы tools: discovery (изучает контекст) сворачиваемая, build (карточки), остальное плоско.
+const DISCOVERY_TOOLS = new Set(["kb_list", "kb_read", "search_kb", "list_departments", "read_chat", "list_posts", "get_research_insights"]);
+
+function CollapsibleToolGroup({ label, tools, defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const anyRunning = tools.some(t => t.status === "running");
+  return (
+    <div style={{ marginBottom: 4 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "4px 4px",
+          background: "transparent", border: "none",
+          fontSize: 12.5, color: "rgba(38,38,51,0.7)",
+          cursor: "pointer", fontFamily: "inherit",
+        }}
+      >
+        <svg width={11} height={11} viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+             style={{ transform: open ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s" }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+        {anyRunning ? (
+          <span style={{
+            width: 6, height: 6, borderRadius: "50%", background: "#FF8B3D",
+            animation: "marypulse 1.2s ease-in-out infinite",
+          }} />
+        ) : (
+          <svg width={11} height={11} viewBox="0 0 24 24" fill="none"
+               stroke="rgba(38,38,51,0.45)" strokeWidth={2.5}
+               strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12l5 5L20 7" />
+          </svg>
+        )}
+        <span style={{ fontWeight: 500 }}>{label}</span>
+        <span style={{ color: "rgba(38,38,51,0.4)" }}>{tools.length}</span>
+      </button>
+      {open && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 3, paddingLeft: 24, marginTop: 2 }}>
+          {tools.map((t, i) => (
+            <div key={i} style={{
+              display: "inline-flex", alignItems: "center", gap: 8,
+              fontSize: 12, color: "rgba(38,38,51,0.6)",
+            }}>
+              {t.status === "running" ? (
+                <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#FF8B3D", flexShrink: 0 }} />
+              ) : (
+                <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <path d="M5 12l5 5L20 7" />
+                </svg>
+              )}
+              <span>{toolLabel(t.name)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolsTrail({ tools }) {
+  // Группируем discovery в collapsible, build остаётся карточками, остальное флэт.
+  const groups = [];
+  let discoveryBucket = [];
+  const flushDiscovery = () => {
+    if (discoveryBucket.length > 0) {
+      groups.push({ kind: "discovery", items: discoveryBucket });
+      discoveryBucket = [];
+    }
+  };
+  for (const t of tools) {
+    if (DISCOVERY_TOOLS.has(t.name)) {
+      discoveryBucket.push(t);
+    } else {
+      flushDiscovery();
+      groups.push({ kind: "single", item: t });
+    }
+  }
+  flushDiscovery();
+
   return (
     <div style={{
       display: "flex", flexDirection: "column", gap: 6,
       marginBottom: 6,
     }}>
-      {tools.map((t, i) => BUILD_TOOLS.has(t.name) ? (
-        <BuildCard key={i} t={t} />
-      ) : (
-        <div key={i} style={{
+      {groups.map((g, gi) => {
+        if (g.kind === "discovery") {
+          return <CollapsibleToolGroup key={gi} label="Изучаю контекст" tools={g.items} />;
+        }
+        const t = g.item;
+        if (BUILD_TOOLS.has(t.name)) return <BuildCard key={gi} t={t} />;
+        return (
+        <div key={gi} style={{
           display: "inline-flex", alignItems: "center", gap: 8,
           fontSize: 12.5, color: "rgba(38,38,51,0.65)",
           paddingLeft: 2,
@@ -1319,7 +1403,8 @@ function ToolsTrail({ tools }) {
             }}>{Math.round(t.durationMs / 100) / 10}с</span>
           )}
         </div>
-      ))}
+        );
+      })}
       <style>{`@keyframes marypulse { 0%,100%{opacity:.4} 50%{opacity:1} }`}</style>
     </div>
   );
