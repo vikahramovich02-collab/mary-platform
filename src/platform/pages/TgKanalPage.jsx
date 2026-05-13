@@ -7347,6 +7347,7 @@ function ChatMaryPage() {
   const isEmptyChat = messages.length === 0 && !loading;
   const typewriterText = useTypewriterPlaceholder(typewriterPhrases, isEmptyChat);
   const [chatsCollapsed, setChatsCollapsed] = useState(false);
+  const [chatsQuery, setChatsQuery] = useState("");
   // AbortController для прерывания текущего стрима через Stop-кнопку
   const abortRef = useRef(null);
   function stopStream() { abortRef.current?.abort(); }
@@ -7418,6 +7419,40 @@ function ChatMaryPage() {
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >{ic.collapse}</button>
         </div>
+        {/* Поиск по чатам */}
+        <div style={{ padding: "0 14px 8px" }}>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "rgba(38,38,51,0.04)",
+            borderRadius: 8, padding: "7px 10px",
+          }}>
+            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <input
+              value={chatsQuery}
+              onChange={e => setChatsQuery(e.target.value)}
+              placeholder="Поиск чатов"
+              style={{
+                flex: 1, border: "none", outline: "none",
+                background: "transparent", fontSize: 13, color: "#262633",
+                fontFamily: "inherit", padding: 0,
+              }}
+            />
+            {chatsQuery && (
+              <button
+                onClick={() => setChatsQuery("")}
+                title="Очистить"
+                style={{
+                  background: "transparent", border: "none", padding: 0,
+                  display: "inline-flex", color: "rgba(38,38,51,0.45)",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}
+              >{ic.close}</button>
+            )}
+          </div>
+        </div>
         <div style={{
           padding: "0 8px 16px", overflowY: "auto", flex: 1,
           display: "flex", flexDirection: "column", gap: 2,
@@ -7427,13 +7462,89 @@ function ChatMaryPage() {
               Нет чатов. Создай первый.
             </div>
           )}
-          {/* Группировка по scope: общие → отделы → свободные */}
+          {/* Поиск (flat-список) или группировка по дате */}
           {(() => {
+            const q = chatsQuery.trim().toLowerCase();
+            const filtered = q
+              ? conversations.filter(c => (c.title || "").toLowerCase().includes(q))
+              : conversations;
+
+            if (q && filtered.length === 0) {
+              return (
+                <div style={{ padding: "20px 14px", fontSize: 12.5, color: "rgba(38,38,51,0.5)", textAlign: "center" }}>
+                  Ничего не найдено.
+                </div>
+              );
+            }
+
+            // Сортируем по updatedAt (новые сверху)
+            const sorted = [...filtered].sort((a, b) =>
+              new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+            );
+
+            // helper для рендера одной строки чата
+            const renderItem = (c) => {
+              const active = c.id === activeId;
+              const isDept = c.scope === "smm" || c.scope.startsWith("smm/");
+              const dot = isDept ? "#FF8B3D" : c.scope === "general" ? "#262633" : "#34C759";
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => setActiveId(c.id)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "8px 10px",
+                    background: active ? "rgba(38,38,51,0.06)" : "transparent",
+                    borderRadius: 8, cursor: "pointer",
+                  }}
+                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot, flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {c.title}
+                    </div>
+                    <div style={{ fontSize: 11, color: "rgba(38,38,51,0.45)", marginTop: 1 }}>
+                      {c.messageCount} сообщ.
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
+                    style={{
+                      background: "transparent", border: "none", cursor: "pointer",
+                      color: "rgba(38,38,51,0.4)", padding: 4, borderRadius: 6,
+                      display: active ? "flex" : "none",
+                    }}
+                    title="Удалить"
+                  >{ic.close}</button>
+                </div>
+              );
+            };
+
+            // Если идёт поиск — flat-список без заголовков
+            if (q) {
+              return <div style={{ marginTop: 4 }}>{sorted.map(renderItem)}</div>;
+            }
+
+            // Группировка по «когда»
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const startOfYesterday = startOfToday - 86400000;
+            const startOfWeek = startOfToday - 7 * 86400000;
+            const buckets = { today: [], yesterday: [], week: [], earlier: [] };
+            for (const c of sorted) {
+              const t = new Date(c.updatedAt || c.createdAt).getTime();
+              if      (t >= startOfToday)     buckets.today.push(c);
+              else if (t >= startOfYesterday) buckets.yesterday.push(c);
+              else if (t >= startOfWeek)      buckets.week.push(c);
+              else                            buckets.earlier.push(c);
+            }
             const groups = [
-              { id: "general", label: "Общие",     items: conversations.filter(c => c.scope === "general") },
-              { id: "smm",     label: "СММ-отдел", items: conversations.filter(c => c.scope === "smm" || c.scope.startsWith("smm/")) },
-              { id: "free",    label: "Свободные", items: conversations.filter(c => c.scope === "free") },
-              { id: "other",   label: "Прочие",    items: conversations.filter(c => !["general", "free"].includes(c.scope) && !c.scope.startsWith("smm")) },
+              { id: "today",     label: "Сегодня",      items: buckets.today },
+              { id: "yesterday", label: "Вчера",        items: buckets.yesterday },
+              { id: "week",      label: "На этой неделе", items: buckets.week },
+              { id: "earlier",   label: "Раньше",       items: buckets.earlier },
             ].filter(g => g.items.length > 0);
 
             return groups.map(g => (
@@ -7442,50 +7553,8 @@ function ChatMaryPage() {
                   fontSize: 10.5, color: "rgba(38,38,51,0.5)", fontWeight: 600,
                   textTransform: "uppercase", letterSpacing: "0.06em",
                   padding: "8px 10px 4px",
-                }}>{g.label} · {g.items.length}</div>
-                {g.items.map(c => {
-                  const active = c.id === activeId;
-                  const isDept = c.scope === "smm" || c.scope.startsWith("smm/");
-                  const dot = isDept ? "#FF8B3D" : c.scope === "general" ? "#262633" : "#34C759";
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => setActiveId(c.id)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 10,
-                        padding: "8px 10px",
-                        background: active ? "rgba(38,38,51,0.06)" : "transparent",
-                        borderRadius: 8,
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
-                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
-                    >
-                      <span style={{
-                        width: 7, height: 7, borderRadius: "50%",
-                        background: dot, flexShrink: 0,
-                      }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {c.title}
-                        </div>
-                        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.45)", marginTop: 1 }}>
-                          {c.messageCount} сообщ.
-                        </div>
-                      </div>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
-                        style={{
-                          background: "transparent", border: "none",
-                          cursor: "pointer", color: "rgba(38,38,51,0.4)",
-                          padding: 4, borderRadius: 6,
-                          display: active ? "flex" : "none",
-                        }}
-                        title="Удалить"
-                      >{ic.close}</button>
-                    </div>
-                  );
-                })}
+                }}>{g.label}</div>
+                {g.items.map(renderItem)}
               </div>
             ));
           })()}
