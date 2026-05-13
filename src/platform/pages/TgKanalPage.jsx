@@ -8548,8 +8548,33 @@ function renderInline(text) {
     }}>{tok.slice(1, -1)}</code>);
     else if (m[4]) {
       const linkMatch = tok.match(/\[([^\]]+)\]\(([^)\s]+)\)/);
-      out.push(<a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
-        style={{ color: "#3F95FF", textDecoration: "underline" }}>{linkMatch[1]}</a>);
+      const href = linkMatch[2];
+      const label = linkMatch[1];
+      // Внутренняя навигация: dept://id или page://name → кнопка-переход
+      if (href.startsWith("dept://") || href.startsWith("page://")) {
+        out.push(
+          <button key={key++} onClick={() => window.__maryNavigate?.(href)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "4px 10px", marginRight: 2,
+              background: "rgba(63,149,255,0.1)",
+              border: "1px solid rgba(63,149,255,0.25)", borderRadius: 7,
+              color: "#1a6fcc", fontSize: 13, fontWeight: 500,
+              cursor: "pointer", fontFamily: "inherit", verticalAlign: "baseline",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(63,149,255,0.18)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(63,149,255,0.1)"; }}
+          >
+            {label}
+            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </button>
+        );
+      } else {
+        out.push(<a key={key++} href={href} target="_blank" rel="noopener noreferrer"
+          style={{ color: "#3F95FF", textDecoration: "underline" }}>{label}</a>);
+      }
     }
     last = m.index + tok.length;
   }
@@ -9386,6 +9411,19 @@ export default function TgKanalPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [openDepts, setOpenDepts] = useState({ smm: true });
+  // Глобальный navigate для dept://X / page://Y ссылок из чата Mary
+  useEffect(() => {
+    window.__maryNavigate = (target) => {
+      if (target.startsWith("dept://")) {
+        const id = target.slice(7);
+        setCurrentPage("tg-kanal");
+        setOpenDepts(prev => ({ ...prev, [id]: true }));
+      } else if (target.startsWith("page://")) {
+        setCurrentPage(target.slice(7));
+      }
+    };
+    return () => { delete window.__maryNavigate; };
+  }, []);
   // Подгружаем список отделов с бэка (Mary через create_department их добавляет)
   useEffect(() => {
     const load = () => fetch("/api/mary/departments")
