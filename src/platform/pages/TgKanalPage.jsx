@@ -8540,6 +8540,46 @@ function renderMarkdown(text) {
       }}>{codeLines.join("\n")}</pre>);
       continue;
     }
+    // Markdown-таблица: | col | col | + следующая строка | --- | --- |
+    if (line.includes("|") && i + 1 < lines.length && /^\s*\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?\s*$/.test(lines[i + 1])) {
+      const splitRow = (s) => s.replace(/^\s*\|/, "").replace(/\|\s*$/, "").split("|").map(c => c.trim());
+      const header = splitRow(line);
+      i += 2; // skip header + separator
+      const rows = [];
+      while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "") {
+        rows.push(splitRow(lines[i]));
+        i++;
+      }
+      blocks.push(
+        <div key={blocks.length} style={{ overflowX: "auto", margin: "10px 0" }}>
+          <table style={{
+            borderCollapse: "collapse", width: "100%",
+            fontSize: 13, color: "#262633",
+          }}>
+            <thead>
+              <tr>{header.map((h, k) => (
+                <th key={k} style={{
+                  textAlign: "left", padding: "8px 10px",
+                  fontWeight: 600, color: "#262633",
+                  borderBottom: "1px solid rgba(38,38,51,0.18)",
+                }}>{renderInline(h)}</th>
+              ))}</tr>
+            </thead>
+            <tbody>
+              {rows.map((row, r) => (
+                <tr key={r}>{row.map((c, k) => (
+                  <td key={k} style={{
+                    padding: "8px 10px", verticalAlign: "top",
+                    borderBottom: "1px solid rgba(38,38,51,0.06)",
+                  }}>{renderInline(c)}</td>
+                ))}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
     // Маркированный список (- / *)
     if (/^[-*]\s+/.test(line)) {
       const items = [];
@@ -8569,11 +8609,15 @@ function renderMarkdown(text) {
     // Обычный параграф (подряд непустые строки до пустой / спец-блока)
     const para = [];
     while (i < lines.length && lines[i].trim() !== ""
-           && !/^(#|>|---|```|[-*]\s|\d+\.\s)/.test(lines[i])) {
+           && !/^(#|>|---|```|[-*]\s|\d+\.\s|\|)/.test(lines[i])) {
       para.push(lines[i]);
       i++;
     }
-    blocks.push(<p key={blocks.length} style={{ margin: "4px 0" }}>{renderInline(para.join(" "))}</p>);
+    if (para.length) {
+      blocks.push(<p key={blocks.length} style={{ margin: "4px 0" }}>{renderInline(para.join(" "))}</p>);
+    } else {
+      i++; // safety: не зациклиться
+    }
   }
   return blocks;
 }
@@ -8783,7 +8827,61 @@ function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
             ))}
           </div>
         )}
+        {/* Action-bar: только для законченных сообщений с текстом */}
+        {!m._streaming && body && body.trim().length > 0 && (
+          <ActionBar text={body} />
+        )}
       </div>
+    </div>
+  );
+}
+
+function ActionBar({ text }) {
+  const [copied, setCopied] = useState(false);
+  const [reaction, setReaction] = useState(null); // null | "up" | "down"
+  const onCopy = () => {
+    navigator.clipboard?.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const btn = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    width: 26, height: 26, padding: 0,
+    background: "transparent", border: "none", borderRadius: 6,
+    color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
+    transition: "color 0.15s, background 0.15s",
+  };
+  const hover = (e) => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; };
+  const leave = (e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; };
+  return (
+    <div style={{ display: "flex", gap: 2, marginTop: 8 }}>
+      <button title={copied ? "Скопировано" : "Копировать"} onClick={onCopy}
+              style={{ ...btn, color: copied ? "#34C759" : btn.color }}
+              onMouseEnter={!copied ? hover : undefined}
+              onMouseLeave={!copied ? leave : undefined}>
+        {copied ? (
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
+        ) : (
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        )}
+      </button>
+      <button title="Хороший ответ" onClick={() => setReaction(reaction === "up" ? null : "up")}
+              style={{ ...btn, color: reaction === "up" ? "#34C759" : btn.color }}
+              onMouseEnter={hover} onMouseLeave={leave}>
+        <svg width={13} height={13} viewBox="0 0 24 24" fill={reaction === "up" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+        </svg>
+      </button>
+      <button title="Плохой ответ" onClick={() => setReaction(reaction === "down" ? null : "down")}
+              style={{ ...btn, color: reaction === "down" ? "#FF3B30" : btn.color }}
+              onMouseEnter={hover} onMouseLeave={leave}>
+        <svg width={13} height={13} viewBox="0 0 24 24" fill={reaction === "down" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
+        </svg>
+      </button>
     </div>
   );
 }
