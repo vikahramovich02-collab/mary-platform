@@ -8234,15 +8234,125 @@ function useTypewriterPlaceholder(phrases, enabled) {
   return text;
 }
 
-// Простой md: **bold** → <strong>bold</strong>, остальное plain.
-function renderInlineMd(text) {
+// Inline markdown: **bold** *italic* `code` [text](url). React-элементы, без dangerouslySetInnerHTML.
+function renderInline(text) {
   if (!text) return text;
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
-  return parts.map((p, i) =>
-    p.startsWith("**") && p.endsWith("**")
-      ? <strong key={i} style={{ fontWeight: 600 }}>{p.slice(2, -2)}</strong>
-      : <span key={i}>{p}</span>
-  );
+  // Один токенайзер: **bold** | *italic* | `code` | [text](url)
+  const re = /(\*\*[^*]+\*\*)|(\*[^*\n]+\*)|(`[^`\n]+`)|(\[[^\]]+\]\([^)\s]+\))/g;
+  const out = [];
+  let last = 0, m, key = 0;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const tok = m[0];
+    if (m[1]) out.push(<strong key={key++} style={{ fontWeight: 600 }}>{tok.slice(2, -2)}</strong>);
+    else if (m[2]) out.push(<em key={key++}>{tok.slice(1, -1)}</em>);
+    else if (m[3]) out.push(<code key={key++} style={{
+      fontFamily: "ui-monospace, SF Mono, monospace", fontSize: 12.5,
+      background: "rgba(38,38,51,0.06)", padding: "1px 6px", borderRadius: 4,
+    }}>{tok.slice(1, -1)}</code>);
+    else if (m[4]) {
+      const linkMatch = tok.match(/\[([^\]]+)\]\(([^)\s]+)\)/);
+      out.push(<a key={key++} href={linkMatch[2]} target="_blank" rel="noopener noreferrer"
+        style={{ color: "#3F95FF", textDecoration: "underline" }}>{linkMatch[1]}</a>);
+    }
+    last = m.index + tok.length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out.map((p, i) => typeof p === "string" ? <span key={"s"+i}>{p}</span> : p);
+}
+
+// Блочный markdown: # / ## / ### заголовки, - / * / 1. списки, > цитаты, ``` блоки кода, --- разделители.
+function renderMarkdown(text) {
+  if (!text) return null;
+  const lines = text.split("\n");
+  const blocks = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i];
+    // Заголовки
+    const h = line.match(/^(#{1,3})\s+(.+)$/);
+    if (h) {
+      const level = h[1].length;
+      const sizes = { 1: 22, 2: 18, 3: 16 };
+      blocks.push(<div key={blocks.length} style={{
+        fontSize: sizes[level], fontWeight: 600,
+        marginTop: blocks.length === 0 ? 0 : 14, marginBottom: 6,
+      }}>{renderInline(h[2])}</div>);
+      i++; continue;
+    }
+    // Цитата
+    if (line.startsWith("> ")) {
+      const quoteLines = [];
+      while (i < lines.length && lines[i].startsWith("> ")) {
+        quoteLines.push(lines[i].slice(2));
+        i++;
+      }
+      blocks.push(<blockquote key={blocks.length} style={{
+        margin: "8px 0", paddingLeft: 12,
+        borderLeft: "3px solid rgba(38,38,51,0.18)",
+        color: "rgba(38,38,51,0.7)",
+      }}>{renderInline(quoteLines.join("\n"))}</blockquote>);
+      continue;
+    }
+    // Разделитель
+    if (/^---+$/.test(line.trim())) {
+      blocks.push(<hr key={blocks.length} style={{
+        border: "none", borderTop: "1px solid rgba(38,38,51,0.1)", margin: "10px 0",
+      }} />);
+      i++; continue;
+    }
+    // Кодовый блок
+    if (line.startsWith("```")) {
+      const codeLines = [];
+      i++;
+      while (i < lines.length && !lines[i].startsWith("```")) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      i++; // skip closing ```
+      blocks.push(<pre key={blocks.length} style={{
+        background: "rgba(38,38,51,0.05)", padding: "10px 12px", borderRadius: 8,
+        fontFamily: "ui-monospace, SF Mono, monospace", fontSize: 12.5,
+        overflowX: "auto", margin: "8px 0",
+      }}>{codeLines.join("\n")}</pre>);
+      continue;
+    }
+    // Маркированный список (- / *)
+    if (/^[-*]\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^[-*]\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^[-*]\s+/, ""));
+        i++;
+      }
+      blocks.push(<ul key={blocks.length} style={{
+        margin: "6px 0", paddingLeft: 22,
+      }}>{items.map((it, k) => <li key={k} style={{ marginBottom: 2 }}>{renderInline(it)}</li>)}</ul>);
+      continue;
+    }
+    // Нумерованный список (1. 2. ...) — но НЕ хвост (он уже отдельно рендерится как опции)
+    if (/^\d+\.\s+/.test(line)) {
+      const items = [];
+      while (i < lines.length && /^\d+\.\s+/.test(lines[i])) {
+        items.push(lines[i].replace(/^\d+\.\s+/, ""));
+        i++;
+      }
+      blocks.push(<ol key={blocks.length} style={{
+        margin: "6px 0", paddingLeft: 22,
+      }}>{items.map((it, k) => <li key={k} style={{ marginBottom: 2 }}>{renderInline(it)}</li>)}</ol>);
+      continue;
+    }
+    // Пустая строка → паузу
+    if (line.trim() === "") { i++; continue; }
+    // Обычный параграф (подряд непустые строки до пустой / спец-блока)
+    const para = [];
+    while (i < lines.length && lines[i].trim() !== ""
+           && !/^(#|>|---|```|[-*]\s|\d+\.\s)/.test(lines[i])) {
+      para.push(lines[i]);
+      i++;
+    }
+    blocks.push(<p key={blocks.length} style={{ margin: "4px 0" }}>{renderInline(para.join(" "))}</p>);
+  }
+  return blocks;
 }
 
 // Извлекает хвост из ≥2 пронумерованных строк (1. ... 2. ...) в конце текста.
@@ -8304,10 +8414,10 @@ function ChatBubble({ m, isLast, onPickOption }) {
           <ToolsTrail tools={m._tools} />
         )}
         <div style={{
-          fontSize: 14, color: "#262633", lineHeight: 1.55, whiteSpace: "pre-wrap",
+          fontSize: 14, color: "#262633", lineHeight: 1.55,
           marginTop: (m._tools && m._tools.length > 0) ? 10 : 0,
         }}>
-          {renderInlineMd(body)}
+          {renderMarkdown(body)}
           {m._streaming && m.text && (
             <span style={{
               display: "inline-block", width: 7, height: 14,
