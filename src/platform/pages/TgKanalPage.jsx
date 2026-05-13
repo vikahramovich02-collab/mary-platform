@@ -7209,10 +7209,18 @@ function ChatMaryPage() {
     }
   }
 
-  async function send(overrideText) {
+  async function send(overrideText, opts = {}) {
     const msg = (overrideText ?? text).trim();
     if (!msg || loading) return;
     if (overrideText === undefined) setText("");
+    // Edit & Resend: сначала отрезаем хвост сообщений начиная с editFromIndex,
+    // и в UI убираем те же сообщения.
+    if (opts.editFromIndex !== undefined && activeId) {
+      try {
+        await fetch(`/api/mary/conversations/${activeId}/messages?from=${opts.editFromIndex}`, { method: "DELETE" });
+      } catch {}
+      setMessages(prev => prev.slice(0, opts.editFromIndex));
+    }
     let cid = activeId;
     if (!cid) cid = await newChat();
     // Добавляем user-сообщение в UI оптимистично
@@ -7607,8 +7615,10 @@ function ChatMaryPage() {
                     <ChatBubble
                       key={i}
                       m={m}
+                      index={i}
                       isLast={i === messages.length - 1}
                       onPickOption={(opt) => send(opt)}
+                      onEdit={(newText, idx) => send(newText, { editFromIndex: idx })}
                     />
                   ))}
                 </div>
@@ -8447,15 +8457,102 @@ function parseNumberedOptions(text) {
   return { body: bodyLines.join("\n"), options: collected };
 }
 
-function ChatBubble({ m, isLast, onPickOption }) {
+function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
   if (m.role === "user") {
+    if (editing) {
+      return (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18 }}>
+          <div style={{
+            background: color.white,
+            border: "1px solid rgba(38,38,51,0.18)", borderRadius: 14,
+            padding: 10, width: "min(80%, 520px)",
+            display: "flex", flexDirection: "column", gap: 8,
+          }}>
+            <textarea
+              autoFocus
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey && draft.trim()) {
+                  e.preventDefault();
+                  setEditing(false);
+                  onEdit?.(draft.trim(), index);
+                }
+                if (e.key === "Escape") setEditing(false);
+              }}
+              rows={Math.max(2, draft.split("\n").length)}
+              style={{
+                width: "100%", border: "none", outline: "none",
+                resize: "none", fontFamily: "inherit",
+                fontSize: 14, color: "#262633",
+                background: "transparent", padding: 0,
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+              <button
+                onClick={() => setEditing(false)}
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(38,38,51,0.18)", borderRadius: 8,
+                  padding: "5px 12px", fontSize: 12.5, color: "#262633",
+                  fontFamily: "inherit", cursor: "pointer",
+                }}
+              >Отмена</button>
+              <button
+                disabled={!draft.trim()}
+                onClick={() => { setEditing(false); onEdit?.(draft.trim(), index); }}
+                style={{
+                  background: draft.trim() ? "#262633" : "rgba(38,38,51,0.3)",
+                  border: "none", borderRadius: 8,
+                  padding: "5px 12px", fontSize: 12.5, color: color.white,
+                  fontFamily: "inherit", cursor: draft.trim() ? "pointer" : "not-allowed",
+                }}
+              >Отправить</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18 }}>
-        <div style={{
-          background: "rgba(38,38,51,0.06)", color: "#262633",
-          padding: "10px 14px", borderRadius: 16,
-          maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
-        }}>{m.text}</div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18, gap: 6, alignItems: "flex-start" }}
+           className="user-bubble-row">
+        {onEdit && index !== undefined && (
+          <button
+            onClick={() => { setDraft(m.text); setEditing(true); }}
+            title="Изменить и отправить заново"
+            style={{
+              opacity: 0, transition: "opacity 0.15s",
+              background: "transparent", border: "none",
+              color: "rgba(38,38,51,0.4)", cursor: "pointer",
+              padding: 6, marginTop: 2, fontFamily: "inherit",
+              display: "inline-flex",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = 1; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = 0; }}
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          </button>
+        )}
+        <div
+          style={{
+            background: "rgba(38,38,51,0.06)", color: "#262633",
+            padding: "10px 14px", borderRadius: 16,
+            maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
+          }}
+          onMouseEnter={e => {
+            const btn = e.currentTarget.parentElement.querySelector("button");
+            if (btn) btn.style.opacity = 0.6;
+          }}
+          onMouseLeave={e => {
+            const btn = e.currentTarget.parentElement.querySelector("button");
+            if (btn) btn.style.opacity = 0;
+          }}
+        >{m.text}</div>
       </div>
     );
   }

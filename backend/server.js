@@ -501,6 +501,17 @@ app.post("/webhook/mary/conversations/:id/messages", (req, res) => {
   if (!c) return res.status(404).json({ error: "not found" });
   res.json({ ok: true });
 });
+// Отрезать хвост сообщений начиная с index (для функции Edit & Resend)
+app.delete("/webhook/mary/conversations/:id/messages", (req, res) => {
+  const fromIndex = Math.max(0, parseInt(req.query.from || "0", 10));
+  const data = loadConversations();
+  const c = data.conversations.find(x => x.id === req.params.id);
+  if (!c) return res.status(404).json({ error: "not found" });
+  c.messages = (c.messages || []).slice(0, fromIndex);
+  c.updatedAt = new Date().toISOString();
+  saveConversations(data);
+  res.json({ ok: true, remaining: c.messages.length });
+});
 
 // ── KB файловые endpoints для фронта ─────────────────────
 app.get("/webhook/mary/kb/files", (_req, res) => {
