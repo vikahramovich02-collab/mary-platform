@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tar.gz
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Data (содержит реальные посты, БЗ, переписки)
+backend/data/
+backend/n8n-data/
+
+# OS
+.DS_Store
+.idea/
+.vscode/
+
+# Temporary
+*.tmp
+.cache/
+
+# Test artifacts
+tests/_check_titles.mjs
+playwright-report/
+test-results/

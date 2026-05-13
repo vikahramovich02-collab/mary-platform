@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Backend smoke (без LLM)
+        run: |
+          cd backend && npm install --no-audit --no-fund
+          # запускаем сервер в фоне, ждём health, убиваем
+          (NODE_ENV=test PORT=5678 node server.js &) >/tmp/srv.log 2>&1
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            sleep 1
+            curl -fs http://localhost:5678/health && break
+          done
+          curl -fs http://localhost:5678/health
