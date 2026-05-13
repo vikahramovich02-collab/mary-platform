@@ -1219,13 +1219,73 @@ const TOOL_LABELS = {
 };
 function toolLabel(name) { return TOOL_LABELS[name] || name; }
 
+// Build-tools (создание/обновление отдела) — рендерим как карточки в чате.
+const BUILD_TOOLS = new Set(["create_department", "add_channel", "add_agent", "set_department_integrations"]);
+
+function BuildCard({ t }) {
+  const a = t.args || {};
+  const r = t.result || {};
+  let icon, color, title, sub;
+  if (t.name === "create_department") {
+    icon = "🏢"; color = r.department?.color || "#7A86FF";
+    title = "Отдел " + (a.name || r.department?.name || "");
+    sub = a.description || "";
+  } else if (t.name === "add_channel") {
+    icon = "📡"; color = "#3F95FF";
+    title = a.name || r.channel?.name || "Канал";
+    sub = a.type || r.channel?.type || "";
+  } else if (t.name === "add_agent") {
+    icon = "🤖"; color = a.color || r.agent?.color || "#7A86FF";
+    title = a.role || r.agent?.role || "Агент";
+    sub = a.tasks || "";
+  } else if (t.name === "set_department_integrations") {
+    icon = "🔌"; color = "#34C759";
+    title = "Интеграции";
+    sub = (a.integrations || []).join(" · ");
+  }
+  const running = t.status === "running";
+  return (
+    <div style={{
+      display: "flex", alignItems: "flex-start", gap: 10,
+      padding: "9px 12px",
+      background: color.white,
+      border: `1px solid rgba(38,38,51,0.1)`,
+      borderLeft: `3px solid ${color}`,
+      borderRadius: 8,
+      opacity: running ? 0.7 : 1,
+      transition: "opacity 0.2s",
+    }}>
+      <span style={{ fontSize: 14, lineHeight: 1.3 }}>{icon}</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#262633" }}>{title}</div>
+        {sub && <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 2, lineHeight: 1.4 }}>{sub}</div>}
+      </div>
+      {running ? (
+        <span style={{
+          width: 6, height: 6, borderRadius: "50%", background: "#FF8B3D",
+          animation: "marypulse 1.2s ease-in-out infinite", flexShrink: 0, marginTop: 4,
+        }} />
+      ) : t.ok === false ? (
+        <span style={{ color: "#FF3B30", fontSize: 12, marginTop: 1 }}>✗</span>
+      ) : (
+        <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth={3}
+             strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 3 }}>
+          <path d="M5 12l5 5L20 7" />
+        </svg>
+      )}
+    </div>
+  );
+}
+
 function ToolsTrail({ tools }) {
   return (
     <div style={{
-      display: "flex", flexDirection: "column", gap: 4,
+      display: "flex", flexDirection: "column", gap: 6,
       marginBottom: 6,
     }}>
-      {tools.map((t, i) => (
+      {tools.map((t, i) => BUILD_TOOLS.has(t.name) ? (
+        <BuildCard key={i} t={t} />
+      ) : (
         <div key={i} style={{
           display: "inline-flex", alignItems: "center", gap: 8,
           fontSize: 12.5, color: "rgba(38,38,51,0.65)",
@@ -7267,17 +7327,17 @@ function ChatMaryPage() {
             setMessages(prev => prev.map(m => {
               if (m._id !== newDraftId) return m;
               const tools = (m._tools || []).slice();
-              tools.push({ name: data.name, status: "running", startedAt: Date.now() });
+              tools.push({ name: data.name, args: data.args, status: "running", startedAt: Date.now() });
               return { ...m, _toolStatus: data.name, _toolStatusStartedAt: Date.now(), _tools: tools };
             }));
           } else if (event === "tool_end") {
             setMessages(prev => prev.map(m => {
               if (m._id !== newDraftId) return m;
               const tools = (m._tools || []).slice();
-              // Помечаем последний running tool с таким именем как done
+              // Помечаем последний running tool с таким именем как done и сохраняем result
               for (let i = tools.length - 1; i >= 0; i--) {
                 if (tools[i].name === data.name && tools[i].status === "running") {
-                  tools[i] = { ...tools[i], status: "done", durationMs: data.durationMs, ok: data.ok };
+                  tools[i] = { ...tools[i], status: "done", durationMs: data.durationMs, ok: data.ok, result: data.result };
                   break;
                 }
               }
