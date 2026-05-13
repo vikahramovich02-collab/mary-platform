@@ -1,76 +1,57 @@
-# Mary backend (n8n)
+# Backend Mary
 
-Локальный backend для платформы Mary на n8n. Каждый Mary-агент = workflow в n8n. Frontend (Vite, port 3000) звонит на webhook'и через прокси `/api/mary/*` → n8n (port 5678).
+Express-сервер с function-calling агентом Mary через OpenRouter (GLM 5.1). Стрим ответов через SSE.
 
 ## Запуск
 
 ```bash
-cd /Users/vika/Desktop/mary/mary/backend
-./start.sh
+cp .env.example .env
+# Заполни OPENROUTER_API_KEY и TELEGRAM_BOT_TOKEN
+npm install
+node server.js              # → http://localhost:5678
 ```
 
-Первый запуск долгий (n8n качает зависимости через npx). Дальше будет быстро — данные хранятся в `./n8n-data/`.
+Health: `curl http://localhost:5678/health`
 
-После старта:
-- **n8n редактор** → http://localhost:5678
-- **API для фронта** → http://localhost:5678/webhook/mary/chat (через прокси: http://localhost:3000/api/mary/chat)
+## Endpoints
 
-## Импорт первого workflow
+| Метод | URL | Что |
+|---|---|---|
+| POST | `/webhook/mary/agent` | One-shot ответ (без SSE) |
+| POST | `/webhook/mary/agent/stream` | Стрим ответа SSE: `text_delta`, `tool_start`, `tool_end`, `done` |
+| GET  | `/conversations` | Список чатов |
+| GET  | `/conversations/:id` | Сообщения чата |
+| POST | `/conversations` | Создать чат |
+| DELETE | `/conversations/:id` | Удалить |
+| GET  | `/departments` | Список отделов |
+| DELETE | `/departments/:id` | Удалить отдел |
+| GET/POST/DELETE | `/kb` | База знаний |
+| GET  | `/health` | Health + uptime + counts |
 
-1. Открой http://localhost:5678
-2. Workflows → Import from file → выбери `workflows/mary-orchestrator.json`
-3. Открой workflow → нажми `Activate` (toggle справа сверху)
-4. Скопируй webhook URL — путь `/webhook/mary/chat`
+Frontend дёргает `/api/mary/*`, Vite проксирует на `:5678/webhook/mary/*` (см. `vite.config.js`).
 
-## Что делает Mary Orchestrator (mock)
+## Tools для агента Mary
 
-- Принимает `POST /webhook/mary/chat` с body `{ message, history?, kbContext? }`
-- Анализирует тему сообщения регуляркой (keyword routing) и решает кому делегировать:
-  - `marketer` — идеи / контент-план
-  - `copywriter` — текст поста
-  - `designer` — обложка / визуал
-  - `researcher` — ресёрч / тренды
-  - `analyst` — метрики / отчёт
-  - `mary` — общий случай, просит уточнить
-- Возвращает `{ agentId, text, delegateTo, timestamp }`
+Определены в `MARY_TOOLS` в `server.js`:
 
-## Что дальше (не в этом MVP)
+- `list_departments`, `create_department`, `add_channel`, `add_agent`, `set_department_integrations` — управление отделами
+- `kb_list`, `kb_read`, `kb_write`, `search_kb` — работа с БЗ
+- `read_chat` — читать чат другого отдела
+- `get_research_insights`, `generate_ideas`, `write_post`, `publish_post`, `create_task` — основные действия
 
-1. **Реальный LLM** — добавить ноду `Anthropic Chat Model` с API key из `.env` для умного ответа Mary
-2. **Подworkflow на каждого агента** — Researcher Parser (через Telethon), Marketer Ideator (через Claude), Designer (Higgsfield API), и т.д.
-3. **Persistence** — n8n Postgres вместо SQLite в production
-4. **Auth** — n8n user management, public webhook auth
+Системный промпт `MARY_SYSTEM_AGENT` — большой, описывает стиль Mary, правила работы с tools, self-onboarding нового отдела через discovery-интервью.
 
-## Тест без фронта
+## Production
 
-```bash
-curl -X POST http://localhost:5678/webhook/mary/chat \
-  -H 'Content-Type: application/json' \
-  -d '{"message":"напиши контент-план на неделю"}'
-```
+Docker контейнер `mary-backend` на 77.237.241.242, рестартится через `bash deploy.sh backend "note"`. nginx проксирует `/api/mary/*` → `:5678/webhook/mary/*` (с `proxy_buffering off` для SSE).
 
-Ожидаемый ответ:
-```json
-{
-  "agentId": "mary",
-  "text": "Передаю Маркетологу — соберёт идеи постов под твой бриф.",
-  "delegateTo": "marketer",
-  "timestamp": "2026-05-10T...",
-  "backend": "n8n-mock"
-}
-```
+## Data
 
-## Подключение к фронту
+`./data/` — JSON-файлы:
+- `conversations.json` — все чаты + сообщения
+- `departments.json` — отделы + агенты + интеграции
+- `posts.json` — спарсенные посты (researcher input)
+- `kb-files/*.md` — markdown-файлы базы знаний
+- `brand.md` — бренд-бриф
 
-Уже сделано через прокси в `vite.config.js`:
-
-```js
-proxy: {
-  '/api/mary': {
-    target: 'http://localhost:5678',
-    rewrite: (p) => p.replace(/^\/api\/mary/, '/webhook/mary'),
-  },
-}
-```
-
-Frontend дёргает `fetch('/api/mary/chat', ...)`, Vite перенаправляет на `http://localhost:5678/webhook/mary/chat`.
+В репо НЕ закоммичены (см. `backend/.gitignore`).
