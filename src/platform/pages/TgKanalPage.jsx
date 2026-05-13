@@ -1239,9 +1239,8 @@ function BuildCard({ t }) {
     title = a.role || r.agent?.role || "Агент";
     sub = a.tasks || "";
   } else if (t.name === "set_department_integrations") {
-    icon = "🔌"; color = "#34C759";
-    title = "Интеграции";
-    sub = (a.integrations || []).join(" · ");
+    // Особый случай — рендерим список интеграций с кнопкой "Подключить" на каждой
+    return <IntegrationsCard t={t} />;
   }
   const running = t.status === "running";
   return (
@@ -1273,6 +1272,80 @@ function BuildCard({ t }) {
           <path d="M5 12l5 5L20 7" />
         </svg>
       )}
+    </div>
+  );
+}
+
+// Карточка интеграций — каждая с кнопкой «Подключить →».
+// Реальное подключение пока заглушено (для AmoCRM/1C/etc нужен OAuth/API key flow).
+function IntegrationsCard({ t }) {
+  const items = t.args?.integrations || t.result?.department?.integrations || [];
+  const [connected, setConnected] = useState({}); // локальный optimistic state, name → bool
+  const onConnect = (name) => {
+    // TODO: реальный OAuth/API-key flow per интеграция. Пока показываем заглушку.
+    alert(`Подключение «${name}» — скоро добавим OAuth/API ключи. Пока это заглушка.`);
+    setConnected(c => ({ ...c, [name]: true }));
+  };
+  if (items.length === 0) return null;
+  return (
+    <div style={{
+      background: color.white,
+      border: "1px solid rgba(38,38,51,0.1)",
+      borderLeft: "3px solid #34C759",
+      borderRadius: 8,
+      overflow: "hidden",
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 10,
+        padding: "8px 12px",
+        borderBottom: items.length ? "1px solid rgba(38,38,51,0.06)" : "none",
+      }}>
+        <span style={{ fontSize: 14 }}>🔌</span>
+        <div style={{ fontSize: 13, fontWeight: 500, color: "#262633", flex: 1 }}>
+          Интеграции <span style={{ color: "rgba(38,38,51,0.4)", fontWeight: 400 }}>· {items.length}</span>
+        </div>
+      </div>
+      <div>
+        {items.map((name, i) => {
+          const isConnected = connected[name];
+          return (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              padding: "8px 12px",
+              borderTop: i > 0 ? "1px solid rgba(38,38,51,0.05)" : "none",
+            }}>
+              <span style={{ flex: 1, fontSize: 13, color: "#262633" }}>{name}</span>
+              {isConnected ? (
+                <span style={{
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  fontSize: 12, color: "#34C759", fontWeight: 500,
+                }}>
+                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12l5 5L20 7" />
+                  </svg>
+                  Подключено
+                </span>
+              ) : (
+                <button
+                  onClick={() => onConnect(name)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "5px 10px",
+                    background: "#262633", color: color.white,
+                    border: "none", borderRadius: 7,
+                    fontSize: 12, fontWeight: 500, cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}>
+                  Подключить
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
