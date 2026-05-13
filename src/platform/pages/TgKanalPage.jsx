@@ -8734,7 +8734,9 @@ function SupportPage() {
 // ── Корневой компонент ──────────────────────────────────────
 export default function TgKanalPage() {
   const [smmOpen, setSmmOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState("tg-kanal"); // "tg-kanal" | "kb" | "integrations" | "tasks" | "chat-mary" | "home" | "inbox" | "team" | "bizproc" | "settings"
+  const [currentPage, setCurrentPage] = useState(
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("page") || "tg-kanal"
+  ); // "tg-kanal" | "kb" | "integrations" | "tasks" | "chat-mary" | "home" | "inbox" | "team" | "bizproc" | "settings"
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [openDepts, setOpenDepts] = useState({ smm: true });

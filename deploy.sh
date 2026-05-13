@@ -31,6 +31,21 @@ DEPLOY_START=$(date +%s)
 # Используем Node 24 (npm на 25/26 у тебя ломается из-за simdjson)
 export PATH="/opt/homebrew/opt/node@24/bin:$PATH"
 
+# ── Git: коммит изменений ПЕРЕД деплоем (если есть, что коммитить) ───
+if [ -d .git ] && [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+  COMMIT_MSG="${NOTE:-deploy: $TARGET (no note)}"
+  echo "📝 Коммитю изменения: $COMMIT_MSG"
+  git add -A
+  git commit -m "$COMMIT_MSG" 2>&1 | tail -2 || echo "  (не получилось коммитнуть — продолжаю деплой)"
+  if git remote get-url origin >/dev/null 2>&1; then
+    echo "⬆️  Push на GitHub..."
+    git push 2>&1 | tail -2 || echo "  (push не прошёл — продолжаю деплой, push повторишь руками)"
+  fi
+elif [ -d .git ]; then
+  echo "📝 Git: нечего коммитить (working tree чистый)"
+fi
+echo
+
 deploy_frontend() {
   echo "🎨 Frontend → build..."
   npm run build --silent 2>&1 | tail -3
