@@ -8634,7 +8634,7 @@ function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
           <circle cx="14.7" cy="13" r="1.4" fill="white" />
         </svg>
       </div>
-      <div style={{ flex: 1, minWidth: 0, paddingTop: 4 }}>
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 640, paddingTop: 4 }}>
         {m._tools && m._tools.length > 0 && (
           <ToolsTrail tools={m._tools} />
         )}
