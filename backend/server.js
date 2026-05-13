@@ -1065,12 +1065,20 @@ const TOOL_HANDLERS = {
     }
   },
   async add_channel(args = {}) {
-    try { return { ok: true, channel: deptAddChannel(args.deptId, { name: args.name, type: args.type || "other" }) }; }
-    catch (e) { return { error: e.message }; }
+    try {
+      const channel = deptAddChannel(args.deptId, { name: args.name, type: args.type || "other" });
+      const data = loadDepartments();
+      const department = data.departments.find(d => d.id === args.deptId);
+      return { ok: true, channel, department };
+    } catch (e) { return { error: e.message }; }
   },
   async add_agent(args = {}) {
-    try { return { ok: true, agent: deptAddAgent(args.deptId, { role: args.role, color: args.color || "#7A86FF", tasks: args.tasks || "" }) }; }
-    catch (e) { return { error: e.message }; }
+    try {
+      const agent = deptAddAgent(args.deptId, { role: args.role, color: args.color || "#7A86FF", tasks: args.tasks || "" });
+      const data = loadDepartments();
+      const department = data.departments.find(d => d.id === args.deptId);
+      return { ok: true, agent, department };
+    } catch (e) { return { error: e.message }; }
   },
   async set_department_integrations(args = {}) {
     try { return { ok: true, department: deptSetIntegrations(args.deptId, args.integrations || []) }; }

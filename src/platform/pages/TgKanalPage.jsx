@@ -7286,22 +7286,19 @@ function ChatMaryPage() {
             // Авто-открытие activity panel при первой работе
             setShowActivity(true);
             // ── live workflow builder: апдейт по результатам tool ──
-            if (data.ok && data.result) {
-              if (data.name === "create_department" && data.result.department) {
-                const d = data.result.department;
-                setBuild({
-                  type: "department",
-                  deptId: d.id, name: d.name,
-                  color: d.color || "#7A86FF",
-                  channels: [], agents: [], integrations: [],
-                });
-              } else if (data.name === "add_channel" && data.result.channel) {
-                setBuild(b => b ? { ...b, channels: [...b.channels, data.result.channel] } : b);
-              } else if (data.name === "add_agent" && data.result.agent) {
-                setBuild(b => b ? { ...b, agents: [...b.agents, data.result.agent] } : b);
-              } else if (data.name === "set_department_integrations" && data.result.department) {
-                setBuild(b => b ? { ...b, integrations: data.result.department.integrations || [] } : b);
-              }
+            // Любой dept-mutating tool возвращает полное состояние department —
+            // используем его как источник правды (на случай если Mary апдейтит
+            // существующий отдел и create_department не вызывался).
+            if (data.ok && data.result?.department) {
+              const d = data.result.department;
+              setBuild({
+                type: "department",
+                deptId: d.id, name: d.name,
+                color: d.color || "#7A86FF",
+                channels: d.channels || [],
+                agents: d.agents || [],
+                integrations: d.integrations || [],
+              });
             }
           } else if (event === "done") {
             setMessages(prev => prev.map(m =>
@@ -7698,6 +7695,8 @@ function ChatMaryPage() {
 // ── Activity Panel: workflow + log ──────────────────────
 function ActivityPanel({ build, activity, onClose }) {
   const [tab, setTab] = useState(build ? "build" : "log");
+  // Если build впервые появляется во время работы — автоматически переключаемся на него.
+  useEffect(() => { if (build && tab === "log" && activity.length <= 2) setTab("build"); }, [build]);
   return (
     <aside style={{
       width: 540, minWidth: 540,
