@@ -7222,11 +7222,14 @@ function ChatMaryPage() {
     setDraftId(newDraftId);
     setMessages(prev => [...prev, { role: "mary", text: "", _streaming: true, _id: newDraftId, ts: new Date().toISOString() }]);
 
+    const ac = new AbortController();
+    abortRef.current = ac;
     try {
       const res = await fetch("/api/mary/agent/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: msg, conversationId: cid }),
+        signal: ac.signal,
       });
       if (!res.ok || !res.body) throw new Error("stream failed");
 
@@ -7310,12 +7313,24 @@ function ChatMaryPage() {
       // Обновим список чатов чтобы title обновился
       refreshList();
     } catch (e) {
-      setMessages(prev => prev.map(m =>
-        m._id === newDraftId ? { ...m, text: "Ошибка: " + e.message, _streaming: false } : m
-      ));
+      // Stop-кнопка → AbortError. Не показываем как ошибку, мягко закрываем.
+      if (e.name === "AbortError") {
+        setMessages(prev => prev.map(m =>
+          m._id === newDraftId ? {
+            ...m,
+            text: (m.text || "") + (m.text ? "\n\n" : "") + "_(остановлено)_",
+            _streaming: false, _toolStatus: null,
+          } : m
+        ));
+      } else {
+        setMessages(prev => prev.map(m =>
+          m._id === newDraftId ? { ...m, text: "Ошибка: " + e.message, _streaming: false } : m
+        ));
+      }
     } finally {
       setLoading(false);
       setDraftId(null);
+      abortRef.current = null;
     }
   }
 
@@ -7335,6 +7350,9 @@ function ChatMaryPage() {
   const isEmptyChat = messages.length === 0 && !loading;
   const typewriterText = useTypewriterPlaceholder(typewriterPhrases, isEmptyChat);
   const [chatsCollapsed, setChatsCollapsed] = useState(false);
+  // AbortController для прерывания текущего стрима через Stop-кнопку
+  const abortRef = useRef(null);
+  function stopStream() { abortRef.current?.abort(); }
 
   return (
     <div style={{ display: "flex", flex: 1, minHeight: 0, background: color.white }}>
@@ -7513,7 +7531,7 @@ function ChatMaryPage() {
                 <ChatWelcome onSuggest={(s) => send(s)}>
                   <MaryInputBox
                     text={text} setText={setText} send={send}
-                    loading={loading}
+                    loading={loading} onStop={stopStream}
                     placeholder={isEmptyChat ? typewriterText : "Спросить у Mary"}
                   />
                 </ChatWelcome>
@@ -7587,18 +7605,36 @@ function ChatMaryPage() {
                       color: "rgba(38,38,51,0.55)",
                       cursor: "pointer", fontFamily: "inherit",
                     }}>{ic.mic}</button>
+                    {loading ? (
+                      <button
+                        data-testid="chat-mary-stop"
+                        onClick={stopStream}
+                        title="Остановить"
+                        style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 30, height: 30,
+                          background: "#262633",
+                          border: "none", borderRadius: "50%",
+                          color: color.white, cursor: "pointer", fontFamily: "inherit",
+                          transition: transition.fast,
+                        }}>
+                        <svg width={11} height={11} viewBox="0 0 16 16" fill="currentColor">
+                          <rect x="2" y="2" width="12" height="12" rx="1.5" />
+                        </svg>
+                      </button>
+                    ) : (
                     <button
                       data-testid="chat-mary-send"
                       onClick={() => send()}
-                      disabled={!text.trim() || loading}
+                      disabled={!text.trim()}
                       title="Отправить"
                       style={{
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
                         width: 30, height: 30,
-                        background: text.trim() && !loading ? "#262633" : "rgba(38,38,51,0.35)",
+                        background: text.trim() ? "#262633" : "rgba(38,38,51,0.35)",
                         border: "none", borderRadius: "50%",
                         color: color.white,
-                        cursor: text.trim() && !loading ? "pointer" : "not-allowed",
+                        cursor: text.trim() ? "pointer" : "not-allowed",
                         fontFamily: "inherit",
                         transition: transition.fast,
                       }}>
@@ -7607,6 +7643,7 @@ function ChatMaryPage() {
                         <path d="M5 12l7-7 7 7" />
                       </svg>
                     </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -8068,7 +8105,7 @@ function ChatWelcome({ onSuggest, children }) {
 }
 
 // Переиспользуемая обёртка inline-input'а Mary (двухстрочная: text + actions row).
-function MaryInputBox({ text, setText, send, loading, placeholder }) {
+function MaryInputBox({ text, setText, send, loading, onStop, placeholder }) {
   return (
     <div style={{
       background: color.white,
@@ -8109,6 +8146,23 @@ function MaryInputBox({ text, setText, send, loading, placeholder }) {
           width: 28, height: 28, background: "transparent", border: "none", borderRadius: 7,
           color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
         }}>{ic.mic}</button>
+        {loading && onStop ? (
+          <button
+            data-testid="chat-mary-stop"
+            onClick={onStop}
+            title="Остановить"
+            style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: 30, height: 30,
+              background: "#262633", border: "none", borderRadius: "50%",
+              color: color.white, cursor: "pointer",
+              fontFamily: "inherit", transition: transition.fast,
+            }}>
+            <svg width={11} height={11} viewBox="0 0 16 16" fill="currentColor">
+              <rect x="2" y="2" width="12" height="12" rx="1.5" />
+            </svg>
+          </button>
+        ) : (
         <button
           data-testid="chat-mary-send"
           onClick={() => send()}
@@ -8128,6 +8182,7 @@ function MaryInputBox({ text, setText, send, loading, placeholder }) {
             <path d="M5 12l7-7 7 7" />
           </svg>
         </button>
+        )}
       </div>
     </div>
   );
