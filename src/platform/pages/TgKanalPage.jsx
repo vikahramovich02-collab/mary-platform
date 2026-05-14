@@ -3270,12 +3270,88 @@ function AgentFlowCanvas({ agent, onClose }) {
   );
 }
 
+// ── pipelineToFlow: бэк-pipeline (type/edges[[from,to]]) → frontend-flow с auto-layout ──
+function pipelineToFlow(pipeline, agentColor = "#7A86FF") {
+  if (!pipeline?.nodes?.length) return null;
+  const { nodes, edges } = pipeline;
+  // 1) Считаем in-degree
+  const inDeg = Object.fromEntries(nodes.map(n => [n.id, 0]));
+  for (const [_, to] of edges) if (inDeg[to] !== undefined) inDeg[to]++;
+  // 2) Layered layout (BFS по уровням)
+  const level = Object.fromEntries(nodes.map(n => [n.id, 0]));
+  const queue = nodes.filter(n => inDeg[n.id] === 0).map(n => n.id);
+  const seen = new Set(queue);
+  const adj = {};
+  for (const [from, to] of edges) (adj[from] = adj[from] || []).push(to);
+  while (queue.length) {
+    const id = queue.shift();
+    for (const nxt of adj[id] || []) {
+      level[nxt] = Math.max(level[nxt], level[id] + 1);
+      if (!seen.has(nxt)) { seen.add(nxt); queue.push(nxt); }
+    }
+  }
+  // 3) Группировка по уровням
+  const levels = {};
+  for (const n of nodes) {
+    const L = level[n.id] || 0;
+    (levels[L] = levels[L] || []).push(n);
+  }
+  // 4) Координаты: ox = (level - centerLevel) * 280, oy = (rowIdx - midRow) * 110
+  const maxLevel = Math.max(...Object.keys(levels).map(Number));
+  const centerLevel = maxLevel / 2;
+  // type → kind для frontend стилей
+  const kindMap = (type, settings = {}) => {
+    if (type === "trigger") return /cron|расписан/i.test(settings.cron || "") || settings.cron ? "trigger-cron" : "input";
+    if (type === "step") return "subagent";
+    if (type === "llm") return "llm-step";
+    if (type === "output") return (settings.target || "").startsWith("agent:") ? "next-agent" : "output-kb";
+    return "subagent";
+  };
+  const flowNodes = [];
+  for (const L of Object.keys(levels).sort((a, b) => +a - +b)) {
+    const items = levels[L];
+    const midRow = (items.length - 1) / 2;
+    items.forEach((n, idx) => {
+      flowNodes.push({
+        id: n.id,
+        kind: kindMap(n.type, n.settings),
+        title: n.title,
+        sub: n.sub || "",
+        ox: (Number(L) - centerLevel) * 280,
+        oy: (idx - midRow) * 110,
+      });
+    });
+  }
+  return { nodes: flowNodes, edges };
+}
+
 function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, approvals, onApprove, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks }) {
   const [positions, setPositions] = useState(() =>
     Object.fromEntries(AGENTS.map(a => [a.id, { x: a.x, y: a.y }]))
   );
   const [expandedId, setExpandedId] = useState(null);
   const [drilledAgentId, setDrilledAgentId] = useState(null);
+  // pipelineByAgentId: { agentId → flow } — приходит с бэка, оверрайдит хардкод AGENTS.flow
+  const [pipelineByAgentId, setPipelineByAgentId] = useState({});
+  useEffect(() => {
+    let stop = false;
+    const load = () => fetch("/api/mary/departments").then(r => r.json()).then(d => {
+      if (stop) return;
+      const smm = (d.departments || []).find(x => x.id === "smm");
+      if (!smm) return;
+      const map = {};
+      for (const a of (smm.agents || [])) {
+        if (a.pipeline?.nodes?.length) {
+          const flow = pipelineToFlow(a.pipeline, a.color);
+          if (flow) map[a.id] = flow;
+        }
+      }
+      setPipelineByAgentId(map);
+    }).catch(() => {});
+    load();
+    const t = setInterval(load, 5000); // подхватывать изменения от Mary раз в 5с
+    return () => { stop = true; clearInterval(t); };
+  }, []);
   const [pipelineKb, setPipelineKb] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
@@ -3323,7 +3399,13 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
   }
 
   // ── DRILL-IN: zoom-в-агента + рендер внутренних нод ──────
-  const drilledAgent = drilledAgentId ? byId[drilledAgentId] : null;
+  // drilledAgent — ищем в AGENTS, и если есть свежий flow с бэка — заменяем им хардкод
+  const drilledAgent = drilledAgentId ? (() => {
+    const base = byId[drilledAgentId];
+    if (!base) return null;
+    const fromBackend = pipelineByAgentId[drilledAgentId];
+    return fromBackend ? { ...base, flow: fromBackend } : base;
+  })() : null;
   const FLOW_NODE_W = 220;
   const FLOW_NODE_H = 64;
   const prevViewRef = useRef(null);
