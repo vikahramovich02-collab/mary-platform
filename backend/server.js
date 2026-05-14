@@ -87,9 +87,144 @@ function deptAddAgent(deptId, agent) {
   const dept = data.departments.find(d => d.id === deptId);
   if (!dept) throw new Error(`отдел '${deptId}' не найден`);
   agent.id = agent.id || (String(agent.role || "agent").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20));
+  if (!agent.pipeline) agent.pipeline = defaultPipelineFor(agent.role || agent.id);
   dept.agents.push(agent);
   saveDepartments(data);
   return agent;
+}
+
+// ── Pipeline (внутренний воркфлоу агента) ─────────────────
+// Узел: { id, type: "trigger"|"step"|"llm"|"output", title, sub?, settings? }
+// Edge: ["fromId", "toId"]
+function defaultPipelineFor(roleOrId) {
+  const key = String(roleOrId || "").toLowerCase();
+  if (/(researcher|ресерч)/.test(key)) {
+    return {
+      nodes: [
+        { id: "channels",  type: "trigger", title: "Список каналов", sub: "источники для парсинга", settings: { sources: [] } },
+        { id: "schedule",  type: "trigger", title: "Расписание",     sub: "cron + on-demand",       settings: { cron: "0 9 * * *" } },
+        { id: "brand",     type: "trigger", title: "Контекст бренда",sub: "ниша и tone of voice",    settings: { niche: "" } },
+        { id: "fetcher",   type: "step",    title: "Сборщик",        sub: "забирает посты" },
+        { id: "dedup",     type: "step",    title: "Дедупликатор",   sub: "выкидывает повторы" },
+        { id: "filter",    type: "llm",     title: "Фильтр релевантности", sub: "GLM · ниша Mary", settings: { model: "z-ai/glm-5.1" } },
+        { id: "discover",  type: "step",    title: "Поиск каналов",  sub: "раз в неделю · по нишам" },
+        { id: "scorer",    type: "step",    title: "Скорер",         sub: "охват · ER · комменты", settings: { weights: { reach: 50, er: 30, comments: 20 } } },
+        { id: "cluster",   type: "llm",     title: "Кластеризатор",  sub: "темы и сюжеты · LLM" },
+        { id: "synth",     type: "llm",     title: "Синтезатор инсайтов", sub: "tl;dr недели · LLM" },
+        { id: "out_top",   type: "output",  title: "Топ-посты недели", sub: "→ База знаний", settings: { target: "kb" } },
+        { id: "out_themes",type: "output",  title: "Темы недели",      sub: "→ Маркетолог",  settings: { target: "agent:marketer" } },
+        { id: "out_hooks", type: "output",  title: "Форматы хуков",    sub: "→ Копирайтер",  settings: { target: "agent:copywriter" } },
+        { id: "out_new",   type: "output",  title: "Новые каналы",     sub: "→ автоматически в источники", settings: { target: "self:channels" } },
+      ],
+      edges: [
+        ["channels","fetcher"], ["schedule","fetcher"],
+        ["fetcher","dedup"], ["dedup","filter"], ["brand","filter"],
+        ["filter","scorer"], ["filter","cluster"],
+        ["scorer","synth"], ["cluster","synth"],
+        ["synth","out_top"], ["synth","out_themes"], ["synth","out_hooks"],
+        ["discover","out_new"],
+      ],
+    };
+  }
+  if (/(marketer|маркетол)/.test(key)) {
+    return {
+      nodes: [
+        { id: "research_in", type: "trigger", title: "Темы от Ресерчера", sub: "input от researcher" },
+        { id: "brief",       type: "trigger", title: "Бренд-бриф",        sub: "ниша, ToV, цели" },
+        { id: "ideate",      type: "llm",     title: "Генератор идей",    sub: "темы → 7-10 идей · LLM" },
+        { id: "rank",        type: "llm",     title: "Скорер идей",       sub: "по бренд-критериям" },
+        { id: "out_ideas",   type: "output",  title: "Идеи постов",       sub: "→ Копирайтер", settings: { target: "agent:copywriter" } },
+      ],
+      edges: [["research_in","ideate"], ["brief","ideate"], ["ideate","rank"], ["rank","out_ideas"]],
+    };
+  }
+  if (/(copywriter|копирайт)/.test(key)) {
+    return {
+      nodes: [
+        { id: "idea_in",   type: "trigger", title: "Идея от Маркетолога", sub: "input" },
+        { id: "hooks_in",  type: "trigger", title: "Форматы хуков",       sub: "от Ресерчера" },
+        { id: "draft",     type: "llm",     title: "Черновик",            sub: "хук → тело → CTA · LLM" },
+        { id: "polish",    type: "llm",     title: "Редактура",           sub: "ToV, ритм · LLM" },
+        { id: "out_text",  type: "output",  title: "Текст поста",         sub: "→ Дизайнер + БЗ", settings: { target: "agent:designer" } },
+      ],
+      edges: [["idea_in","draft"], ["hooks_in","draft"], ["draft","polish"], ["polish","out_text"]],
+    };
+  }
+  if (/(designer|дизайн)/.test(key)) {
+    return {
+      nodes: [
+        { id: "text_in", type: "trigger", title: "Текст поста",     sub: "от Копирайтера" },
+        { id: "concept", type: "llm",     title: "Концепт визуала", sub: "идея + промпт · LLM" },
+        { id: "render",  type: "step",    title: "Генератор",       sub: "Higgsfield/SDXL" },
+        { id: "out_img", type: "output",  title: "Готовая обложка", sub: "→ Аналитик + БЗ" },
+      ],
+      edges: [["text_in","concept"], ["concept","render"], ["render","out_img"]],
+    };
+  }
+  if (/(analyst|аналитик)/.test(key)) {
+    return {
+      nodes: [
+        { id: "post_in", type: "trigger", title: "Опубликованный пост", sub: "from publish_post" },
+        { id: "fetch",   type: "step",    title: "Снимаю метрики",     sub: "TG Stat / API" },
+        { id: "analyze", type: "llm",     title: "Анализ",             sub: "что зашло, что нет · LLM" },
+        { id: "out_report", type: "output", title: "Отчёт",            sub: "→ БЗ + Маркетолог", settings: { target: "kb" } },
+      ],
+      edges: [["post_in","fetch"], ["fetch","analyze"], ["analyze","out_report"]],
+    };
+  }
+  // Дефолтный простой pipeline для незнакомой роли
+  return {
+    nodes: [
+      { id: "input",  type: "trigger", title: "Входящий запрос" },
+      { id: "process",type: "llm",     title: "Обработка",    sub: "LLM" },
+      { id: "output", type: "output",  title: "Результат" },
+    ],
+    edges: [["input","process"], ["process","output"]],
+  };
+}
+
+// Pipeline mutations — апдейт конкретного агента в отделе
+function withAgent(deptId, agentId, mutate) {
+  const data = loadDepartments();
+  const dept = data.departments.find(d => d.id === deptId);
+  if (!dept) throw new Error(`отдел '${deptId}' не найден`);
+  const agent = dept.agents.find(a => a.id === agentId);
+  if (!agent) throw new Error(`агент '${agentId}' в отделе '${deptId}' не найден`);
+  if (!agent.pipeline) agent.pipeline = defaultPipelineFor(agent.role || agent.id);
+  mutate(agent.pipeline, agent, dept);
+  saveDepartments(data);
+  return { dept, agent };
+}
+function pipelineAddNode(deptId, agentId, node, after) {
+  return withAgent(deptId, agentId, (p) => {
+    if (!node.id) node.id = String(node.title || "node").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20) + "-" + Date.now().toString(36).slice(-4);
+    p.nodes.push(node);
+    if (after) p.edges.push([after, node.id]);
+  });
+}
+function pipelineRemoveNode(deptId, agentId, nodeId) {
+  return withAgent(deptId, agentId, (p) => {
+    p.nodes = p.nodes.filter(n => n.id !== nodeId);
+    p.edges = p.edges.filter(([from, to]) => from !== nodeId && to !== nodeId);
+  });
+}
+function pipelineUpdateNode(deptId, agentId, nodeId, patch) {
+  return withAgent(deptId, agentId, (p) => {
+    const n = p.nodes.find(x => x.id === nodeId);
+    if (!n) throw new Error(`узел '${nodeId}' не найден`);
+    Object.assign(n, patch);
+    if (patch.settings) n.settings = { ...(n.settings || {}), ...patch.settings };
+  });
+}
+function pipelineConnect(deptId, agentId, from, to) {
+  return withAgent(deptId, agentId, (p) => {
+    if (!p.edges.some(([f, t]) => f === from && t === to)) p.edges.push([from, to]);
+  });
+}
+function pipelineDisconnect(deptId, agentId, from, to) {
+  return withAgent(deptId, agentId, (p) => {
+    p.edges = p.edges.filter(([f, t]) => !(f === from && t === to));
+  });
 }
 function deptSetIntegrations(deptId, integrations) {
   const data = loadDepartments();
@@ -849,6 +984,93 @@ const MARY_TOOLS = [
   {
     type: "function",
     function: {
+      name: "add_pipeline_node",
+      description: "Добавить шаг (узел) в pipeline конкретного агента. Например юзер говорит 'добавь Ресерчеру шаг проверки на спам' → добавляешь узел type=step после filter. Типы узлов: trigger (источник данных), step (обработка), llm (LLM-узел), output (выход).",
+      parameters: {
+        type: "object",
+        properties: {
+          deptId:  { type: "string" },
+          agentId: { type: "string", description: "id агента внутри отдела (researcher, marketer, copywriter, designer, analyst или кастомный)" },
+          type:    { type: "string", enum: ["trigger", "step", "llm", "output"] },
+          title:   { type: "string", description: "Короткое название узла, например 'Спам-фильтр'" },
+          sub:     { type: "string", description: "Подзаголовок 1 строкой что узел делает", default: "" },
+          settings:{ type: "object", description: "Параметры узла, например { model: 'z-ai/glm-5.1' }", default: {} },
+          after:   { type: "string", description: "id узла после которого вставить (создаст edge after→new). Опционально." },
+        },
+        required: ["deptId", "agentId", "type", "title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "remove_pipeline_node",
+      description: "Удалить узел из pipeline агента (по id). Все edges с этим узлом тоже удаляются.",
+      parameters: {
+        type: "object",
+        properties: {
+          deptId:  { type: "string" },
+          agentId: { type: "string" },
+          nodeId:  { type: "string" },
+        },
+        required: ["deptId", "agentId", "nodeId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "update_pipeline_node",
+      description: "Изменить title/sub/settings конкретного узла. Например юзер говорит 'поменяй вес комментов в Скорере на 50%' → update_pipeline_node({nodeId:'scorer', settings:{weights:{...}}}).",
+      parameters: {
+        type: "object",
+        properties: {
+          deptId:  { type: "string" },
+          agentId: { type: "string" },
+          nodeId:  { type: "string" },
+          patch:   { type: "object", description: "Объект с обновлёнными полями. settings мерджится поверх." },
+        },
+        required: ["deptId", "agentId", "nodeId", "patch"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "connect_nodes",
+      description: "Соединить два узла в pipeline (edge from→to). Используй когда юзер говорит 'пусть Скорер ещё подаёт в Кластеризатор'.",
+      parameters: {
+        type: "object",
+        properties: {
+          deptId:  { type: "string" },
+          agentId: { type: "string" },
+          from:    { type: "string", description: "id узла-источника" },
+          to:      { type: "string", description: "id узла-приёмника" },
+        },
+        required: ["deptId", "agentId", "from", "to"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "disconnect_nodes",
+      description: "Удалить связь между двумя узлами в pipeline (только edge, узлы остаются).",
+      parameters: {
+        type: "object",
+        properties: {
+          deptId:  { type: "string" },
+          agentId: { type: "string" },
+          from:    { type: "string" },
+          to:      { type: "string" },
+        },
+        required: ["deptId", "agentId", "from", "to"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "read_chat",
       description: "Прочитать последние N сообщений из чата отдела (например 'smm') чтобы понять что там обсуждается. Используй когда юзер спрашивает 'что я писала в СММ', 'какие задачи стоят перед маркетологом', 'покажи последние идеи' и подобное. Возвращает массив сообщений {role, text, ts}.",
       parameters: {
@@ -913,6 +1135,7 @@ const MARY_SYSTEM_AGENT = `Ты — Mary, AI-оркестратор отдела
 - list_departments — посмотри какие отделы уже есть прежде чем создавать новый
 - create_department — ТОЛЬКО когда юзер прямо просит создать отдел («создай отдел продаж»). Не создавай по своей инициативе.
 - add_channel / add_agent / set_department_integrations — для разворачивания отдела (см. ONBOARDING ниже)
+- add_pipeline_node / remove_pipeline_node / update_pipeline_node / connect_nodes / disconnect_nodes — для редактирования внутреннего pipeline агента (это его «процессная схема»: триггеры → шаги → LLM → выходы). См. PIPELINE-РЕДАКТИРОВАНИЕ ниже.
 - publish_post — ⚠️ ТОЛЬКО когда юзер прямо просит ПОСТ В КАНАЛ. Триггеры: «опубликуй пост», «запости в канал», «напиши пост про X», «постни», «дай пост». «Помоги настроить X», «как мне делать Y», «нужна автоматизация Z» — это НЕ просьба про пост, не пиши и не публикуй! Если сомневаешься — НЕ ПУБЛИКУЙ, лучше задать уточняющий вопрос или предложить заведение отдела (см. ниже). После явного запроса на пост — auto-approve работает: можно одним тёрном write_post + publish_post без переспроса «публикуем?».
 
 Ты — главная над всеми отделами. Можешь создавать новые отделы и разворачивать их по запросу.
@@ -1016,6 +1239,26 @@ const MARY_SYSTEM_AGENT = `Ты — Mary, AI-оркестратор отдела
 - Финал — set_department_integrations + одна фраза «Готово, [Имя] собран.»
 
 ИТОГ: для отдела с 2 каналами + 3 агентами получится ~8 тёрнов вместо 1 простыни.
+
+🔧 PIPELINE-РЕДАКТИРОВАНИЕ (важно):
+
+У каждого агента есть внутренний pipeline — граф из узлов 4 типов:
+- trigger — источник данных (список каналов, расписание cron, контекст бренда)
+- step — обработка (Сборщик, Дедупликатор, Скорер)
+- llm — LLM-узел (Фильтр релевантности, Кластеризатор, Синтезатор инсайтов)
+- output — куда уходит результат (БЗ, другой агент, сам в источники)
+
+Юзер НЕ может править граф через UI (нет drag&drop). Только через тебя в чате. Когда юзер говорит «добавь Ресерчеру шаг проверки на спам» / «убери Дедупликатор» / «увеличь вес комментов в Скорере» / «пусть Скорер отдаёт сразу в Синтезатор минуя Кластеризатор» — используй pipeline-tools:
+
+- add_pipeline_node({ deptId, agentId, type, title, sub, settings, after }) — добавить узел. after = id предыдущего узла (создаст edge after→new).
+- remove_pipeline_node({ deptId, agentId, nodeId }) — удалить узел и все его edges.
+- update_pipeline_node({ deptId, agentId, nodeId, patch }) — поправить title/sub/settings. patch.settings мерджится поверх.
+- connect_nodes({ deptId, agentId, from, to }) — добавить связь.
+- disconnect_nodes({ deptId, agentId, from, to }) — удалить связь.
+
+Чтобы найти id узла — посмотри текущий pipeline через list_departments (там есть agents[].pipeline.nodes с id).
+
+После каждого изменения кратко: «Добавила узел "Спам-фильтр" между Дедупликатором и Фильтром релевантности — граф перерисовался.»
 
 ФАЙЛЫ В БЗ (важно):
 У тебя есть полноценная файловая система БЗ. Используй её для долгосрочных артефактов.
@@ -1131,6 +1374,37 @@ const TOOL_HANDLERS = {
   async set_department_integrations(args = {}) {
     try { return { ok: true, department: deptSetIntegrations(args.deptId, args.integrations || []) }; }
     catch (e) { return { error: e.message }; }
+  },
+  async add_pipeline_node(args = {}) {
+    try {
+      const { deptId, agentId, type, title, sub = "", settings = {}, after } = args;
+      const r = pipelineAddNode(deptId, agentId, { type, title, sub, settings }, after);
+      return { ok: true, agent: r.agent, department: r.dept };
+    } catch (e) { return { error: e.message }; }
+  },
+  async remove_pipeline_node(args = {}) {
+    try {
+      const r = pipelineRemoveNode(args.deptId, args.agentId, args.nodeId);
+      return { ok: true, agent: r.agent, department: r.dept };
+    } catch (e) { return { error: e.message }; }
+  },
+  async update_pipeline_node(args = {}) {
+    try {
+      const r = pipelineUpdateNode(args.deptId, args.agentId, args.nodeId, args.patch || {});
+      return { ok: true, agent: r.agent, department: r.dept };
+    } catch (e) { return { error: e.message }; }
+  },
+  async connect_nodes(args = {}) {
+    try {
+      const r = pipelineConnect(args.deptId, args.agentId, args.from, args.to);
+      return { ok: true, agent: r.agent, department: r.dept };
+    } catch (e) { return { error: e.message }; }
+  },
+  async disconnect_nodes(args = {}) {
+    try {
+      const r = pipelineDisconnect(args.deptId, args.agentId, args.from, args.to);
+      return { ok: true, agent: r.agent, department: r.dept };
+    } catch (e) { return { error: e.message }; }
   },
   async read_chat(args = {}) {
     if (!args.scope) return { error: "scope required" };
