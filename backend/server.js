@@ -1744,6 +1744,97 @@ app.post("/webhook/mary/agent/stream", async (req, res) => {
   res.end();
 });
 
+// ── Sandbox runner: прогон pipeline агента ──────────────
+// Берёт inputs от юзера, топ-сортит nodes, прогоняет каждый по типу,
+// стримит SSE: node_start / node_end / done.
+// dryRun=true — LLM не вызывается, mock ответы (бесплатно для проверки flow).
+function topoSort(pipeline) {
+  const { nodes, edges } = pipeline;
+  const inDeg = Object.fromEntries(nodes.map(n => [n.id, 0]));
+  const adj = {};
+  for (const [from, to] of edges || []) {
+    if (inDeg[to] !== undefined) inDeg[to]++;
+    (adj[from] = adj[from] || []).push(to);
+  }
+  const out = [];
+  const queue = nodes.filter(n => inDeg[n.id] === 0);
+  while (queue.length) {
+    const n = queue.shift();
+    out.push(n);
+    for (const next of adj[n.id] || []) {
+      if (--inDeg[next] === 0) queue.push(nodes.find(x => x.id === next));
+    }
+  }
+  return out;
+}
+async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit }) {
+  const data = loadDepartments();
+  const dept = data.departments.find(d => d.id === deptId);
+  if (!dept) throw new Error(`отдел '${deptId}' не найден`);
+  const agent = (dept.agents || []).find(a => a.id === agentId);
+  if (!agent) throw new Error(`агент '${agentId}' не найден`);
+  if (!agent.pipeline?.nodes?.length) throw new Error("у агента нет pipeline");
+
+  const sorted = topoSort(agent.pipeline);
+  const outputs = {}; // nodeId → текст output
+
+  // Собираем outputs предыдущих узлов как контекст для текущего
+  const contextFor = (nodeId) => {
+    const incoming = (agent.pipeline.edges || []).filter(([_, to]) => to === nodeId).map(([from]) => from);
+    return incoming.map(id => `[${id}]: ${outputs[id] || "(пусто)"}`).join("\n");
+  };
+
+  for (const node of sorted) {
+    const start = Date.now();
+    emit("node_start", { nodeId: node.id, type: node.type, title: node.title });
+    let output = "";
+    try {
+      if (node.type === "trigger") {
+        output = inputs[node.id] || node.settings?.placeholder || `(${node.title})`;
+      } else if (node.type === "step") {
+        // Mock — просто описание + входные данные
+        output = `${node.title} → обработано (вход: ${contextFor(node.id).slice(0, 100)}…)`;
+      } else if (node.type === "llm") {
+        if (dryRun) {
+          output = `[DRY] ${node.title} — пропуск LLM-вызова, mock-ответ`;
+        } else {
+          const sys = `Ты — узел "${node.title}" (${node.sub || "обработчик"}) внутри pipeline агента "${agent.role}". Делай только свою функцию, кратко.`;
+          const usr = `Контекст от предыдущих узлов:\n${contextFor(node.id)}\n\nВыполни свою функцию и верни результат.`;
+          output = await callLLM({ system: sys, user: usr, jsonMode: false, maxTokens: 500, label: `sandbox/${node.id}` });
+        }
+      } else if (node.type === "output") {
+        output = `→ ${node.settings?.target || "результат"}: ${contextFor(node.id).slice(0, 200)}`;
+      }
+      outputs[node.id] = output;
+      emit("node_end", { nodeId: node.id, ok: true, output, durationMs: Date.now() - start });
+    } catch (e) {
+      emit("node_end", { nodeId: node.id, ok: false, error: e.message, durationMs: Date.now() - start });
+    }
+  }
+  emit("done", { outputs });
+  return outputs;
+}
+
+app.post("/webhook/mary/agents/:deptId/:agentId/sandbox/stream", async (req, res) => {
+  const { deptId, agentId } = req.params;
+  const { inputs = {}, dryRun = false } = req.body || {};
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+  const emit = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+  try {
+    await runSandbox({ deptId, agentId, inputs, dryRun, emit });
+  } catch (e) {
+    emit("error", { message: e.message });
+  } finally {
+    res.end();
+  }
+});
+
 app.post("/webhook/mary/agent", async (req, res) => {
   const { message = "", history = [] } = req.body || {};
   const start = Date.now();
