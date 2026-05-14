@@ -3325,6 +3325,115 @@ function pipelineToFlow(pipeline, agentColor = "#7A86FF") {
   return { nodes: flowNodes, edges };
 }
 
+function SandboxPanel({ agent, status, outputs, running, onRun }) {
+  const triggers = (agent.flow?.nodes || []).filter(n => n.kind === "input" || n.kind === "trigger-cron" || n.kind === "trigger-manual");
+  const [inputs, setInputs] = useState({});
+  const [showResults, setShowResults] = useState(false);
+  const completedNodes = Object.entries(status).filter(([_, s]) => s === "done" || s === "error");
+  return (
+    <div style={{
+      position: "absolute", right: 16, top: 80, width: 340,
+      maxHeight: "calc(100vh - 200px)", overflowY: "auto",
+      background: color.white, border: "1px solid rgba(38,38,51,0.1)", borderRadius: 12,
+      boxShadow: "0 4px 16px rgba(38,38,51,0.06)",
+      padding: 14, fontFamily: "inherit", zIndex: 5,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#262633" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 2v7.31" /><path d="M14 9.3V2" />
+          <path d="M8.5 2h7" /><path d="M14 9.3a6.5 6.5 0 1 1-4 0" />
+        </svg>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#262633" }}>Песочница</div>
+        <div style={{ flex: 1 }} />
+        {running && <span style={{
+          width: 6, height: 6, borderRadius: "50%", background: "#FF8B3D",
+          animation: "marypulse 1.2s ease-in-out infinite",
+        }} />}
+      </div>
+
+      {/* Поля для триггеров */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+        {triggers.length === 0 && (
+          <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)" }}>У агента нет trigger-узлов</div>
+        )}
+        {triggers.map(t => (
+          <div key={t.id}>
+            <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.6)", marginBottom: 3 }}>{t.title}</div>
+            <textarea
+              value={inputs[t.id] || ""}
+              onChange={e => setInputs(p => ({ ...p, [t.id]: e.target.value }))}
+              placeholder={t.sub || "пробное значение"}
+              rows={2}
+              style={{
+                width: "100%", border: "1px solid rgba(38,38,51,0.12)", borderRadius: 8,
+                padding: "6px 9px", fontSize: 12.5, color: "#262633",
+                fontFamily: "inherit", resize: "vertical", outline: "none",
+              }}
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* Кнопки запуска */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <button
+          onClick={() => { onRun(inputs, true); setShowResults(true); }}
+          disabled={running}
+          style={{
+            flex: 1, padding: "8px 12px",
+            background: "transparent", border: "1px solid rgba(38,38,51,0.18)", borderRadius: 8,
+            fontSize: 12.5, color: "#262633", fontWeight: 500,
+            cursor: running ? "not-allowed" : "pointer", fontFamily: "inherit",
+          }}
+        >Dry-run (mock)</button>
+        <button
+          onClick={() => { onRun(inputs, false); setShowResults(true); }}
+          disabled={running}
+          style={{
+            flex: 1, padding: "8px 12px",
+            background: running ? "rgba(38,38,51,0.3)" : "#262633",
+            border: "none", borderRadius: 8,
+            fontSize: 12.5, color: color.white, fontWeight: 500,
+            cursor: running ? "not-allowed" : "pointer", fontFamily: "inherit",
+          }}
+        >{running ? "Бежит…" : "Запустить вживую"}</button>
+      </div>
+
+      {/* Лог результатов */}
+      {showResults && completedNodes.length > 0 && (
+        <div style={{
+          borderTop: "1px solid rgba(38,38,51,0.06)",
+          paddingTop: 10, display: "flex", flexDirection: "column", gap: 6,
+        }}>
+          <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            Результаты
+          </div>
+          {completedNodes.map(([nodeId, s]) => {
+            const node = agent.flow?.nodes.find(n => n.id === nodeId);
+            const out = outputs[nodeId] || "";
+            return (
+              <details key={nodeId} style={{ fontSize: 12 }}>
+                <summary style={{
+                  cursor: "pointer", padding: "4px 0",
+                  color: s === "error" ? "#FF3B30" : "#262633",
+                }}>
+                  {s === "error" ? "✗" : "✓"} {node?.title || nodeId}
+                </summary>
+                <div style={{
+                  padding: "6px 8px", marginTop: 4,
+                  background: "rgba(38,38,51,0.04)", borderRadius: 6,
+                  fontSize: 11.5, color: "rgba(38,38,51,0.75)",
+                  whiteSpace: "pre-wrap", maxHeight: 120, overflowY: "auto",
+                }}>{out}</div>
+              </details>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, approvals, onApprove, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks }) {
   const [positions, setPositions] = useState(() =>
     Object.fromEntries(AGENTS.map(a => [a.id, { x: a.x, y: a.y }]))
@@ -3333,6 +3442,10 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
   const [drilledAgentId, setDrilledAgentId] = useState(null);
   // pipelineByAgentId: { agentId → flow } — приходит с бэка, оверрайдит хардкод AGENTS.flow
   const [pipelineByAgentId, setPipelineByAgentId] = useState({});
+  // Sandbox: статус узлов при прогоне, outputs, inputs формы
+  const [sandboxStatus, setSandboxStatus] = useState({});  // nodeId → "running"|"done"|"error"
+  const [sandboxOutputs, setSandboxOutputs] = useState({});  // nodeId → text
+  const [sandboxRunning, setSandboxRunning] = useState(false);
   useEffect(() => {
     let stop = false;
     const load = () => fetch("/api/mary/departments").then(r => r.json()).then(d => {
@@ -3406,6 +3519,51 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
     const fromBackend = pipelineByAgentId[drilledAgentId];
     return fromBackend ? { ...base, flow: fromBackend } : base;
   })() : null;
+
+  // Запуск sandbox — стримит статусы узлов и outputs
+  async function runSandbox(inputs, dryRun) {
+    if (!drilledAgent) return;
+    setSandboxRunning(true);
+    setSandboxStatus({});
+    setSandboxOutputs({});
+    try {
+      const res = await fetch(`/api/mary/agents/smm/${drilledAgent.id}/sandbox/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inputs, dryRun }),
+      });
+      if (!res.body) throw new Error("no stream");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() || "";
+        for (const block of blocks) {
+          let event = "message", dataStr = "";
+          for (const line of block.split("\n")) {
+            if (line.startsWith("event:")) event = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
+          }
+          if (!dataStr) continue;
+          let data; try { data = JSON.parse(dataStr); } catch { continue; }
+          if (event === "node_start") {
+            setSandboxStatus(s => ({ ...s, [data.nodeId]: "running" }));
+          } else if (event === "node_end") {
+            setSandboxStatus(s => ({ ...s, [data.nodeId]: data.ok ? "done" : "error" }));
+            setSandboxOutputs(o => ({ ...o, [data.nodeId]: data.output || data.error || "" }));
+          }
+        }
+      }
+    } catch (e) {
+      console.error("sandbox error", e);
+    } finally {
+      setSandboxRunning(false);
+    }
+  }
   const FLOW_NODE_W = 220;
   const FLOW_NODE_H = 64;
   const prevViewRef = useRef(null);
@@ -3699,6 +3857,17 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
 
       {pipelineKb && (
         <KbPopup item={pipelineKb} onClose={() => setPipelineKb(null)} />
+      )}
+
+      {/* Sandbox panel — справа когда юзер залез в агента */}
+      {drilledAgent && (
+        <SandboxPanel
+          agent={drilledAgent}
+          status={sandboxStatus}
+          outputs={sandboxOutputs}
+          running={sandboxRunning}
+          onRun={runSandbox}
+        />
       )}
 
       {/* Tool/zoom bar — поднимается над докнутым чатом */}
