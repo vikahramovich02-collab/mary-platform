@@ -9144,20 +9144,25 @@ function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, pinned 
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{c.title}</span>
       )}
-      {(hover || menuOpen) && !renaming && (
+      {(hover || menuOpen || active) && !renaming && (
         <button
           ref={menuRef}
           onClick={e => { e.stopPropagation(); setMenuOpen(o => !o); }}
           title="Действия"
           style={{
             position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
-            background: menuOpen ? "rgba(38,38,51,0.08)" : "transparent", border: "none", cursor: "pointer",
-            color: "rgba(38,38,51,0.5)", padding: 3, borderRadius: 5,
+            width: 22, height: 22, padding: 0,
+            background: menuOpen ? "rgba(38,38,51,0.08)" : color.white,
+            border: "1px solid rgba(38,38,51,0.12)",
+            borderRadius: 6,
+            color: "rgba(38,38,51,0.55)", cursor: "pointer",
             display: "inline-flex", alignItems: "center", justifyContent: "center",
             fontFamily: "inherit",
           }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; }}
+          onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background = color.white; }}
         >
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
+          <svg width={12} height={12} viewBox="0 0 24 24" fill="currentColor">
             <circle cx="6" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="18" cy="12" r="1.5" />
           </svg>
         </button>
