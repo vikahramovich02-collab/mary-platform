@@ -8050,20 +8050,22 @@ function ChatMaryPage() {
           </div>
         ) : (
           <>
-            {/* Шапка */}
-            <div style={{
-              padding: "14px 24px",
-              borderBottom: "1px solid rgba(38,38,51,0.06)",
-              display: "flex", alignItems: "center", gap: 10,
-            }}>
-              <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>
-                {conversations.find(c => c.id === activeId)?.title || "Чат"}
-              </span>
-              <span style={{
-                fontSize: 11, color: "rgba(38,38,51,0.5)",
-                padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 999,
-              }}>{SCOPE_LABEL[conversations.find(c => c.id === activeId)?.scope] || ""}</span>
-            </div>
+            {/* Шапка — только когда чат начат */}
+            {messages.length > 0 && (
+              <div style={{
+                padding: "14px 24px",
+                borderBottom: "1px solid rgba(38,38,51,0.06)",
+                display: "flex", alignItems: "center", gap: 10,
+              }}>
+                <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>
+                  {conversations.find(c => c.id === activeId)?.title || "Чат"}
+                </span>
+                <span style={{
+                  fontSize: 11, color: "rgba(38,38,51,0.5)",
+                  padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 999,
+                }}>{SCOPE_LABEL[conversations.find(c => c.id === activeId)?.scope] || ""}</span>
+              </div>
+            )}
 
             {/* Сообщения */}
             <div style={{
