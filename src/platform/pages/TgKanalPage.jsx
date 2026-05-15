@@ -7825,6 +7825,12 @@ function ChatMaryPage() {
   const typewriterText = useTypewriterPlaceholder(typewriterPhrases, isEmptyChat);
   const [chatsCollapsed, setChatsCollapsed] = useState(false);
   const [chatsQuery, setChatsQuery] = useState("");
+  const [pinnedChats, setPinnedChats] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("mary_pinned_chats") || "[]"); } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem("mary_pinned_chats", JSON.stringify(pinnedChats)); } catch {}
+  }, [pinnedChats]);
   // AbortController для прерывания текущего стрима через Stop-кнопку
   const abortRef = useRef(null);
   function stopStream() { abortRef.current?.abort(); }
@@ -7996,44 +8002,17 @@ function ChatMaryPage() {
             );
 
             // helper для рендера одной строки чата
-            const renderItem = (c) => {
-              const active = c.id === activeId;
-              const isDept = c.scope === "smm" || c.scope.startsWith("smm/");
-              const dot = isDept ? "#FF8B3D" : c.scope === "general" ? "#262633" : "#34C759";
-              return (
-                <div
-                  key={c.id}
-                  onClick={() => setActiveId(c.id)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 10,
-                    padding: "8px 10px",
-                    background: active ? "rgba(38,38,51,0.06)" : "transparent",
-                    borderRadius: 8, cursor: "pointer",
-                  }}
-                  onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
-                  onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
-                >
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: dot, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, color: "#262633", fontWeight: 510, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {c.title}
-                    </div>
-                    <div style={{ fontSize: 10.5, color: "rgba(38,38,51,0.45)", marginTop: 1 }}>
-                      {c.messageCount} сообщ.
-                    </div>
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deleteChat(c.id); }}
-                    style={{
-                      background: "transparent", border: "none", cursor: "pointer",
-                      color: "rgba(38,38,51,0.4)", padding: 4, borderRadius: 6,
-                      display: active ? "flex" : "none",
-                    }}
-                    title="Удалить"
-                  >{ic.close}</button>
-                </div>
-              );
-            };
+            const renderItem = (c) => (
+              <ChatItem
+                key={c.id}
+                c={c}
+                active={c.id === activeId}
+                onClick={() => setActiveId(c.id)}
+                onDelete={() => deleteChat(c.id)}
+                onTogglePin={() => setPinnedChats(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])}
+                pinned={pinnedChats.includes(c.id)}
+              />
+            );
 
             // Если идёт поиск — flat-список без заголовков
             if (q) {
@@ -8065,6 +8044,13 @@ function ChatMaryPage() {
               { id: "smm-pin", title: "СММ", scope: "smm", color: "#FF8B3D" },
               { id: "sales-pin", title: "Продажи", scope: "smm", color: "#3F95FF" },
             ];
+            // Закреплённые юзером чаты — отдельной секцией, удаляем их из date-buckets
+            const pinnedItems = sorted.filter(c => pinnedChats.includes(c.id));
+            const pinnedSet = new Set(pinnedItems.map(c => c.id));
+            for (const k of Object.keys(buckets)) {
+              buckets[k] = buckets[k].filter(c => !pinnedSet.has(c.id));
+            }
+            const groupsClean = groups.map(g => ({ ...g, items: g.items.filter(c => !pinnedSet.has(c.id)) })).filter(g => g.items.length > 0);
 
             return (
               <>
@@ -8089,7 +8075,16 @@ function ChatMaryPage() {
                     ))}
                   </div>
                 )}
-                {groups.map(g => (
+                {pinnedItems.length > 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{
+                      fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 510,
+                      padding: "4px 10px 4px",
+                    }}>Закреплённые</div>
+                    {pinnedItems.map(renderItem)}
+                  </div>
+                )}
+                {groupsClean.map(g => (
                   <div key={g.id} style={{ marginBottom: 10 }}>
                     <div style={{
                       fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 510,
@@ -9062,6 +9057,93 @@ function parseNumberedOptions(text) {
   const bodyLines = lines.slice(0, i + 1);
   while (bodyLines.length && bodyLines[bodyLines.length - 1].trim() === "") bodyLines.pop();
   return { body: bodyLines.join("\n"), options: collected };
+}
+
+function ChatItem({ c, active, onClick, onDelete, onTogglePin, pinned }) {
+  const [hover, setHover] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDoc = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [menuOpen]);
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        position: "relative",
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "7px 10px",
+        background: active ? "rgba(38,38,51,0.06)" : (hover ? "rgba(38,38,51,0.03)" : "transparent"),
+        borderRadius: 8, cursor: "pointer",
+      }}
+    >
+      <div style={{
+        flex: 1, minWidth: 0,
+        fontSize: 12, color: "#262633", fontWeight: 510,
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        display: "flex", alignItems: "center", gap: 6,
+      }}>
+        {pinned && (
+          <svg width={10} height={10} viewBox="0 0 24 24" fill="rgba(38,38,51,0.4)" style={{ flexShrink: 0 }}>
+            <path d="M16 3l5 5-2 2-1-1-4 4 1 4-2 2-5-5-5 5v-2l5-5-5-5 2-2 4 1 4-4-1-1z" />
+          </svg>
+        )}
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</span>
+      </div>
+      {(hover || menuOpen) && (
+        <button
+          ref={menuRef}
+          onClick={e => { e.stopPropagation(); setMenuOpen(o => !o); }}
+          title="Действия"
+          style={{
+            background: menuOpen ? "rgba(38,38,51,0.08)" : "transparent", border: "none", cursor: "pointer",
+            color: "rgba(38,38,51,0.5)", padding: 3, borderRadius: 5,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "inherit",
+          }}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="6" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="18" cy="12" r="1.5" />
+          </svg>
+        </button>
+      )}
+      {menuOpen && (
+        <div
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: "absolute", right: 0, top: "100%", marginTop: 4,
+            background: color.white, borderRadius: 10,
+            border: "1px solid rgba(38,38,51,0.08)",
+            boxShadow: "0 6px 20px rgba(38,38,51,0.1)",
+            padding: 4, zIndex: 10, minWidth: 160,
+            display: "flex", flexDirection: "column", gap: 1,
+          }}>
+          {[
+            { id: "pin", label: pinned ? "Открепить" : "Закрепить", onClick: () => { onTogglePin(); setMenuOpen(false); } },
+            { id: "rename", label: "Переименовать", onClick: () => { setMenuOpen(false); /* TODO rename */ } },
+            { id: "delete", label: "Удалить", danger: true, onClick: () => { onDelete(); setMenuOpen(false); } },
+          ].map(item => (
+            <button key={item.id} onClick={item.onClick}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "7px 10px", background: "transparent",
+                border: "none", borderRadius: 6,
+                fontSize: 12.5, color: item.danger ? "#FF3B30" : "#262633",
+                cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >{item.label}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
