@@ -7865,71 +7865,107 @@ function ChatMaryPage() {
         </div>
       ) : (
       <aside style={{
-        width: 280, minWidth: 280,
-        borderRight: "1px solid rgba(38,38,51,0.06)",
+        width: 226, minWidth: 226,
         display: "flex", flexDirection: "column",
-        background: color.white,
+        background: "transparent",
+        padding: "10px 10px 10px 10px",
       }}>
-        <div style={{ padding: "16px 14px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            data-testid="new-chat-btn"
-            onClick={() => newChat("general")}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              flex: 1, padding: "10px 14px",
-              background: "#262633", color: color.white,
-              border: "none", borderRadius: 10,
-              fontSize: 13, fontWeight: 500,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
-          >{ic.plus} <span>Новый чат</span></button>
+        <div style={{
+          flex: 1, display: "flex", flexDirection: "column",
+          background: "rgba(247,247,247,0.5)",
+          border: "1px solid rgba(0,0,0,0.06)",
+          borderRadius: 16,
+          overflow: "hidden",
+        }}>
+        {/* Шапка: 3 иконки — collapse, search, plus */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "14px 14px 8px",
+        }}>
           <button
             onClick={() => setChatsCollapsed(true)}
             title="Скрыть список чатов"
             style={{
-              width: 32, height: 32, flexShrink: 0,
+              width: 24, height: 24, padding: 0,
               display: "inline-flex", alignItems: "center", justifyContent: "center",
-              background: "transparent", border: "none", borderRadius: 7,
+              background: "transparent", border: "none", borderRadius: 6,
               color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
             }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >{ic.collapse}</button>
-        </div>
-        {/* Поиск по чатам */}
-        <div style={{ padding: "0 14px 8px" }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            background: "rgba(38,38,51,0.04)",
-            borderRadius: 8, padding: "7px 10px",
-          }}>
-            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              value={chatsQuery}
-              onChange={e => setChatsQuery(e.target.value)}
-              placeholder="Поиск чатов"
+          <div style={{ display: "flex", gap: 4 }}>
+            <button
+              onClick={() => setChatsQuery(q => q ? "" : " ")}
+              title="Поиск"
               style={{
-                flex: 1, border: "none", outline: "none",
-                background: "transparent", fontSize: 13, color: "#262633",
-                fontFamily: "inherit", padding: 0,
+                width: 24, height: 24, padding: 0,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                background: "transparent", border: "none", borderRadius: 6,
+                color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
               }}
-            />
-            {chatsQuery && (
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+            </button>
+            <button
+              data-testid="new-chat-btn"
+              onClick={() => newChat("general")}
+              title="Новый чат"
+              style={{
+                width: 24, height: 24, padding: 0,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                background: "transparent", border: "none", borderRadius: 6,
+                color: "rgba(38,38,51,0.7)", cursor: "pointer", fontFamily: "inherit",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+            >
+              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        {/* Поиск по чатам — раскрывается по клику на иконку */}
+        {chatsQuery !== "" && (
+          <div style={{ padding: "0 12px 8px" }}>
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "rgba(38,38,51,0.05)",
+              borderRadius: 7, padding: "5px 9px",
+            }}>
+              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                autoFocus
+                value={chatsQuery.trim()}
+                onChange={e => setChatsQuery(e.target.value)}
+                placeholder="Поиск чатов"
+                style={{
+                  flex: 1, border: "none", outline: "none",
+                  background: "transparent", fontSize: 12, color: "#262633",
+                  fontFamily: "inherit", padding: 0,
+                }}
+              />
               <button
                 onClick={() => setChatsQuery("")}
-                title="Очистить"
+                title="Закрыть"
                 style={{
                   background: "transparent", border: "none", padding: 0,
                   display: "inline-flex", color: "rgba(38,38,51,0.45)",
                   cursor: "pointer", fontFamily: "inherit",
                 }}
               >{ic.close}</button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
         <div style={{
           padding: "0 8px 16px", overflowY: "auto", flex: 1,
           display: "flex", flexDirection: "column", gap: 2,
@@ -7977,12 +8013,12 @@ function ChatMaryPage() {
                   onMouseEnter={e => { if (!active) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
                   onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
                 >
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: dot, flexShrink: 0 }} />
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: dot, flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div style={{ fontSize: 12, color: "#262633", fontWeight: 510, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {c.title}
                     </div>
-                    <div style={{ fontSize: 11, color: "rgba(38,38,51,0.45)", marginTop: 1 }}>
+                    <div style={{ fontSize: 10.5, color: "rgba(38,38,51,0.45)", marginTop: 1 }}>
                       {c.messageCount} сообщ.
                     </div>
                   </div>
@@ -8024,17 +8060,48 @@ function ChatMaryPage() {
               { id: "earlier",   label: "Раньше",       items: buckets.earlier },
             ].filter(g => g.items.length > 0);
 
-            return groups.map(g => (
-              <div key={g.id} style={{ marginBottom: 10 }}>
-                <div style={{
-                  fontSize: 10.5, color: "rgba(38,38,51,0.5)", fontWeight: 600,
-                  textTransform: "uppercase", letterSpacing: "0.06em",
-                  padding: "8px 10px 4px",
-                }}>{g.label}</div>
-                {g.items.map(renderItem)}
-              </div>
-            ));
+            // Раздел «Отделы» сверху — закрепы СММ, Продажи, HR (статически)
+            const deptPins = [
+              { id: "smm-pin", title: "СММ", scope: "smm", color: "#FF8B3D" },
+              { id: "sales-pin", title: "Продажи", scope: "smm", color: "#3F95FF" },
+            ];
+
+            return (
+              <>
+                {deptPins.length > 0 && (
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{
+                      fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 510,
+                      padding: "4px 10px 4px",
+                    }}>Отделы</div>
+                    {deptPins.map(d => (
+                      <div key={d.id} style={{
+                        display: "flex", alignItems: "center", gap: 8,
+                        padding: "5px 10px", fontSize: 12, color: "#262633",
+                        cursor: "pointer", borderRadius: 6,
+                      }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {groups.map(g => (
+                  <div key={g.id} style={{ marginBottom: 10 }}>
+                    <div style={{
+                      fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 510,
+                      padding: "4px 10px 4px",
+                    }}>{g.label}</div>
+                    {g.items.map(renderItem)}
+                  </div>
+                ))}
+              </>
+            );
           })()}
+        </div>
         </div>
       </aside>
       )}
