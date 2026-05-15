@@ -8700,18 +8700,18 @@ function ChatWelcome({ onSuggest, children }) {
             key={i}
             onClick={() => onSuggest(a.prompt)}
             style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "8px 12px",
+              display: "inline-flex", alignItems: "center", gap: 4,
+              height: 34, padding: "0 10px",
               background: "rgba(244,244,244,0.8)",
-              border: "1px solid rgba(0,0,0,0.04)",
+              border: "none",
               borderRadius: 8,
-              fontSize: 12.5, fontWeight: 500, color: "#262633",
+              fontSize: 12, fontWeight: 510, color: "#262633",
               cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
             }}
             onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.08)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "rgba(244,244,244,0.8)"; }}
           >
-            <img src="/icons/mary-puppy.png" alt="" style={{ width: 16, height: 16, objectFit: "contain" }} />
+            <img src="/icons/mary-puppy.png" alt="" style={{ width: 20, height: 20, objectFit: "contain" }} />
             <span>{a.label}</span>
           </button>
         ))}
