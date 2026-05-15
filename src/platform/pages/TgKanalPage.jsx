@@ -8587,52 +8587,26 @@ function BuildNode({ x, y, w, h, icon, iconBg, iconColor, title, sub, animate, i
 
 function ChatWelcome({ onSuggest, children }) {
   const quickActions = [
-    { emoji: "🤖", label: "Автоматизировать отдел", prompt: "Помоги автоматизировать отдел" },
-    { emoji: "✅", label: "Поставить задачу",       prompt: "Помоги поставить задачу" },
-    { emoji: "📄", label: "Найти документ",         prompt: "Найди документ в базе знаний" },
-    { emoji: "📊", label: "Метрики и отчёты",       prompt: "Покажи метрики за последнюю неделю" },
-    { emoji: "💡", label: "Идеи постов",            prompt: "Предложи идеи постов на основе свежего ресёрча" },
-    { emoji: "🔌", label: "Подключить интеграцию",  prompt: "Помоги подключить новую интеграцию" },
+    { label: "Автоматизировать отдел", prompt: "Помоги автоматизировать отдел" },
+    { label: "Поставить задачу",       prompt: "Помоги поставить задачу" },
+    { label: "Найти документ",         prompt: "Найди документ в базе знаний" },
+    { label: "Метрики и отчёты",       prompt: "Покажи метрики за последнюю неделю" },
+    { label: "Идеи постов",            prompt: "Предложи идеи постов на основе свежего ресёрча" },
+    { label: "Подключить интеграцию",  prompt: "Помоги подключить новую интеграцию" },
   ];
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", gap: 22,
+      alignItems: "center", justifyContent: "center", gap: 18,
       width: "100%", maxWidth: 760, margin: "0 auto",
       padding: "20px 24px",
     }}>
-      {/* Чипы быстрых действий */}
-      <div style={{
-        display: "flex", flexWrap: "wrap", gap: 8,
-        justifyContent: "center",
-      }}>
-        {quickActions.map((a, i) => (
-          <button
-            key={i}
-            onClick={() => onSuggest(a.prompt)}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              padding: "8px 14px",
-              background: color.white,
-              border: "1px solid rgba(38,38,51,0.12)",
-              borderRadius: 999,
-              fontSize: 13, fontWeight: 400, color: "#262633",
-              cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = "rgba(38,38,51,0.04)";
-              e.currentTarget.style.borderColor = "rgba(38,38,51,0.22)";
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = color.white;
-              e.currentTarget.style.borderColor = "rgba(38,38,51,0.12)";
-            }}
-          >
-            <span style={{ fontSize: 14 }}>{a.emoji}</span>
-            <span>{a.label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Аватар Mary — щенок */}
+      <img
+        src="/icons/mary-puppy.png"
+        alt="Mary"
+        style={{ width: 130, height: 130, objectFit: "contain", flexShrink: 0 }}
+      />
       {/* Большой заголовок */}
       <div style={{
         textAlign: "center",
@@ -8647,6 +8621,32 @@ function ChatWelcome({ onSuggest, children }) {
           {children}
         </div>
       )}
+      {/* Чипы быстрых действий — внизу под input */}
+      <div style={{
+        display: "flex", flexWrap: "wrap", gap: 8,
+        justifyContent: "center", marginTop: 4,
+      }}>
+        {quickActions.map((a, i) => (
+          <button
+            key={i}
+            onClick={() => onSuggest(a.prompt)}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "8px 12px",
+              background: "rgba(244,244,244,0.8)",
+              border: "1px solid rgba(0,0,0,0.04)",
+              borderRadius: 8,
+              fontSize: 12.5, fontWeight: 500, color: "#262633",
+              cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.08)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "rgba(244,244,244,0.8)"; }}
+          >
+            <img src="/icons/mary-puppy.png" alt="" style={{ width: 16, height: 16, objectFit: "contain" }} />
+            <span>{a.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
