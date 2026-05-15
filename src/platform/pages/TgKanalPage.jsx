@@ -7825,6 +7825,17 @@ function ChatMaryPage() {
   const typewriterText = useTypewriterPlaceholder(typewriterPhrases, isEmptyChat);
   const [chatsCollapsed, setChatsCollapsed] = useState(false);
   const [chatsQuery, setChatsQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "f") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   const [pinnedChats, setPinnedChats] = useState(() => {
     try { return JSON.parse(localStorage.getItem("mary_pinned_chats") || "[]"); } catch { return []; }
   });
@@ -7883,76 +7894,25 @@ function ChatMaryPage() {
           borderRadius: 16,
           overflow: "hidden",
         }}>
-        {/* Шапка: 3 иконки — collapse, search, plus */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "14px 14px 8px",
-        }}>
-          <button
-            onClick={() => setChatsCollapsed(true)}
-            title="Скрыть список чатов"
-            style={{
-              width: 24, height: 24, padding: 0,
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              background: "transparent", border: "none", borderRadius: 6,
-              color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          >{ic.collapse}</button>
-          <div style={{ display: "flex", gap: 4 }}>
-            <button
-              onClick={() => setChatsQuery(q => q ? "" : " ")}
-              title="Поиск"
-              style={{
-                width: 24, height: 24, padding: 0,
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                background: "transparent", border: "none", borderRadius: 6,
-                color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-            >
-              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-              </svg>
-            </button>
-            <button
-              data-testid="new-chat-btn"
-              onClick={() => newChat("general")}
-              title="Новый чат"
-              style={{
-                width: 24, height: 24, padding: 0,
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                background: "transparent", border: "none", borderRadius: 6,
-                color: "rgba(38,38,51,0.7)", cursor: "pointer", fontFamily: "inherit",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-            >
-              <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Поиск по чатам — раскрывается по клику на иконку */}
-        {chatsQuery !== "" && (
-          <div style={{ padding: "0 12px 8px" }}>
+        {/* Шапка: 3 иконки, либо search-input (когда юзер кликнул на лупу) */}
+        <div style={{ padding: "14px 14px 8px" }}>
+          {searchOpen ? (
             <div style={{
               display: "flex", alignItems: "center", gap: 6,
-              background: "rgba(38,38,51,0.05)",
-              borderRadius: 7, padding: "5px 9px",
+              height: 24,
+              background: "rgba(38,38,51,0.06)",
+              borderRadius: 7, padding: "0 8px",
+              border: "1.5px solid #3F95FF",
             }}>
-              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.55)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
                 <circle cx="11" cy="11" r="7" />
                 <path d="m20 20-3.5-3.5" />
               </svg>
               <input
                 autoFocus
-                value={chatsQuery.trim()}
+                value={chatsQuery}
                 onChange={e => setChatsQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === "Escape") { setChatsQuery(""); setSearchOpen(false); } }}
                 placeholder="Поиск чатов"
                 style={{
                   flex: 1, border: "none", outline: "none",
@@ -7961,17 +7921,72 @@ function ChatMaryPage() {
                 }}
               />
               <button
-                onClick={() => setChatsQuery("")}
+                onClick={() => { setChatsQuery(""); setSearchOpen(false); }}
                 title="Закрыть"
                 style={{
                   background: "transparent", border: "none", padding: 0,
-                  display: "inline-flex", color: "rgba(38,38,51,0.45)",
+                  display: "inline-flex", color: "rgba(38,38,51,0.5)",
                   cursor: "pointer", fontFamily: "inherit",
                 }}
-              >{ic.close}</button>
+              >
+                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <button
+                onClick={() => setChatsCollapsed(true)}
+                title="Скрыть список чатов"
+                style={{
+                  width: 24, height: 24, padding: 0,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  background: "transparent", border: "none", borderRadius: 6,
+                  color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+              >{ic.collapse}</button>
+              <div style={{ display: "flex", gap: 4 }}>
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  title="Поиск чатов (⌘F)"
+                  style={{
+                    width: 24, height: 24, padding: 0,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    background: "transparent", border: "none", borderRadius: 6,
+                    color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="m20 20-3.5-3.5" />
+                  </svg>
+                </button>
+                <button
+                  data-testid="new-chat-btn"
+                  onClick={() => newChat("general")}
+                  title="Новый чат"
+                  style={{
+                    width: 24, height: 24, padding: 0,
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    background: "transparent", border: "none", borderRadius: 6,
+                    color: "rgba(38,38,51,0.7)", cursor: "pointer", fontFamily: "inherit",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
         <div style={{
           padding: "0 8px 16px", overflowY: "auto", flex: 1,
           display: "flex", flexDirection: "column", gap: 2,
@@ -8002,6 +8017,14 @@ function ChatMaryPage() {
             );
 
             // helper для рендера одной строки чата
+            const renameChat = async (id, title) => {
+              await fetch(`/api/mary/conversations/${id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title }),
+              });
+              setConversations(prev => prev.map(x => x.id === id ? { ...x, title } : x));
+            };
             const renderItem = (c) => (
               <ChatItem
                 key={c.id}
@@ -8009,6 +8032,7 @@ function ChatMaryPage() {
                 active={c.id === activeId}
                 onClick={() => setActiveId(c.id)}
                 onDelete={() => deleteChat(c.id)}
+                onRename={(t) => renameChat(c.id, t)}
                 onTogglePin={() => setPinnedChats(p => p.includes(c.id) ? p.filter(x => x !== c.id) : [...p, c.id])}
                 pinned={pinnedChats.includes(c.id)}
               />
@@ -9059,9 +9083,11 @@ function parseNumberedOptions(text) {
   return { body: bodyLines.join("\n"), options: collected };
 }
 
-function ChatItem({ c, active, onClick, onDelete, onTogglePin, pinned }) {
+function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, pinned }) {
   const [hover, setHover] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState(c.title || "");
   const menuRef = useRef(null);
   useEffect(() => {
     if (!menuOpen) return;
@@ -9069,38 +9095,62 @@ function ChatItem({ c, active, onClick, onDelete, onTogglePin, pinned }) {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, [menuOpen]);
+  const commitRename = () => {
+    const t = draft.trim();
+    if (t && t !== c.title) onRename(t);
+    setRenaming(false);
+  };
   return (
     <div
-      onClick={onClick}
+      onClick={renaming ? undefined : onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
         position: "relative",
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "7px 10px",
+        display: "flex", alignItems: "center", gap: 6,
+        height: 30, padding: "0 32px 0 10px",
         background: active ? "rgba(38,38,51,0.06)" : (hover ? "rgba(38,38,51,0.03)" : "transparent"),
-        borderRadius: 8, cursor: "pointer",
+        borderRadius: 8, cursor: renaming ? "text" : "pointer",
       }}
     >
-      <div style={{
-        flex: 1, minWidth: 0,
-        fontSize: 12, color: "#262633", fontWeight: 510,
-        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        display: "flex", alignItems: "center", gap: 6,
-      }}>
-        {pinned && (
-          <svg width={10} height={10} viewBox="0 0 24 24" fill="rgba(38,38,51,0.4)" style={{ flexShrink: 0 }}>
-            <path d="M16 3l5 5-2 2-1-1-4 4 1 4-2 2-5-5-5 5v-2l5-5-5-5 2-2 4 1 4-4-1-1z" />
-          </svg>
-        )}
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{c.title}</span>
-      </div>
-      {(hover || menuOpen) && (
+      {pinned && !renaming && (
+        <svg width={10} height={10} viewBox="0 0 24 24" fill="rgba(38,38,51,0.4)" style={{ flexShrink: 0 }}>
+          <path d="M16 3l5 5-2 2-1-1-4 4 1 4-2 2-5-5-5 5v-2l5-5-5-5 2-2 4 1 4-4-1-1z" />
+        </svg>
+      )}
+      {renaming ? (
+        <input
+          autoFocus
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commitRename}
+          onClick={e => e.stopPropagation()}
+          onKeyDown={e => {
+            if (e.key === "Enter") commitRename();
+            if (e.key === "Escape") { setDraft(c.title || ""); setRenaming(false); }
+          }}
+          style={{
+            flex: 1, minWidth: 0,
+            border: "1px solid rgba(63,149,255,0.4)", borderRadius: 5,
+            background: color.white, outline: "none",
+            fontSize: 12, fontWeight: 510, color: "#262633",
+            fontFamily: "inherit", padding: "2px 6px",
+          }}
+        />
+      ) : (
+        <span style={{
+          flex: 1, minWidth: 0,
+          fontSize: 12, color: "#262633", fontWeight: 510,
+          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{c.title}</span>
+      )}
+      {(hover || menuOpen) && !renaming && (
         <button
           ref={menuRef}
           onClick={e => { e.stopPropagation(); setMenuOpen(o => !o); }}
           title="Действия"
           style={{
+            position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
             background: menuOpen ? "rgba(38,38,51,0.08)" : "transparent", border: "none", cursor: "pointer",
             color: "rgba(38,38,51,0.5)", padding: 3, borderRadius: 5,
             display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -9125,7 +9175,7 @@ function ChatItem({ c, active, onClick, onDelete, onTogglePin, pinned }) {
           }}>
           {[
             { id: "pin", label: pinned ? "Открепить" : "Закрепить", onClick: () => { onTogglePin(); setMenuOpen(false); } },
-            { id: "rename", label: "Переименовать", onClick: () => { setMenuOpen(false); /* TODO rename */ } },
+            { id: "rename", label: "Переименовать", onClick: () => { setMenuOpen(false); setDraft(c.title || ""); setRenaming(true); } },
             { id: "delete", label: "Удалить", danger: true, onClick: () => { onDelete(); setMenuOpen(false); } },
           ].map(item => (
             <button key={item.id} onClick={item.onClick}
