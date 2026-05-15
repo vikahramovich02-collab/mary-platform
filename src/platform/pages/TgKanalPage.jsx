@@ -8275,7 +8275,7 @@ function ChatMaryPage() {
           onClose={() => setShowActivity(false)}
         />
       )}
-      {!showActivity && (
+      {!showActivity && messages.length > 0 && (
         <button
           onClick={() => setShowActivity(true)}
           title="Что делает Mary"
