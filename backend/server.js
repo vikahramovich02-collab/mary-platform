@@ -1815,6 +1815,69 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit }
   return outputs;
 }
 
+// Песочница всего отдела: цепочка агентов (output одного → input следующего).
+// Порядок задаётся либо в dept.agentOrder, либо по умолчанию (researcher → marketer → copywriter → designer → analyst).
+const DEFAULT_AGENT_ORDER = ["researcher", "marketer", "copywriter", "designer", "analyst"];
+async function runDepartmentSandbox({ deptId, input = "", dryRun = false, emit }) {
+  const data = loadDepartments();
+  const dept = data.departments.find(d => d.id === deptId);
+  if (!dept) throw new Error(`отдел '${deptId}' не найден`);
+  const agents = dept.agents || [];
+  if (!agents.length) throw new Error("в отделе нет агентов");
+  // Порядок: dept.agentOrder → DEFAULT → as-is. Берём только тех что реально есть в отделе.
+  const orderIds = dept.agentOrder || DEFAULT_AGENT_ORDER;
+  const ordered = orderIds.map(id => agents.find(a => a.id === id)).filter(Boolean);
+  for (const a of agents) if (!ordered.includes(a)) ordered.push(a);
+
+  let prevSummary = input;
+  const results = {};
+  for (const agent of ordered) {
+    emit("agent_start", { agentId: agent.id, role: agent.role });
+    const triggers = (agent.pipeline?.nodes || []).filter(n => n.type === "trigger");
+    // Подаём prevSummary в первый trigger; остальные триггеры — пустые (или из дефолтов)
+    const agentInputs = {};
+    if (triggers[0]) agentInputs[triggers[0].id] = prevSummary;
+    try {
+      const outputs = await runSandbox({
+        deptId, agentId: agent.id, inputs: agentInputs, dryRun,
+        emit: (event, data) => emit(event, { ...data, agentId: agent.id }),
+      });
+      // Финальный output этого агента = последний output-узел (или последний по топ-сорту)
+      const outputNodes = (agent.pipeline?.nodes || []).filter(n => n.type === "output");
+      const finalNode = outputNodes[outputNodes.length - 1] || (agent.pipeline?.nodes || []).slice(-1)[0];
+      prevSummary = outputs[finalNode?.id] || prevSummary;
+      results[agent.id] = prevSummary;
+      emit("agent_end", { agentId: agent.id, output: prevSummary });
+    } catch (e) {
+      emit("agent_end", { agentId: agent.id, error: e.message });
+      // Дальше не идём при ошибке
+      break;
+    }
+  }
+  emit("done", { results, finalOutput: prevSummary });
+  return results;
+}
+
+app.post("/webhook/mary/departments/:deptId/sandbox/stream", async (req, res) => {
+  const { deptId } = req.params;
+  const { input = "", dryRun = false } = req.body || {};
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders?.();
+  const emit = (event, data) => {
+    res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+  try {
+    await runDepartmentSandbox({ deptId, input, dryRun, emit });
+  } catch (e) {
+    emit("error", { message: e.message });
+  } finally {
+    res.end();
+  }
+});
+
 app.post("/webhook/mary/agents/:deptId/:agentId/sandbox/stream", async (req, res) => {
   const { deptId, agentId } = req.params;
   const { inputs = {}, dryRun = false } = req.body || {};
