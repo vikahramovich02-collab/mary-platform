@@ -20,6 +20,8 @@ const TELEGRAM_PUBLISH_CHAT = process.env.TELEGRAM_PUBLISH_CHAT || "";   // ка
 const KB_DIR = process.env.KB_DIR || path.join(__dirname, "kb-files");
 const CONV_FILE = path.join(KB_DIR, "..", "conversations.json");
 const DEPT_FILE = path.join(KB_DIR, "..", "departments.json");
+const SANDBOX_FILE = path.join(KB_DIR, "..", "sandbox-runs.json");
+const GOLDEN_FILE = path.join(KB_DIR, "..", "golden-tests.json");
 
 // ── Departments (отделы компании) ────────────────────────
 const DEFAULT_DEPARTMENTS = [
@@ -452,7 +454,7 @@ async function getInsightsCached(maxAgeSec = 600) {
     return _insightsCache;
   } catch { return null; }
 }
-async function callLLM({ system, user, temperature = 0.7, maxTokens = 1200, jsonMode = true, label = "llm" }) {
+async function callLLM({ system, user, temperature = 0.7, maxTokens = 1200, jsonMode = true, label = "llm", returnUsage = false }) {
   if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not set");
   const start = Date.now();
   const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -476,7 +478,18 @@ async function callLLM({ system, user, temperature = 0.7, maxTokens = 1200, json
   const choice = data.choices?.[0];
   const content = choice?.message?.content || "";
   console.log(`[${label}] ${Date.now() - start}ms tokens=${data.usage?.total_tokens || "?"} finish=${choice?.finish_reason} len=${content.length}`);
-  return content;
+  return returnUsage ? { content, usage: data.usage || {}, model: data.model, durationMs: Date.now() - start } : content;
+}
+
+// Грубый прайсинг — GLM 5.1 ~$0.15/$0.55 за 1M токенов (input/output)
+function estimateCostUsd(usage = {}, model = OPENROUTER_MODEL) {
+  const pIn = usage.prompt_tokens || 0;
+  const pOut = usage.completion_tokens || 0;
+  // дефолт GLM (можно расширить по моделям)
+  let inPrice = 0.15, outPrice = 0.55;
+  if (/claude/i.test(model)) { inPrice = 3; outPrice = 15; }
+  if (/gpt-4/i.test(model))  { inPrice = 5; outPrice = 15; }
+  return (pIn * inPrice + pOut * outPrice) / 1_000_000;
 }
 function postScore(p) {
   const v = Number(p.views || 0);
@@ -1767,7 +1780,7 @@ function topoSort(pipeline) {
   }
   return out;
 }
-async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit }) {
+async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit, costAcc }) {
   const data = loadDepartments();
   const dept = data.departments.find(d => d.id === deptId);
   if (!dept) throw new Error(`отдел '${deptId}' не найден`);
@@ -1788,11 +1801,12 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit }
     const start = Date.now();
     emit("node_start", { nodeId: node.id, type: node.type, title: node.title });
     let output = "";
+    let nodeCost = 0;
+    let nodeTokens = 0;
     try {
       if (node.type === "trigger") {
         output = inputs[node.id] || node.settings?.placeholder || `(${node.title})`;
       } else if (node.type === "step") {
-        // Mock — просто описание + входные данные
         output = `${node.title} → обработано (вход: ${contextFor(node.id).slice(0, 100)}…)`;
       } else if (node.type === "llm") {
         if (dryRun) {
@@ -1800,13 +1814,17 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit }
         } else {
           const sys = `Ты — узел "${node.title}" (${node.sub || "обработчик"}) внутри pipeline агента "${agent.role}". Делай только свою функцию, кратко.`;
           const usr = `Контекст от предыдущих узлов:\n${contextFor(node.id)}\n\nВыполни свою функцию и верни результат.`;
-          output = await callLLM({ system: sys, user: usr, jsonMode: false, maxTokens: 500, label: `sandbox/${node.id}` });
+          const r = await callLLM({ system: sys, user: usr, jsonMode: false, maxTokens: 500, label: `sandbox/${node.id}`, returnUsage: true });
+          output = r.content;
+          nodeTokens = r.usage?.total_tokens || 0;
+          nodeCost = estimateCostUsd(r.usage, r.model);
+          if (costAcc) { costAcc.tokens += nodeTokens; costAcc.usd += nodeCost; }
         }
       } else if (node.type === "output") {
         output = `→ ${node.settings?.target || "результат"}: ${contextFor(node.id).slice(0, 200)}`;
       }
       outputs[node.id] = output;
-      emit("node_end", { nodeId: node.id, ok: true, output, durationMs: Date.now() - start });
+      emit("node_end", { nodeId: node.id, ok: true, output, durationMs: Date.now() - start, tokens: nodeTokens, costUsd: nodeCost });
     } catch (e) {
       emit("node_end", { nodeId: node.id, ok: false, error: e.message, durationMs: Date.now() - start });
     }
@@ -1816,51 +1834,167 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit }
 }
 
 // Песочница всего отдела: цепочка агентов (output одного → input следующего).
-// Порядок задаётся либо в dept.agentOrder, либо по умолчанию (researcher → marketer → copywriter → designer → analyst).
 const DEFAULT_AGENT_ORDER = ["researcher", "marketer", "copywriter", "designer", "analyst"];
-async function runDepartmentSandbox({ deptId, input = "", dryRun = false, emit }) {
+
+function loadSandboxRuns() {
+  try { return JSON.parse(fs.readFileSync(SANDBOX_FILE, "utf8")); } catch { return { runs: [] }; }
+}
+function saveSandboxRuns(data) {
+  fs.mkdirSync(path.dirname(SANDBOX_FILE), { recursive: true });
+  fs.writeFileSync(SANDBOX_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+function loadGoldenTests() {
+  try { return JSON.parse(fs.readFileSync(GOLDEN_FILE, "utf8")); } catch {
+    // Defaults — 5 предустановленных тем под СММ
+    return { tests: [
+      { id: "smm-morning",  deptId: "smm", name: "5 привычек продуктивного утра", input: "5 привычек продуктивного утра, дружелюбный тон, Instagram", expected: { minWords: 80, hasCta: true, hasHook: true } },
+      { id: "smm-product",  deptId: "smm", name: "Анонс новой фичи продукта",     input: "Анонс новой фичи: AI-агенты для СММ, информативный тон, Telegram", expected: { minWords: 100, hasCta: true } },
+      { id: "smm-case",     deptId: "smm", name: "Кейс клиента (B2B)",            input: "Кейс: как стартап вырос с 0 до 10K подписчиков за месяц, экспертный тон, Telegram", expected: { minWords: 120, hasNumbers: true } },
+      { id: "smm-tip",      deptId: "smm", name: "Короткий совет",                input: "Короткий совет по копирайтингу для маркетологов, неформальный тон, Instagram", expected: { minWords: 40, maxWords: 120 } },
+      { id: "smm-question", deptId: "smm", name: "Вовлекающий вопрос",            input: "Открытый вопрос аудитории про их главные SMM-проблемы, дружелюбный тон, Telegram", expected: { hasQuestion: true, maxWords: 100 } },
+    ]};
+  }
+}
+function saveGoldenTests(data) {
+  fs.mkdirSync(path.dirname(GOLDEN_FILE), { recursive: true });
+  fs.writeFileSync(GOLDEN_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+// Базовые assertions на финальный output отдела
+function runAssertions(text, expected = {}) {
+  const t = String(text || "");
+  const words = t.trim().split(/\s+/).filter(Boolean).length;
+  const results = [];
+  if (expected.minWords)  results.push({ id: "minWords",  ok: words >= expected.minWords,  details: `${words} слов (≥${expected.minWords})` });
+  if (expected.maxWords)  results.push({ id: "maxWords",  ok: words <= expected.maxWords,  details: `${words} слов (≤${expected.maxWords})` });
+  if (expected.hasHook)   results.push({ id: "hasHook",   ok: t.split("\n")[0]?.length > 10, details: "первая строка не пустая" });
+  if (expected.hasCta)    results.push({ id: "hasCta",    ok: /(подпиш|перейди|посмотри|узнай|комменти|поделись|расскажи|жми|читай|пиши|ставь|сохрани|ставьте)/i.test(t), details: "есть CTA-глагол" });
+  if (expected.hasQuestion) results.push({ id: "hasQuestion", ok: /\?/.test(t), details: "есть знак ?" });
+  if (expected.hasNumbers)  results.push({ id: "hasNumbers",  ok: /\d/.test(t), details: "есть цифры" });
+  return results;
+}
+
+// LLM-judge — оценка качества output (1-10 + комментарий)
+async function llmJudge({ output, task, criteria = "релевантность, тон, ясность, наличие CTA" }) {
+  if (!OPENROUTER_API_KEY) return null;
+  try {
+    const r = await callLLM({
+      system: "Ты — придирчивый редактор-судья. Оценишь текст по критериям. Верни строго JSON: {\"score\":1-10, \"verdict\":\"коротко 1 предложение\", \"strengths\":[],\"issues\":[]}",
+      user: `Задача: ${task}\n\nТекст:\n${output}\n\nКритерии: ${criteria}`,
+      jsonMode: true, maxTokens: 400, label: "judge", returnUsage: true,
+    });
+    return { ...JSON.parse(r.content), tokens: r.usage?.total_tokens || 0, costUsd: estimateCostUsd(r.usage, r.model) };
+  } catch (e) {
+    return { score: null, verdict: "не удалось оценить: " + e.message, strengths: [], issues: [] };
+  }
+}
+
+async function runDepartmentSandbox({ deptId, input = "", dryRun = false, judge = false, expected = {}, emit }) {
   const data = loadDepartments();
   const dept = data.departments.find(d => d.id === deptId);
   if (!dept) throw new Error(`отдел '${deptId}' не найден`);
   const agents = dept.agents || [];
   if (!agents.length) throw new Error("в отделе нет агентов");
-  // Порядок: dept.agentOrder → DEFAULT → as-is. Берём только тех что реально есть в отделе.
   const orderIds = dept.agentOrder || DEFAULT_AGENT_ORDER;
   const ordered = orderIds.map(id => agents.find(a => a.id === id)).filter(Boolean);
   for (const a of agents) if (!ordered.includes(a)) ordered.push(a);
 
+  const startTs = Date.now();
+  const costAcc = { tokens: 0, usd: 0 };
   let prevSummary = input;
   const results = {};
+  const agentMeta = {}; // agentId → {durationMs, tokens, costUsd}
+
   for (const agent of ordered) {
+    const aStart = Date.now();
+    const aCostBefore = costAcc.usd, aTokensBefore = costAcc.tokens;
     emit("agent_start", { agentId: agent.id, role: agent.role });
     const triggers = (agent.pipeline?.nodes || []).filter(n => n.type === "trigger");
-    // Подаём prevSummary в первый trigger; остальные триггеры — пустые (или из дефолтов)
     const agentInputs = {};
     if (triggers[0]) agentInputs[triggers[0].id] = prevSummary;
     try {
       const outputs = await runSandbox({
-        deptId, agentId: agent.id, inputs: agentInputs, dryRun,
+        deptId, agentId: agent.id, inputs: agentInputs, dryRun, costAcc,
         emit: (event, data) => emit(event, { ...data, agentId: agent.id }),
       });
-      // Финальный output этого агента = последний output-узел (или последний по топ-сорту)
       const outputNodes = (agent.pipeline?.nodes || []).filter(n => n.type === "output");
       const finalNode = outputNodes[outputNodes.length - 1] || (agent.pipeline?.nodes || []).slice(-1)[0];
       prevSummary = outputs[finalNode?.id] || prevSummary;
       results[agent.id] = prevSummary;
-      emit("agent_end", { agentId: agent.id, output: prevSummary });
+      const meta = {
+        durationMs: Date.now() - aStart,
+        tokens: costAcc.tokens - aTokensBefore,
+        costUsd: costAcc.usd - aCostBefore,
+      };
+      agentMeta[agent.id] = meta;
+      emit("agent_end", { agentId: agent.id, output: prevSummary, ...meta });
     } catch (e) {
       emit("agent_end", { agentId: agent.id, error: e.message });
-      // Дальше не идём при ошибке
       break;
     }
   }
-  emit("done", { results, finalOutput: prevSummary });
-  return results;
+
+  // Assertions + LLM-judge на финальный output
+  const assertions = expected ? runAssertions(prevSummary, expected) : [];
+  let judgeResult = null;
+  if (judge && !dryRun) {
+    emit("judge_start", {});
+    judgeResult = await llmJudge({ output: prevSummary, task: input });
+    if (judgeResult?.costUsd) { costAcc.tokens += judgeResult.tokens || 0; costAcc.usd += judgeResult.costUsd; }
+    emit("judge_end", judgeResult || {});
+  }
+
+  // Сохраняем run в БД
+  const runId = "run-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+  const run = {
+    id: runId, deptId, input, dryRun,
+    startedAt: new Date(startTs).toISOString(),
+    durationMs: Date.now() - startTs,
+    finalOutput: prevSummary,
+    agents: ordered.map(a => ({ id: a.id, role: a.role, output: results[a.id], ...agentMeta[a.id] })),
+    totalTokens: costAcc.tokens, totalCostUsd: costAcc.usd,
+    assertions, judge: judgeResult,
+  };
+  const all = loadSandboxRuns();
+  all.runs.unshift(run); // новые сверху
+  if (all.runs.length > 500) all.runs.length = 500;
+  saveSandboxRuns(all);
+
+  emit("done", { runId, run });
+  return run;
 }
+
+// Endpoints для runs / golden
+app.get("/webhook/mary/sandbox/runs", (req, res) => {
+  const { deptId, limit = 50 } = req.query;
+  const all = loadSandboxRuns();
+  let runs = all.runs;
+  if (deptId) runs = runs.filter(r => r.deptId === deptId);
+  res.json({ runs: runs.slice(0, +limit) });
+});
+app.get("/webhook/mary/sandbox/runs/:id", (req, res) => {
+  const all = loadSandboxRuns();
+  const r = all.runs.find(x => x.id === req.params.id);
+  if (!r) return res.status(404).json({ error: "not found" });
+  res.json(r);
+});
+app.delete("/webhook/mary/sandbox/runs/:id", (req, res) => {
+  const all = loadSandboxRuns();
+  all.runs = all.runs.filter(x => x.id !== req.params.id);
+  saveSandboxRuns(all);
+  res.json({ ok: true });
+});
+app.get("/webhook/mary/sandbox/golden", (req, res) => {
+  const { deptId } = req.query;
+  const all = loadGoldenTests();
+  let tests = all.tests || [];
+  if (deptId) tests = tests.filter(t => t.deptId === deptId);
+  res.json({ tests });
+});
 
 app.post("/webhook/mary/departments/:deptId/sandbox/stream", async (req, res) => {
   const { deptId } = req.params;
-  const { input = "", dryRun = false } = req.body || {};
+  const { input = "", dryRun = false, judge = false, expected = {} } = req.body || {};
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
   res.setHeader("Connection", "keep-alive");
@@ -1870,7 +2004,7 @@ app.post("/webhook/mary/departments/:deptId/sandbox/stream", async (req, res) =>
     res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
   };
   try {
-    await runDepartmentSandbox({ deptId, input, dryRun, emit });
+    await runDepartmentSandbox({ deptId, input, dryRun, judge, expected, emit });
   } catch (e) {
     emit("error", { message: e.message });
   } finally {
