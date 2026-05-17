@@ -283,6 +283,23 @@ function convCreate({ title, scope = "general" } = {}) {
 function convGet(id) {
   return loadConversations().conversations.find(c => c.id === id);
 }
+
+// ── Workflow policy: owner + votes + blockers + decisions per thread ──
+// Хранится в conv.workflow = { ownerId, votes: [{by, vote, ts}], blockers: [{reason, ts, public}], decisions: [{text, ts}], closed: bool }
+function convWorkflow(id) {
+  const data = loadConversations();
+  const c = data.conversations.find(x => x.id === id);
+  if (!c) throw new Error(`thread '${id}' не найден`);
+  if (!c.workflow) c.workflow = { ownerId: null, votes: [], blockers: [], decisions: [], closed: false };
+  return { data, c, save: () => saveConversations(data) };
+}
+function deptPolicy(deptId) {
+  const dd = loadDepartments();
+  const d = dd.departments.find(x => x.id === deptId);
+  if (!d) throw new Error(`отдел '${deptId}' не найден`);
+  if (!d.policy) d.policy = { ownerPerThread: true, maxVotes: 2, publicBlockers: true, weeklyMemo: true };
+  return { dd, d, save: () => saveDepartments(dd) };
+}
 function convAppend(id, msg) {
   const data = loadConversations();
   const conv = data.conversations.find(c => c.id === id);
@@ -1084,6 +1101,101 @@ const MARY_TOOLS = [
   {
     type: "function",
     function: {
+      name: "set_workflow_policy",
+      description: "Изменить workflow-политику отдела: ownerPerThread (нужен ли owner на каждый тред), maxVotes (сколько голосов «за» закрывают решение, обычно 2), publicBlockers (постить блокеры в публичный TG), weeklyMemo (собирать ли еженедельный отчёт).",
+      parameters: {
+        type: "object",
+        properties: {
+          deptId: { type: "string" },
+          ownerPerThread: { type: "boolean" },
+          maxVotes:       { type: "integer", description: "Сколько 'за' закрывают решение (дефолт 2)" },
+          publicBlockers: { type: "boolean" },
+          weeklyMemo:     { type: "boolean" },
+        },
+        required: ["deptId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "assign_thread_owner",
+      description: "Назначить ответственного (owner) на тред-конверсацию. Применяется по правилу policy.ownerPerThread.",
+      parameters: {
+        type: "object",
+        properties: {
+          threadId: { type: "string", description: "id conversation" },
+          ownerId:  { type: "string", description: "имя или username/role того кто owner" },
+        },
+        required: ["threadId", "ownerId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "record_vote",
+      description: "Записать голос «за» или «против» по треду. Когда наберётся policy.maxVotes одинаковых голосов — тред автоматически закрывается, решение записывается в decision log. Используй когда юзер пишет 'согласна', 'ок', 'против', '+1', '👍' в чате отдела по конкретному вопросу.",
+      parameters: {
+        type: "object",
+        properties: {
+          threadId: { type: "string" },
+          by:       { type: "string", description: "кто голосует" },
+          vote:     { type: "string", enum: ["for", "against"] },
+          decision: { type: "string", description: "формулировка решения (нужна для авто-закрытия)" },
+        },
+        required: ["threadId", "by", "vote"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "flag_blocker",
+      description: "Пометить блокер по треду. Если у отдела policy.publicBlockers=true — отправляется уведомление в общий TG-allowlist (Виктория видит сразу).",
+      parameters: {
+        type: "object",
+        properties: {
+          threadId: { type: "string" },
+          deptId:   { type: "string", description: "для определения policy.publicBlockers и формулировки в TG" },
+          reason:   { type: "string", description: "что блокирует" },
+        },
+        required: ["threadId", "reason"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "add_decision",
+      description: "Добавить запись в decision log треда. Одна строка — что решено, кем, когда. Используется когда тред закрывается с финальным решением.",
+      parameters: {
+        type: "object",
+        properties: {
+          threadId: { type: "string" },
+          text:     { type: "string", description: "Краткая формулировка решения (≤120 символов)" },
+        },
+        required: ["threadId", "text"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "weekly_memo",
+      description: "Собрать еженедельный memo по отделу: что решили / что в работе / блокеры / следующие шаги. Сохраняется в БЗ как файл. Запускать раз в неделю (понедельник утром) или по запросу.",
+      parameters: {
+        type: "object",
+        properties: {
+          deptId: { type: "string" },
+        },
+        required: ["deptId"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "read_chat",
       description: "Прочитать последние N сообщений из чата отдела (например 'smm') чтобы понять что там обсуждается. Используй когда юзер спрашивает 'что я писала в СММ', 'какие задачи стоят перед маркетологом', 'покажи последние идеи' и подобное. Возвращает массив сообщений {role, text, ts}.",
       parameters: {
@@ -1273,6 +1385,22 @@ const MARY_SYSTEM_AGENT = `Ты — Mary, AI-оркестратор отдела
 
 После каждого изменения кратко: «Добавила узел "Спам-фильтр" между Дедупликатором и Фильтром релевантности — граф перерисовался.»
 
+🎯 WORKFLOW-ПОЛИТИКА ОТДЕЛА (важно!):
+
+Каждый отдел имеет policy: ownerPerThread, maxVotes (обычно 2), publicBlockers, weeklyMemo. Применяй её автоматически:
+
+1. **Owner на тред.** При новом обсуждении в чате отдела (новый conversation со scope=deptId) — если policy.ownerPerThread и owner ещё не назначен — спроси «Кто owner этого треда?» (1 раз, в начале). Дальше assign_thread_owner. Без owner тред не «живой» — все рекомендации/решения должны быть привязаны к owner.
+
+2. **Два голоса на решение.** Когда юзер пишет в треде «согласна», «ок», «+1», «👍», «против» по конкретному предложению — вызови record_vote с параметром decision=формулировка обсуждаемого решения. После policy.maxVotes одинаковых голосов «for» тред автоматически закрывается + add_decision. Скажи: «2/2 за — решение «X» принято и записано».
+
+3. **Публичные блокеры.** Если в треде кто-то говорит «не могу продолжить», «жду от X», «застрял на Y» — это блокер. Вызови flag_blocker — если policy.publicBlockers=true, моментально летит в TG (Виктория видит). Скажи: «Поставила блокер «X» — Виктория уведомлена в TG».
+
+4. **Decision log.** Любое принятое решение — одна короткая строка через add_decision. Это long-term память отдела: «решили перейти с Notion на Linear, 12 мая», «дед-лайн релиза — 25 мая, owner: Виктория».
+
+5. **Еженедельный memo.** В понедельник утром (или по запросу) — weekly_memo(deptId). Соберёт: решено / в работе / блокеры / следующие шаги за неделю. Запишет в БЗ как файл "Memo · [Имя] · [дата].md". Скажи юзеру «Готов еженедельный memo по [Отделу] — лежит в БЗ».
+
+Эти 5 правил — фундамент. Не «забывай» о них. Если новый отдел создан без policy — используется дефолт. Если юзер просит изменить — set_workflow_policy.
+
 ФАЙЛЫ В БЗ (важно):
 У тебя есть полноценная файловая система БЗ. Используй её для долгосрочных артефактов.
 - kb_list — посмотри что уже есть, прежде чем создавать
@@ -1417,6 +1545,99 @@ const TOOL_HANDLERS = {
     try {
       const r = pipelineDisconnect(args.deptId, args.agentId, args.from, args.to);
       return { ok: true, agent: r.agent, department: r.dept };
+    } catch (e) { return { error: e.message }; }
+  },
+  async set_workflow_policy(args = {}) {
+    try {
+      const { dd, d, save } = deptPolicy(args.deptId);
+      for (const k of ["ownerPerThread", "maxVotes", "publicBlockers", "weeklyMemo"]) {
+        if (args[k] !== undefined) d.policy[k] = args[k];
+      }
+      save();
+      return { ok: true, policy: d.policy };
+    } catch (e) { return { error: e.message }; }
+  },
+  async assign_thread_owner(args = {}) {
+    try {
+      const { c, save } = convWorkflow(args.threadId);
+      c.workflow.ownerId = args.ownerId;
+      save();
+      return { ok: true, ownerId: args.ownerId };
+    } catch (e) { return { error: e.message }; }
+  },
+  async record_vote(args = {}) {
+    try {
+      const { c, save } = convWorkflow(args.threadId);
+      c.workflow.votes.push({ by: args.by, vote: args.vote, ts: new Date().toISOString() });
+      // Если деп есть и набрали maxVotes "for" — автоматом close + decision
+      let auto = null;
+      const scope = c.scope || "general";
+      const deptId = scope.startsWith("smm") ? "smm" : scope.split("/")[0];
+      try {
+        const { d } = deptPolicy(deptId);
+        const max = d.policy.maxVotes || 2;
+        const fors = c.workflow.votes.filter(v => v.vote === "for").length;
+        if (fors >= max && !c.workflow.closed && args.decision) {
+          c.workflow.decisions.push({ text: args.decision, ts: new Date().toISOString() });
+          c.workflow.closed = true;
+          auto = "тред закрыт, решение записано";
+        }
+      } catch {}
+      save();
+      return { ok: true, votes: c.workflow.votes.length, autoClose: auto };
+    } catch (e) { return { error: e.message }; }
+  },
+  async flag_blocker(args = {}) {
+    try {
+      const { c, save } = convWorkflow(args.threadId);
+      const blocker = { reason: args.reason, ts: new Date().toISOString() };
+      let posted = false;
+      try {
+        const deptId = args.deptId || (c.scope || "").split("/")[0] || "general";
+        const { d } = deptPolicy(deptId);
+        if (d.policy.publicBlockers) {
+          await tgAlert(`🚨 БЛОКЕР · отдел ${d.name}\nТред: ${c.title}\nПричина: ${args.reason}`);
+          blocker.public = true;
+          posted = true;
+        }
+      } catch {}
+      c.workflow.blockers.push(blocker);
+      save();
+      return { ok: true, postedToTg: posted };
+    } catch (e) { return { error: e.message }; }
+  },
+  async add_decision(args = {}) {
+    try {
+      const { c, save } = convWorkflow(args.threadId);
+      c.workflow.decisions.push({ text: args.text, ts: new Date().toISOString() });
+      save();
+      return { ok: true, total: c.workflow.decisions.length };
+    } catch (e) { return { error: e.message }; }
+  },
+  async weekly_memo(args = {}) {
+    try {
+      const { d } = deptPolicy(args.deptId);
+      const since = Date.now() - 7 * 86400000;
+      const allConvs = loadConversations().conversations
+        .filter(c => (c.scope || "").startsWith(args.deptId));
+      const decisions = [], blockers = [], inProgress = [];
+      for (const c of allConvs) {
+        const w = c.workflow || {};
+        for (const dec of (w.decisions || [])) {
+          if (new Date(dec.ts).getTime() >= since) decisions.push(`- ${dec.text} _(${c.title})_`);
+        }
+        for (const b of (w.blockers || [])) {
+          if (new Date(b.ts).getTime() >= since) blockers.push(`- ${b.reason} _(${c.title})_`);
+        }
+        if (!w.closed && new Date(c.updatedAt).getTime() >= since) {
+          inProgress.push(`- ${c.title}${w.ownerId ? ` · owner: ${w.ownerId}` : ""}`);
+        }
+      }
+      const week = new Date().toLocaleDateString("ru", { day: "numeric", month: "short" });
+      const body = `# Memo · ${d.name} · ${week}\n\n## ✅ Решено (${decisions.length})\n${decisions.join("\n") || "_пусто_"}\n\n## 🔄 В работе (${inProgress.length})\n${inProgress.join("\n") || "_пусто_"}\n\n## 🚨 Блокеры (${blockers.length})\n${blockers.join("\n") || "_пусто_"}\n\n## ➡ Следующие шаги\n_допиши вручную или попроси Mary_\n`;
+      const name = `Memo · ${d.name} · ${week}.md`;
+      kbWrite(name, body);
+      return { ok: true, file: name, counts: { decisions: decisions.length, inProgress: inProgress.length, blockers: blockers.length } };
     } catch (e) { return { error: e.message }; }
   },
   async read_chat(args = {}) {
