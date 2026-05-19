@@ -7527,6 +7527,583 @@ const KANBAN_COLUMNS = [
   { id: "Готово",         label: "Готово",        color: "#34C759" },
 ];
 
+// ── Tasks page (Kanban) — Taskk-style ────────────────────
+const TASK_COLUMNS = [
+  { id: "backlog", label: "Backlog",  color: "#3F95FF" },
+  { id: "doing",   label: "Doing",    color: "#FF8B3D" },
+  { id: "blocked", label: "Blocked",  color: "#FF3B30" },
+  { id: "done",    label: "Done",     color: "#34C759" },
+];
+const SOURCE_TAG = {
+  mary:       { label: "Mary",    bg: "rgba(255,139,61,0.12)",  fg: "#FF8B3D" },
+  transcript: { label: "Звонок",  bg: "rgba(63,149,255,0.12)",  fg: "#3F95FF" },
+  decision:   { label: "Решение", bg: "rgba(122,134,255,0.12)", fg: "#7A86FF" },
+  manual:     { label: "Вручную", bg: "rgba(38,38,51,0.06)",    fg: "rgba(38,38,51,0.6)" },
+};
+
+function TasksKanbanPage() {
+  const [tasks, setTasks] = useState([]);
+  const [deptFilter, setDeptFilter] = useState("all");
+  const [view, setView] = useState("board"); // board | list | timeline | due
+  const [activeTaskId, setActiveTaskId] = useState(null);
+  const [newDraft, setNewDraft] = useState(null); // {columnId, title}
+  const [departments, setDepartments] = useState([]);
+  const [draggingId, setDraggingId] = useState(null);
+  const [dragOverCol, setDragOverCol] = useState(null);
+
+  const reload = () => {
+    const q = deptFilter === "all" ? "" : `?deptId=${deptFilter}`;
+    fetch(`/api/mary/tasks${q}`).then(r => r.json()).then(d => setTasks(d.tasks || []));
+  };
+  useEffect(() => { reload(); }, [deptFilter]);
+  useEffect(() => {
+    fetch("/api/mary/departments").then(r => r.json()).then(d => setDepartments(d.departments || []));
+  }, []);
+
+  const tasksByColumn = (col) => tasks.filter(t => t.status === col);
+  const activeTask = tasks.find(t => t.id === activeTaskId);
+
+  const createTask = async (columnId, title) => {
+    if (!title?.trim()) return;
+    await fetch("/api/mary/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: title.trim(),
+        status: columnId,
+        deptId: deptFilter === "all" ? "general" : deptFilter,
+        source: { type: "manual" },
+      }),
+    });
+    setNewDraft(null);
+    reload();
+  };
+
+  const moveTask = async (taskId, newStatus) => {
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: newStatus } : t));
+    await fetch(`/api/mary/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    reload();
+  };
+
+  return (
+    <div style={{ display: "flex", flex: 1, minHeight: 0, background: color.white, overflow: "hidden" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
+        <div style={{ padding: "26px 40px 18px", maxWidth: 1400 }}>
+          {/* Breadcrumb */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8, marginBottom: 18,
+            fontSize: 12.5, color: "rgba(38,38,51,0.55)",
+          }}>
+            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <span>›</span>
+            <span>Board</span>
+            <span>›</span>
+            <span style={{
+              padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 5,
+              color: "#262633", fontWeight: 500,
+            }}>Overview</span>
+          </div>
+
+          {/* H1 */}
+          <h1 style={{
+            fontSize: 26, fontWeight: 600, color: "#262633",
+            margin: "0 0 18px", letterSpacing: "-0.01em",
+          }}>Задачи</h1>
+
+          {/* View-tabs + actions */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 14,
+            marginBottom: 22,
+          }}>
+            <div style={{ display: "flex", gap: 6 }}>
+              {[
+                { id: "board",    label: "Board" },
+                { id: "list",     label: "List" },
+                { id: "timeline", label: "Timeline" },
+                { id: "due",      label: "Due Tasks" },
+              ].map(t => (
+                <button key={t.id} onClick={() => setView(t.id)}
+                  style={{
+                    padding: "7px 14px",
+                    background: view === t.id ? "#262633" : "transparent",
+                    color: view === t.id ? color.white : "#262633",
+                    border: "none", borderRadius: 8,
+                    fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+                    transition: transition.fast,
+                  }}>{t.label}</button>
+              ))}
+            </div>
+            <div style={{ flex: 1 }} />
+            {/* Dept selector */}
+            <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
+              style={{
+                padding: "7px 10px", border: "1px solid rgba(38,38,51,0.12)", borderRadius: 8,
+                fontSize: 13, color: "#262633", background: color.white,
+                fontFamily: "inherit", outline: "none", cursor: "pointer",
+              }}>
+              <option value="all">Все отделы</option>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+            <button onClick={async () => {
+              const r = await fetch("/api/mary/tasks/morning-digest", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ deptId: deptFilter === "all" ? null : deptFilter }),
+              });
+              const d = await r.json();
+              alert("☀️ Утренний дайджест Mary:\n\n" + (d.digest || "—") + (d.topPicks?.length ? "\n\nТоп-3:\n" + d.topPicks.map(p => "• " + (tasks.find(t => t.id === p.id)?.title || p.id) + " — " + p.why).join("\n") : ""));
+            }}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "7px 12px", background: "transparent",
+                border: "1px solid rgba(38,38,51,0.18)", borderRadius: 8,
+                fontSize: 13, color: "#262633", fontWeight: 500,
+                cursor: "pointer", fontFamily: "inherit",
+              }}>☀️ Дайджест</button>
+            <button onClick={() => setNewDraft({ columnId: "backlog", title: "" })}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "7px 14px", background: "#262633", color: color.white,
+                border: "none", borderRadius: 8,
+                fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+              }}>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Новая задача
+            </button>
+          </div>
+
+          {/* Kanban */}
+          {view === "board" && (
+            <div style={{ display: "flex", gap: 14, alignItems: "flex-start", paddingBottom: 40 }}>
+              {TASK_COLUMNS.map(col => {
+                const items = tasksByColumn(col.id);
+                const isDragOver = dragOverCol === col.id;
+                return (
+                  <div key={col.id}
+                    onDragOver={e => { e.preventDefault(); setDragOverCol(col.id); }}
+                    onDragLeave={() => setDragOverCol(null)}
+                    onDrop={e => {
+                      e.preventDefault();
+                      const id = e.dataTransfer.getData("text/plain");
+                      if (id) moveTask(id, col.id);
+                      setDragOverCol(null);
+                      setDraggingId(null);
+                    }}
+                    style={{
+                      width: 290, minWidth: 290,
+                      background: isDragOver ? "rgba(38,38,51,0.03)" : "transparent",
+                      borderRadius: 12, padding: 4, transition: "background 0.15s",
+                    }}>
+                    {/* Column header */}
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "6px 8px 10px",
+                    }}>
+                      <span style={{ width: 3, height: 14, background: col.color, borderRadius: 2 }} />
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: "#262633" }}>{col.label}</span>
+                      <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)" }}>{items.length}</span>
+                      <div style={{ flex: 1 }} />
+                      <button onClick={() => setNewDraft({ columnId: col.id, title: "" })}
+                        title="Добавить" style={{
+                          width: 22, height: 22, padding: 0,
+                          background: "transparent", border: "none", borderRadius: 5,
+                          color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.06)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 5v14M5 12h14" />
+                        </svg>
+                      </button>
+                    </div>
+                    {/* Cards */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                      {items.map(t => (
+                        <TaskCard key={t.id} t={t}
+                          departments={departments}
+                          onClick={() => setActiveTaskId(t.id)}
+                          draggable
+                          onDragStart={e => { e.dataTransfer.setData("text/plain", t.id); setDraggingId(t.id); }}
+                          onDragEnd={() => setDraggingId(null)}
+                          isDragging={draggingId === t.id}
+                        />
+                      ))}
+                      {newDraft?.columnId === col.id && (
+                        <input
+                          autoFocus
+                          value={newDraft.title}
+                          onChange={e => setNewDraft({ ...newDraft, title: e.target.value })}
+                          onBlur={() => { createTask(col.id, newDraft.title); }}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") createTask(col.id, newDraft.title);
+                            if (e.key === "Escape") setNewDraft(null);
+                          }}
+                          placeholder="Название задачи"
+                          style={{
+                            padding: "10px 12px",
+                            background: color.white,
+                            border: "1px solid #3F95FF", borderRadius: 10,
+                            fontSize: 13, fontWeight: 500, color: "#262633",
+                            outline: "none", fontFamily: "inherit",
+                          }}
+                        />
+                      )}
+                      {newDraft?.columnId !== col.id && (
+                        <button onClick={() => setNewDraft({ columnId: col.id, title: "" })}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: 6,
+                            padding: "8px 12px", background: "transparent",
+                            border: "none", borderRadius: 8,
+                            fontSize: 12.5, color: "rgba(38,38,51,0.5)",
+                            cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
+                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                        >
+                          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 5v14M5 12h14" />
+                          </svg>
+                          Add new
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {view !== "board" && (
+            <div style={{
+              padding: 60, textAlign: "center",
+              fontSize: 14, color: "rgba(38,38,51,0.45)",
+              border: "1px dashed rgba(38,38,51,0.12)", borderRadius: 12,
+            }}>
+              View «{view}» в разработке. Сейчас работает Board.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Drawer задачи */}
+      {activeTask && (
+        <TaskDrawer
+          task={activeTask}
+          departments={departments}
+          onClose={() => setActiveTaskId(null)}
+          onUpdate={async (patch) => {
+            await fetch(`/api/mary/tasks/${activeTask.id}`, {
+              method: "PATCH", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(patch),
+            });
+            reload();
+          }}
+          onDelete={async () => {
+            if (!confirm("Удалить задачу?")) return;
+            await fetch(`/api/mary/tasks/${activeTask.id}`, { method: "DELETE" });
+            setActiveTaskId(null);
+            reload();
+          }}
+          onComment={async (text) => {
+            await fetch(`/api/mary/tasks/${activeTask.id}/comment`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ text, author: "Виктория" }),
+            });
+            reload();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function TaskCard({ t, departments, onClick, draggable, onDragStart, onDragEnd, isDragging }) {
+  const dept = departments.find(d => d.id === t.deptId);
+  const src = SOURCE_TAG[t.source?.type] || SOURCE_TAG.manual;
+  return (
+    <div
+      onClick={onClick}
+      draggable={draggable} onDragStart={onDragStart} onDragEnd={onDragEnd}
+      style={{
+        background: color.white, border: "1px solid rgba(38,38,51,0.08)",
+        borderRadius: 10, padding: "12px 14px",
+        cursor: "pointer", opacity: isDragging ? 0.4 : 1,
+        transition: "opacity 0.15s, box-shadow 0.15s",
+      }}
+      onMouseEnter={e => e.currentTarget.style.boxShadow = "0 2px 8px rgba(38,38,51,0.08)"}
+      onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
+    >
+      {dept && (
+        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", marginBottom: 6 }}>
+          Отдел: <span style={{ color: dept.color, fontWeight: 500 }}>{dept.name}</span>
+        </div>
+      )}
+      <div style={{
+        fontSize: 13.5, fontWeight: 510, color: "#262633",
+        lineHeight: 1.35, marginBottom: 10,
+      }}>{t.title}</div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+        {t.ownerId && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 5,
+            padding: "2px 7px 2px 2px",
+            background: "rgba(38,38,51,0.05)", borderRadius: 999,
+            fontSize: 11.5, color: "#262633",
+          }}>
+            <span style={{
+              width: 16, height: 16, borderRadius: "50%",
+              background: dept?.color || "#7A86FF", color: color.white,
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              fontSize: 9, fontWeight: 600,
+            }}>{(t.ownerId[0] || "?").toUpperCase()}</span>
+            {t.ownerId}
+          </span>
+        )}
+        <span style={{
+          padding: "2px 8px", background: src.bg, color: src.fg,
+          borderRadius: 999, fontSize: 11, fontWeight: 500,
+        }}>{src.label}</span>
+        {t.priority === "high" && (
+          <span style={{
+            padding: "2px 7px", background: "rgba(255,59,48,0.12)", color: "#FF3B30",
+            borderRadius: 999, fontSize: 11, fontWeight: 500,
+          }}>↑ важно</span>
+        )}
+      </div>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 12,
+        fontSize: 11, color: "rgba(38,38,51,0.5)",
+      }}>
+        {t.comments?.length > 0 && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+            {t.comments.length}
+          </span>
+        )}
+        <div style={{ flex: 1 }} />
+        {t.dueDate && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+            </svg>
+            {t.dueDate}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TaskDrawer({ task, departments, onClose, onUpdate, onDelete, onComment }) {
+  const [comment, setComment] = useState("");
+  const [titleEdit, setTitleEdit] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(task.title);
+  useEffect(() => { setTitleDraft(task.title); }, [task.id, task.title]);
+  const dept = departments.find(d => d.id === task.deptId);
+  const src = SOURCE_TAG[task.source?.type] || SOURCE_TAG.manual;
+
+  return (
+    <aside style={{
+      width: 420, minWidth: 420, borderLeft: "1px solid rgba(38,38,51,0.06)",
+      background: color.white, display: "flex", flexDirection: "column",
+    }}>
+      <div style={{
+        padding: "14px 18px",
+        borderBottom: "1px solid rgba(38,38,51,0.06)",
+        display: "flex", alignItems: "center", gap: 8,
+      }}>
+        <span style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", flex: 1 }}>{task.id}</span>
+        <button onClick={onDelete} title="Удалить"
+          style={{
+            background: "transparent", border: "none", padding: 6, borderRadius: 6,
+            color: "rgba(38,38,51,0.5)", cursor: "pointer", display: "inline-flex",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(255,59,48,0.08)"; e.currentTarget.style.color = "#FF3B30"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.5)"; }}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 6h18M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+        <button onClick={onClose}
+          style={{
+            background: "transparent", border: "none", padding: 6, borderRadius: 6,
+            color: "rgba(38,38,51,0.55)", cursor: "pointer", display: "inline-flex",
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div style={{ flex: 1, overflowY: "auto", padding: 20 }}>
+        {/* Title (editable on click) */}
+        {titleEdit ? (
+          <input
+            autoFocus value={titleDraft}
+            onChange={e => setTitleDraft(e.target.value)}
+            onBlur={() => { if (titleDraft.trim()) onUpdate({ title: titleDraft.trim() }); setTitleEdit(false); }}
+            onKeyDown={e => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") { setTitleDraft(task.title); setTitleEdit(false); } }}
+            style={{
+              width: "100%", boxSizing: "border-box",
+              fontSize: 18, fontWeight: 600, color: "#262633",
+              border: "1px solid rgba(63,149,255,0.4)", borderRadius: 7,
+              padding: "6px 9px", fontFamily: "inherit", outline: "none", marginBottom: 14,
+            }}
+          />
+        ) : (
+          <h2 onClick={() => setTitleEdit(true)} style={{
+            fontSize: 18, fontWeight: 600, color: "#262633",
+            margin: "0 0 14px", cursor: "text", lineHeight: 1.3,
+          }}>{task.title}</h2>
+        )}
+
+        {/* Meta — status / dept / owner / priority / source / due */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
+          <DrawerRow label="Статус">
+            <select value={task.status} onChange={e => onUpdate({ status: e.target.value })}
+              style={{
+                border: "1px solid rgba(38,38,51,0.12)", borderRadius: 7,
+                padding: "5px 8px", fontSize: 12.5, color: "#262633",
+                background: color.white, fontFamily: "inherit", cursor: "pointer", outline: "none",
+              }}>
+              {TASK_COLUMNS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+          </DrawerRow>
+          <DrawerRow label="Отдел">
+            <select value={task.deptId || "general"} onChange={e => onUpdate({ deptId: e.target.value })}
+              style={{
+                border: "1px solid rgba(38,38,51,0.12)", borderRadius: 7,
+                padding: "5px 8px", fontSize: 12.5, color: "#262633",
+                background: color.white, fontFamily: "inherit", cursor: "pointer", outline: "none",
+              }}>
+              <option value="general">Общий</option>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </DrawerRow>
+          <DrawerRow label="Owner">
+            <input value={task.ownerId || ""} onChange={e => onUpdate({ ownerId: e.target.value })}
+              placeholder="имя или агент"
+              style={{
+                border: "1px solid rgba(38,38,51,0.12)", borderRadius: 7,
+                padding: "5px 8px", fontSize: 12.5, color: "#262633",
+                fontFamily: "inherit", outline: "none", width: 160,
+              }} />
+          </DrawerRow>
+          <DrawerRow label="Приоритет">
+            <select value={task.priority || "normal"} onChange={e => onUpdate({ priority: e.target.value })}
+              style={{
+                border: "1px solid rgba(38,38,51,0.12)", borderRadius: 7,
+                padding: "5px 8px", fontSize: 12.5, color: "#262633",
+                background: color.white, fontFamily: "inherit", cursor: "pointer", outline: "none",
+              }}>
+              <option value="high">↑ Важно</option>
+              <option value="normal">Обычный</option>
+              <option value="low">↓ Низкий</option>
+            </select>
+          </DrawerRow>
+          <DrawerRow label="Due">
+            <input type="text" value={task.dueDate || ""} onChange={e => onUpdate({ dueDate: e.target.value })}
+              placeholder="ISO или 'завтра 18:00'"
+              style={{
+                border: "1px solid rgba(38,38,51,0.12)", borderRadius: 7,
+                padding: "5px 8px", fontSize: 12.5, color: "#262633",
+                fontFamily: "inherit", outline: "none", width: 160,
+              }} />
+          </DrawerRow>
+          <DrawerRow label="Источник">
+            <span style={{
+              padding: "3px 8px", background: src.bg, color: src.fg,
+              borderRadius: 999, fontSize: 11.5, fontWeight: 500,
+            }}>{src.label}</span>
+          </DrawerRow>
+        </div>
+
+        {/* Description */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+            Описание
+          </div>
+          <textarea
+            value={task.description || ""}
+            onChange={e => onUpdate({ description: e.target.value })}
+            placeholder="Подробнее…"
+            rows={3}
+            style={{
+              width: "100%", boxSizing: "border-box",
+              border: "1px solid rgba(38,38,51,0.12)", borderRadius: 8,
+              padding: "8px 10px", fontSize: 12.5, color: "#262633",
+              fontFamily: "inherit", resize: "vertical", outline: "none",
+            }}
+          />
+        </div>
+
+        {/* Comments */}
+        <div>
+          <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 6 }}>
+            Комментарии · {task.comments?.length || 0}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 10 }}>
+            {(task.comments || []).map((c, i) => (
+              <div key={i} style={{
+                background: "rgba(38,38,51,0.03)", borderRadius: 8, padding: "8px 10px",
+              }}>
+                <div style={{ fontSize: 11, color: "rgba(38,38,51,0.55)", marginBottom: 3 }}>
+                  {c.author} · {new Date(c.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" })}
+                </div>
+                <div style={{ fontSize: 12.5, color: "#262633", whiteSpace: "pre-wrap" }}>{c.text}</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <input value={comment} onChange={e => setComment(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && comment.trim()) { onComment(comment); setComment(""); } }}
+              placeholder="Комментарий…"
+              style={{
+                flex: 1, border: "1px solid rgba(38,38,51,0.12)", borderRadius: 7,
+                padding: "6px 10px", fontSize: 12.5, color: "#262633",
+                fontFamily: "inherit", outline: "none",
+              }} />
+            <button onClick={() => { if (comment.trim()) { onComment(comment); setComment(""); } }}
+              disabled={!comment.trim()}
+              style={{
+                padding: "6px 12px",
+                background: comment.trim() ? "#262633" : "rgba(38,38,51,0.3)",
+                color: color.white, border: "none", borderRadius: 7,
+                fontSize: 12.5, fontWeight: 500,
+                cursor: comment.trim() ? "pointer" : "not-allowed", fontFamily: "inherit",
+              }}>Отправить</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function DrawerRow({ label, children }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+      <span style={{ fontSize: 12, color: "rgba(38,38,51,0.55)", width: 90, flexShrink: 0 }}>{label}</span>
+      {children}
+    </div>
+  );
+}
+
 function TasksPage({ pendingTasks = [], onOpenChat }) {
   const [scope, setScope] = useState("smm/tg-kanal");
   const [smmOpen, setSmmOpen] = useState(true);
@@ -11169,13 +11746,8 @@ export default function TgKanalPage() {
               return <DepartmentChannelPage deptId={dept.id} channelPage={currentPage} onNavigate={setCurrentPage} />;
             }
           }
-          // Fallback — Tasks
-          return (
-            <TasksPage
-              pendingTasks={pendingTasks}
-              onOpenChat={() => { setChatOpen(true); setChatMode("mini"); setActiveFilter("all"); }}
-            />
-          );
+          // Fallback — Tasks (Taskk-style Kanban)
+          return <TasksKanbanPage />;
         })()}
       </main>
 
