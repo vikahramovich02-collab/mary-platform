@@ -3667,6 +3667,67 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
   const [sandboxOutputs, setSandboxOutputs] = useState({});  // nodeId → text
   const [sandboxRunning, setSandboxRunning] = useState(false);
   const [deptSandboxOpen, setDeptSandboxOpen] = useState(false);
+  const [audioUploading, setAudioUploading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const fileInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const recordChunksRef = useRef([]);
+
+  // Загрузка аудио → транскрипт → подстановка в input
+  const uploadAudio = async (blob, fileName) => {
+    setAudioUploading(true);
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result.split(",")[1]);
+        r.onerror = reject;
+        r.readAsDataURL(blob);
+      });
+      const res = await fetch("/api/mary/transcripts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audio: base64, fileName, conversationId: activeId }),
+      });
+      const d = await res.json();
+      if (d.error) throw new Error(d.error);
+      const tr = d.transcript;
+      const mins = Math.floor(tr.durationSec / 60), secs = tr.durationSec % 60;
+      const prompt = `📼 Транскрипт звонка · ${fileName} · ${mins}:${String(secs).padStart(2, "0")}${tr.mock ? " · mock-STT" : ""}\n\n${tr.transcript}\n\n— Разбери: выпиши memo (Решения / Блокеры / Задачи / Owner-ы) и сразу применяй workflow-tools (flag_blocker / record_vote+add_decision / create_task / assign_thread_owner).`;
+      setText(prompt);
+    } catch (e) {
+      alert("Не удалось расшифровать: " + e.message);
+    } finally {
+      setAudioUploading(false);
+    }
+  };
+  const onPickAudio = (e) => {
+    const f = e.target.files?.[0];
+    if (f) uploadAudio(f, f.name);
+    e.target.value = "";
+  };
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      recordChunksRef.current = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) recordChunksRef.current.push(e.data); };
+      mr.onstop = () => {
+        const blob = new Blob(recordChunksRef.current, { type: "audio/webm" });
+        stream.getTracks().forEach(t => t.stop());
+        uploadAudio(blob, `recording-${new Date().toISOString().slice(0, 19)}.webm`);
+      };
+      mr.start();
+      mediaRecorderRef.current = mr;
+      setRecording(true);
+    } catch (e) {
+      alert("Микрофон недоступен: " + e.message);
+    }
+  };
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current = null;
+    setRecording(false);
+  };
   useEffect(() => {
     let stop = false;
     const load = () => fetch("/api/mary/departments").then(r => r.json()).then(d => {
@@ -9054,23 +9115,30 @@ function ChatMaryPage() {
                         color: "rgba(38,38,51,0.7)",
                         cursor: "pointer", fontFamily: "inherit",
                       }}>{ic.plus}</button>
+                    <input ref={fileInputRef} type="file" accept="audio/*,video/*" onChange={onPickAudio} style={{ display: "none" }} />
                     <button
-                      title="Прикрепить файл"
+                      onClick={() => fileInputRef.current?.click()}
+                      title={audioUploading ? "Расшифровываю..." : "Прикрепить аудио/видео"}
+                      disabled={audioUploading || recording}
                       style={{
                         display: "inline-flex", alignItems: "center", justifyContent: "center",
                         width: 28, height: 28,
                         background: "transparent", border: "none", borderRadius: 7,
-                        color: "rgba(38,38,51,0.55)",
-                        cursor: "pointer", fontFamily: "inherit",
+                        color: audioUploading ? "#FF8B3D" : "rgba(38,38,51,0.55)",
+                        cursor: audioUploading || recording ? "wait" : "pointer", fontFamily: "inherit",
                       }}>{ic.attach}</button>
                     <div style={{ flex: 1 }} />
-                    <button title="Микрофон" style={{
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      width: 28, height: 28,
-                      background: "transparent", border: "none", borderRadius: 7,
-                      color: "rgba(38,38,51,0.55)",
-                      cursor: "pointer", fontFamily: "inherit",
-                    }}>{ic.mic}</button>
+                    <button
+                      onClick={recording ? stopRecording : startRecording}
+                      title={recording ? "Остановить запись" : "Начать запись (микрофон)"}
+                      disabled={audioUploading}
+                      style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        width: 28, height: 28,
+                        background: recording ? "rgba(255,59,48,0.15)" : "transparent", border: "none", borderRadius: 7,
+                        color: recording ? "#FF3B30" : "rgba(38,38,51,0.55)",
+                        cursor: audioUploading ? "wait" : "pointer", fontFamily: "inherit",
+                      }}>{ic.mic}</button>
                     {loading ? (
                       <button
                         data-testid="chat-mary-stop"
