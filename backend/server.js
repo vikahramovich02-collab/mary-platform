@@ -664,6 +664,130 @@ app.patch("/webhook/mary/conversations/:id", (req, res) => {
   res.json(c);
 });
 // Принять одно сообщение в conversation (для случаев без stream)
+// ── Team / TG-mock seed ──────────────────────────────
+// Создаёт mock-сотрудников + 3 «подключенных TG-группы» + 2 внутренних чата с сообщениями.
+const MOCK_PEOPLE_LIST = [
+  { id: "alex",    name: "Александр Орлов",    role: "Бекенд-лид",      color: "#3F95FF" },
+  { id: "maria",   name: "Мария Дудник",       role: "Дизайнер",        color: "#FF6FB3" },
+  { id: "ivan",    name: "Иван Соколов",       role: "Маркетинг",       color: "#FF8B3D" },
+  { id: "katya",   name: "Катя Сафина",        role: "Контент",         color: "#7A86FF" },
+  { id: "andrey",  name: "Андрей Шумилов",     role: "Аналитик",        color: "#34C759" },
+];
+
+app.get("/webhook/mary/team/people", (req, res) => {
+  res.json({ people: MOCK_PEOPLE_LIST });
+});
+
+app.post("/webhook/mary/team/seed", (req, res) => {
+  const data = loadConversations();
+  // Если уже есть seed — не плодим
+  if (data.conversations.some(c => c.scope?.startsWith("team/") || c.scope?.startsWith("tg/"))) {
+    return res.json({ ok: true, seeded: false, message: "Уже засеяно" });
+  }
+  const now = Date.now();
+  const ago = (mins) => new Date(now - mins * 60000).toISOString();
+
+  const seeds = [
+    // 1-1 с Александром (внутренний)
+    {
+      scope: "team/alex", title: "Александр Орлов",
+      meta: { kind: "personal", peopleIds: ["alex"], source: "internal" },
+      messages: [
+        { role: "user",      agentId: "alex",    text: "Привет. Виктория, посмотри коммент к идее #2 — нужен твой апрув", ts: ago(95) },
+        { role: "user",      agentId: "vika",    text: "Окей, гляну после обеда", ts: ago(80) },
+        { role: "user",      agentId: "alex",    text: "Спасибо. И ещё застрял с OAuth — не пускает callback. Думаю это блокер на релиз", ts: ago(30) },
+      ],
+    },
+    // 1-1 с Марией
+    {
+      scope: "team/maria", title: "Мария Дудник",
+      meta: { kind: "personal", peopleIds: ["maria"], source: "internal" },
+      messages: [
+        { role: "user", agentId: "maria", text: "Виктория, обложку к утренним привычкам выложила в фигму. Глянь?", ts: ago(120) },
+        { role: "user", agentId: "vika",  text: "Огонь, апрувлю!", ts: ago(110) },
+        { role: "user", agentId: "maria", text: "Поняла, передаю в продакшен 👍", ts: ago(108) },
+      ],
+    },
+    // Группа «Команда продукта» (внутренняя)
+    {
+      scope: "team/product", title: "Команда продукта",
+      meta: { kind: "group", peopleIds: ["alex", "maria", "ivan", "vika"], source: "internal" },
+      messages: [
+        { role: "user", agentId: "ivan",   text: "Команда, релиз AI-агентов планируем на 25.05. Все согласны?", ts: ago(180) },
+        { role: "user", agentId: "alex",   text: "Я бы предложил перенести на 26.05 — нужен ещё день на OAuth", ts: ago(170) },
+        { role: "user", agentId: "maria",  text: "Согласна, пусть будет 26-го", ts: ago(165) },
+        { role: "user", agentId: "vika",   text: "Окей, 26 мая. Александр — owner релиза", ts: ago(160) },
+      ],
+    },
+
+    // TG-интеграции (mock — типа подключены боты)
+    {
+      scope: "tg/mary30", title: "Mary 3.0",
+      meta: { kind: "tg_group", source: "tg", platform: "telegram", botConnected: true, membersCount: 8 },
+      messages: [
+        { role: "user", agentId: "alex",   text: "Виктория, посмотри пожалуйста PR #847 — там фикс по publish_post", ts: ago(45) },
+        { role: "user", agentId: "ivan",   text: "Ребят, дайджест за неделю готов: https://disk.yandex.ru/i/abc", ts: ago(40) },
+        { role: "user", agentId: "katya",  text: "У меня вопрос — кто-нибудь видел метрики по @neural_prosecco? Не сходится с прошлой недели", ts: ago(25) },
+      ],
+    },
+    {
+      scope: "tg/design-team", title: "Дизайн-команда",
+      meta: { kind: "tg_group", source: "tg", platform: "telegram", botConnected: true, membersCount: 5 },
+      messages: [
+        { role: "user", agentId: "maria",  text: "Завтра в 14:00 ревью обложек — все придут?", ts: ago(60) },
+        { role: "user", agentId: "katya",  text: "Я смогу к 14:30", ts: ago(58) },
+      ],
+    },
+    {
+      scope: "tg/sales", title: "Продажи · оперативка",
+      meta: { kind: "tg_group", source: "tg", platform: "telegram", botConnected: true, membersCount: 4 },
+      messages: [
+        { role: "user", agentId: "andrey", text: "@vika клиент Stellar просит демо AI-агентов до пятницы — успеваем?", ts: ago(15) },
+        { role: "user", agentId: "ivan",   text: "Стоит делать. Мария поможет с визуалом?", ts: ago(10) },
+      ],
+    },
+  ];
+
+  for (const s of seeds) {
+    const id = "c-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+    data.conversations.unshift({
+      id, title: s.title, scope: s.scope,
+      createdAt: ago(300), updatedAt: s.messages[s.messages.length - 1]?.ts || ago(300),
+      messages: s.messages,
+      meta: s.meta,
+    });
+  }
+  saveConversations(data);
+  res.json({ ok: true, seeded: true, count: seeds.length });
+});
+
+// Отправка сообщения от текущего юзера (Виктории) в team-чат
+app.post("/webhook/mary/team/:id/send", (req, res) => {
+  const { text } = req.body || {};
+  if (!text?.trim()) return res.status(400).json({ error: "text required" });
+  const data = loadConversations();
+  const c = data.conversations.find(x => x.id === req.params.id);
+  if (!c) return res.status(404).json({ error: "not found" });
+  c.messages.push({ role: "user", agentId: "vika", text: text.trim(), ts: new Date().toISOString() });
+  c.updatedAt = new Date().toISOString();
+  saveConversations(data);
+  // Mock: для TG-чатов через 2-4 сек кто-то «отвечает» (просто демо)
+  if (c.scope?.startsWith("tg/") && Math.random() > 0.5) {
+    setTimeout(() => {
+      const data2 = loadConversations();
+      const c2 = data2.conversations.find(x => x.id === req.params.id);
+      if (!c2) return;
+      const replies = ["Окей, понял", "👍", "Принято", "Сделаю до конца дня", "Согласен"];
+      const otherPeople = MOCK_PEOPLE_LIST.filter(p => p.id !== "vika");
+      const p = otherPeople[Math.floor(Math.random() * otherPeople.length)];
+      c2.messages.push({ role: "user", agentId: p.id, text: replies[Math.floor(Math.random() * replies.length)], ts: new Date().toISOString() });
+      c2.updatedAt = new Date().toISOString();
+      saveConversations(data2);
+    }, 2000 + Math.random() * 3000);
+  }
+  res.json({ ok: true });
+});
+
 app.post("/webhook/mary/conversations/:id/messages", (req, res) => {
   const { role = "user", text = "", trace } = req.body || {};
   const c = convAppend(req.params.id, { role, text, ...(trace ? { trace } : {}) });
