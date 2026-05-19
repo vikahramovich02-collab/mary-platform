@@ -25,6 +25,7 @@ const GOLDEN_FILE = path.join(KB_DIR, "..", "golden-tests.json");
 const TRANSCRIPTS_FILE = path.join(KB_DIR, "..", "transcripts.json");
 const TRANSCRIPTS_DIR = path.join(KB_DIR, "..", "audio");
 const TASKS_FILE = path.join(KB_DIR, "..", "tasks.json");
+const INBOX_STATE_FILE = path.join(KB_DIR, "..", "inbox-state.json");
 
 // ── Departments (отделы компании) ────────────────────────
 const DEFAULT_DEPARTMENTS = [
@@ -2299,6 +2300,143 @@ app.post("/webhook/mary/tasks/batched", async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── Inbox: агрегатор из всех существующих источников ──
+function loadInboxState() {
+  try { return JSON.parse(fs.readFileSync(INBOX_STATE_FILE, "utf8")); } catch { return { items: {} }; }
+}
+function saveInboxState(d) {
+  fs.mkdirSync(path.dirname(INBOX_STATE_FILE), { recursive: true });
+  fs.writeFileSync(INBOX_STATE_FILE, JSON.stringify(d, null, 2), "utf8");
+}
+
+// Собирает все 7 категорий из существующих БД в unified inbox-список
+function buildInbox(currentUser = "Виктория") {
+  const items = [];
+  const state = loadInboxState();
+  const convs = loadConversations().conversations || [];
+  const tasks = loadTasks().tasks || [];
+  const transcripts = loadTranscripts().items || [];
+
+  // 🚨 БЛОКЕРЫ — из conversations[*].workflow.blockers
+  for (const c of convs) {
+    for (const b of (c.workflow?.blockers || [])) {
+      const id = `blk-${c.id}-${b.ts}`;
+      items.push({
+        id, kind: "blocker",
+        title: `Блокер: ${b.reason}`,
+        preview: `В треде «${c.title}»`,
+        ts: b.ts, deptId: (c.scope || "").split("/")[0],
+        source: { type: "conversation", refId: c.id, navTo: `chat:${c.id}` },
+        meta: { reason: b.reason, threadTitle: c.title, public: !!b.public },
+      });
+    }
+  }
+
+  // ✅ ЗАДАЧИ — где ownerId = currentUser и status ≠ done
+  for (const t of tasks) {
+    if (t.ownerId === currentUser && t.status !== "done") {
+      items.push({
+        id: `task-${t.id}`, kind: "task",
+        title: t.title,
+        preview: `Задача · ${t.status === "blocked" ? "блокер" : t.status === "doing" ? "в работе" : "в бэклоге"}${t.dueDate ? " · до " + t.dueDate : ""}`,
+        ts: t.updatedAt || t.createdAt,
+        deptId: t.deptId,
+        source: { type: "task", refId: t.id, navTo: `task:${t.id}` },
+        meta: { status: t.status, priority: t.priority, dueDate: t.dueDate, description: t.description },
+      });
+    }
+  }
+
+  // 📼 ТРАНСКРИПТЫ — необработанные
+  for (const tr of transcripts) {
+    if (!tr.processed) {
+      items.push({
+        id: `tr-${tr.id}`, kind: "transcript",
+        title: `Транскрипт: ${tr.fileName}`,
+        preview: `Длительность ~${Math.round((tr.durationSec || 0) / 60)} мин · не разобран`,
+        ts: tr.createdAt, deptId: tr.deptId,
+        source: { type: "transcript", refId: tr.id, navTo: `transcript:${tr.id}` },
+        meta: { fileName: tr.fileName, durationSec: tr.durationSec, transcript: tr.transcript?.slice(0, 500) },
+      });
+    }
+  }
+
+  // 🗳 ГОЛОСОВАНИЯ — есть votes но closed=false
+  for (const c of convs) {
+    const w = c.workflow;
+    if (!w || w.closed) continue;
+    if ((w.votes || []).length > 0) {
+      items.push({
+        id: `vote-${c.id}`, kind: "vote",
+        title: `Голосование: ${c.title}`,
+        preview: `${w.votes.length}/2 голосов`,
+        ts: w.votes[w.votes.length - 1]?.ts || c.updatedAt,
+        deptId: (c.scope || "").split("/")[0],
+        source: { type: "conversation", refId: c.id, navTo: `chat:${c.id}` },
+        meta: { votes: w.votes, owner: w.ownerId, threadTitle: c.title },
+      });
+    }
+  }
+
+  // 💬 УПОМИНАНИЯ — последние сообщения с "Виктория" / "@vika"
+  for (const c of convs) {
+    const msgs = c.messages || [];
+    for (let i = Math.max(0, msgs.length - 10); i < msgs.length; i++) {
+      const m = msgs[i];
+      if (m.role === "user") continue;
+      if (!new RegExp(currentUser, "i").test(m.text || "")) continue;
+      const id = `mn-${c.id}-${i}`;
+      items.push({
+        id, kind: "mention",
+        title: `Упоминание в «${c.title}»`,
+        preview: (m.text || "").slice(0, 140),
+        ts: m.ts, deptId: (c.scope || "").split("/")[0],
+        source: { type: "conversation", refId: c.id, navTo: `chat:${c.id}` },
+        meta: { fullText: m.text, threadTitle: c.title },
+      });
+      break;  // одно последнее упоминание на тред
+    }
+  }
+
+  // Сортируем новые сверху, добавляем read/archived состояние
+  items.sort((a, b) => new Date(b.ts) - new Date(a.ts));
+  for (const it of items) {
+    const s = state.items[it.id] || {};
+    it.read = !!s.read;
+    it.archived = !!s.archived;
+  }
+  return items;
+}
+
+app.get("/webhook/mary/inbox", (req, res) => {
+  const { kind, unread, archived, q } = req.query;
+  let items = buildInbox(req.query.user || "Виктория");
+  if (kind && kind !== "all") items = items.filter(x => x.kind === kind);
+  if (unread === "1") items = items.filter(x => !x.read && !x.archived);
+  if (archived === "1") items = items.filter(x => x.archived);
+  else if (!archived) items = items.filter(x => !x.archived);
+  if (q) {
+    const qq = String(q).toLowerCase();
+    items = items.filter(x => (x.title + " " + x.preview).toLowerCase().includes(qq));
+  }
+  // counts по kind для табов
+  const all = buildInbox(req.query.user || "Виктория").filter(x => !x.archived);
+  const counts = { all: all.length, unread: all.filter(x => !x.read).length };
+  for (const k of ["blocker", "task", "transcript", "vote", "mention"]) {
+    counts[k] = all.filter(x => x.kind === k).length;
+  }
+  res.json({ items, counts });
+});
+
+app.post("/webhook/mary/inbox/read", (req, res) => {
+  const { id, read, archived } = req.body || {};
+  if (!id) return res.status(400).json({ error: "id required" });
+  const state = loadInboxState();
+  state.items[id] = { ...(state.items[id] || {}), ...(read !== undefined ? { read } : {}), ...(archived !== undefined ? { archived } : {}) };
+  saveInboxState(state);
+  res.json({ ok: true });
 });
 
 function loadSandboxRuns() {
