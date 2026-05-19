@@ -9052,7 +9052,13 @@ function ChatMaryPage() {
               display: "flex", flexDirection: "column",
             }}>
               {messages.length === 0 ? (
-                <ChatWelcome onSuggest={(s) => send(s)}>
+                <ChatWelcome
+                  onSuggest={(s) => send(s)}
+                  onPickAudio={onPickAudio}
+                  onRecord={recording ? stopRecording : startRecording}
+                  recording={recording}
+                  audioUploading={audioUploading}
+                >
                   <MaryInputBox
                     text={text} setText={setText} send={send}
                     loading={loading} onStop={stopStream}
@@ -9573,10 +9579,20 @@ function BuildNode({ x, y, w, h, icon, iconBg, iconColor, title, sub, animate, i
   );
 }
 
-function ChatWelcome({ onSuggest, children }) {
+function ChatWelcome({ onSuggest, children, onPickAudio, onRecord, recording, audioUploading }) {
+  const [callMenuOpen, setCallMenuOpen] = useState(false);
+  const callBtnRef = useRef(null);
+  const localFileRef = useRef(null);
+  useEffect(() => {
+    if (!callMenuOpen) return;
+    const onDoc = (e) => { if (!callBtnRef.current?.contains(e.target)) setCallMenuOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [callMenuOpen]);
   const quickActions = [
     { label: "Автоматизировать отдел", prompt: "Помоги автоматизировать отдел" },
     { label: "Поставить задачу",       prompt: "Помоги поставить задачу" },
+    { label: "Подключить созвон",      isCall: true },
     { label: "Найти документ",         prompt: "Найди документ в базе знаний" },
     { label: "Метрики и отчёты",       prompt: "Покажи метрики за последнюю неделю" },
     { label: "Идеи постов",            prompt: "Предложи идеи постов на основе свежего ресёрча" },
@@ -9609,31 +9625,104 @@ function ChatWelcome({ onSuggest, children }) {
           {children}
         </div>
       )}
+      {/* Hidden file input для опции «загрузить» в меню созвонов */}
+      <input ref={localFileRef} type="file" accept="audio/*,video/*"
+        onChange={e => { const f = e.target.files?.[0]; if (f && onPickAudio) onPickAudio({ target: { files: [f], value: "" } }); e.target.value = ""; setCallMenuOpen(false); }}
+        style={{ display: "none" }} />
+
       {/* Чипы быстрых действий — внизу под input */}
       <div style={{
         display: "flex", flexWrap: "wrap", gap: 8,
         justifyContent: "center", marginTop: 4,
       }}>
-        {quickActions.map((a, i) => (
-          <button
-            key={i}
-            onClick={() => onSuggest(a.prompt)}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 4,
-              height: 34, padding: "0 10px",
-              background: "rgba(244,244,244,0.8)",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 12, fontWeight: 510, color: "#262633",
-              cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.08)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(244,244,244,0.8)"; }}
-          >
-            <img src="/icons/mary-puppy.png" alt="" style={{ width: 20, height: 20, objectFit: "contain" }} />
-            <span>{a.label}</span>
-          </button>
-        ))}
+        {quickActions.map((a, i) => {
+          if (a.isCall) {
+            const busy = recording || audioUploading;
+            return (
+              <div key={i} style={{ position: "relative" }} ref={callBtnRef}>
+                <button
+                  onClick={() => setCallMenuOpen(o => !o)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 4,
+                    height: 34, padding: "0 10px",
+                    background: callMenuOpen || busy ? "rgba(38,38,51,0.08)" : "rgba(244,244,244,0.8)",
+                    border: "none", borderRadius: 8,
+                    fontSize: 12, fontWeight: 510, color: busy ? "#FF8B3D" : "#262633",
+                    cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
+                  }}
+                  onMouseEnter={e => { if (!callMenuOpen && !busy) e.currentTarget.style.background = "rgba(38,38,51,0.08)"; }}
+                  onMouseLeave={e => { if (!callMenuOpen && !busy) e.currentTarget.style.background = "rgba(244,244,244,0.8)"; }}
+                >
+                  <span style={{ fontSize: 14, display: "inline-flex" }}>
+                    {recording ? "🔴" : audioUploading ? "⏳" : "📞"}
+                  </span>
+                  <span>
+                    {recording ? "Запись… (клик чтобы стоп)" : audioUploading ? "Расшифровка…" : a.label}
+                  </span>
+                </button>
+                {callMenuOpen && !busy && (
+                  <div style={{
+                    position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)",
+                    background: color.white, border: "1px solid rgba(38,38,51,0.1)",
+                    borderRadius: 12, boxShadow: "0 8px 24px rgba(38,38,51,0.12)",
+                    padding: 4, minWidth: 240, zIndex: 20,
+                    display: "flex", flexDirection: "column", gap: 1,
+                  }}>
+                    {[
+                      { id: "rec",   icon: "🎤", label: "Записать сейчас (микрофон)", onClick: () => { setCallMenuOpen(false); onRecord?.(); } },
+                      { id: "file",  icon: "📎", label: "Загрузить запись из файла",   onClick: () => { localFileRef.current?.click(); } },
+                      { id: "div",   divider: true },
+                      { id: "zoom",  icon: "🎥", label: "Подключить Zoom",         disabled: true, hint: "OAuth скоро" },
+                      { id: "meet",  icon: "📹", label: "Подключить Google Meet",  disabled: true, hint: "OAuth скоро" },
+                      { id: "tlmst", icon: "🅰️", label: "Подключить Яндекс.Телемост", disabled: true, hint: "API скоро" },
+                    ].map(item => item.divider ? (
+                      <div key={item.id} style={{ height: 1, background: "rgba(38,38,51,0.08)", margin: "3px 4px" }} />
+                    ) : (
+                      <button
+                        key={item.id}
+                        onClick={item.disabled ? undefined : item.onClick}
+                        disabled={item.disabled}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          padding: "8px 10px", background: "transparent",
+                          border: "none", borderRadius: 7,
+                          fontSize: 12.5, color: item.disabled ? "rgba(38,38,51,0.4)" : "#262633",
+                          cursor: item.disabled ? "not-allowed" : "pointer",
+                          fontFamily: "inherit", textAlign: "left",
+                        }}
+                        onMouseEnter={e => { if (!item.disabled) e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <span style={{ fontSize: 14 }}>{item.icon}</span>
+                        <span style={{ flex: 1 }}>{item.label}</span>
+                        {item.hint && <span style={{ fontSize: 10.5, color: "rgba(38,38,51,0.4)" }}>{item.hint}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+          return (
+            <button
+              key={i}
+              onClick={() => onSuggest(a.prompt)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 4,
+                height: 34, padding: "0 10px",
+                background: "rgba(244,244,244,0.8)",
+                border: "none", borderRadius: 8,
+                fontSize: 12, fontWeight: 510, color: "#262633",
+                cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.08)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "rgba(244,244,244,0.8)"; }}
+            >
+              <img src="/icons/mary-puppy.png" alt="" style={{ width: 20, height: 20, objectFit: "contain" }} />
+              <span>{a.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
