@@ -24,6 +24,7 @@ const SANDBOX_FILE = path.join(KB_DIR, "..", "sandbox-runs.json");
 const GOLDEN_FILE = path.join(KB_DIR, "..", "golden-tests.json");
 const TRANSCRIPTS_FILE = path.join(KB_DIR, "..", "transcripts.json");
 const TRANSCRIPTS_DIR = path.join(KB_DIR, "..", "audio");
+const TASKS_FILE = path.join(KB_DIR, "..", "tasks.json");
 
 // ── Departments (отделы компании) ────────────────────────
 const DEFAULT_DEPARTMENTS = [
@@ -892,15 +893,20 @@ const MARY_TOOLS = [
     type: "function",
     function: {
       name: "create_task",
-      description: "Поставить задачу человеку в команде или агенту. Появится в Drawer Tasks в статусе 'Ожидает принятия'.",
+      description: "Создать задачу в kanban-доске. Появится в колонке Backlog (или указанной status). Связывается с отделом и owner-ом — отображается на странице Задачи.",
       parameters: {
         type: "object",
         properties: {
-          assignee:    { type: "string", description: "Имя сотрудника или ID агента (researcher/marketer/copywriter/designer/analyst)" },
-          description: { type: "string", description: "Что нужно сделать" },
-          deadline:    { type: "string", description: "Дедлайн в формате ISO date или текст ('завтра в 18:00')" },
+          title:       { type: "string", description: "Короткое название задачи (5-10 слов)" },
+          description: { type: "string", description: "Подробности что нужно сделать" },
+          deptId:      { type: "string", description: "ID отдела (smm/hr/sales/...). Опускай если общая задача" },
+          assignee:    { type: "string", description: "Имя owner-а (человек или агент researcher/marketer/copywriter/designer/analyst)" },
+          dueDate:     { type: "string", description: "ISO date или текст ('завтра 18:00')" },
+          priority:    { type: "string", enum: ["high", "normal", "low"], description: "Приоритет, дефолт normal" },
+          status:      { type: "string", enum: ["backlog", "doing", "blocked", "done"], description: "Дефолт backlog" },
+          source:      { type: "object", description: "Откуда задача: { type: 'mary' | 'transcript' | 'decision' | 'manual', refId?: '...' }" },
         },
-        required: ["assignee", "description"],
+        required: ["title"],
       },
     },
   },
@@ -1458,15 +1464,19 @@ const TOOL_HANDLERS = {
     return { found: 0, results: [], note: "KB search будет на этапе 3 (RAG)" };
   },
   async create_task(args = {}) {
-    // TODO: настоящая запись в БД. Пока mock — фронт всё равно покажет в Tasks drawer.
-    return {
-      taskId: `t-${Date.now()}`,
-      status: "Ожидает принятия",
-      assignee: args.assignee,
-      description: args.description,
-      deadline: args.deadline || null,
-      created: new Date().toISOString(),
-    };
+    try {
+      const t = taskCreate({
+        title: args.title || args.description?.slice(0, 80) || "Без названия",
+        description: args.description || "",
+        deptId: args.deptId || "general",
+        ownerId: args.assignee || args.ownerId || null,
+        dueDate: args.deadline || args.dueDate || null,
+        priority: args.priority || "normal",
+        source: args.source || { type: "mary" },
+        status: args.status || "backlog",
+      });
+      return { ok: true, task: t };
+    } catch (e) { return { error: e.message }; }
   },
   async kb_list() {
     return { files: kbList() };
@@ -2154,6 +2164,138 @@ app.post("/webhook/mary/transcripts/:id/process", async (req, res) => {
     it.appliedTools = result.trace.map(t => ({ name: t.name, ok: t.ok, args: t.args, result: t.result }));
     saveTranscripts(all);
     res.json({ ok: true, memo: it.memo, applied: it.appliedTools, transcript: it });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Tasks ─────────────────────────────────────────────
+function loadTasks() {
+  try { return JSON.parse(fs.readFileSync(TASKS_FILE, "utf8")); } catch { return { tasks: [] }; }
+}
+function saveTasks(data) {
+  fs.mkdirSync(path.dirname(TASKS_FILE), { recursive: true });
+  fs.writeFileSync(TASKS_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+function taskCreate({ title, description = "", deptId = "general", ownerId = null, status = "backlog", dueDate = null, priority = "normal", source = { type: "manual" } }) {
+  if (!title) throw new Error("title required");
+  const data = loadTasks();
+  const task = {
+    id: "task-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6),
+    title, description, deptId, ownerId, status,
+    dueDate, priority, source,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    comments: [], history: [{ action: "created", ts: new Date().toISOString() }],
+  };
+  data.tasks.unshift(task);
+  saveTasks(data);
+  return task;
+}
+function taskUpdate(id, patch) {
+  const data = loadTasks();
+  const t = data.tasks.find(x => x.id === id);
+  if (!t) throw new Error(`task '${id}' не найден`);
+  const oldStatus = t.status;
+  Object.assign(t, patch, { updatedAt: new Date().toISOString() });
+  if (patch.status && patch.status !== oldStatus) {
+    t.history.push({ action: `status: ${oldStatus} → ${patch.status}`, ts: new Date().toISOString() });
+  }
+  saveTasks(data);
+  return t;
+}
+function taskDelete(id) {
+  const data = loadTasks();
+  data.tasks = data.tasks.filter(t => t.id !== id);
+  saveTasks(data);
+  return true;
+}
+function taskAddComment(id, text, author = "user") {
+  const data = loadTasks();
+  const t = data.tasks.find(x => x.id === id);
+  if (!t) throw new Error("not found");
+  t.comments.push({ author, text, ts: new Date().toISOString() });
+  t.updatedAt = new Date().toISOString();
+  saveTasks(data);
+  return t;
+}
+
+// REST endpoints
+app.get("/webhook/mary/tasks", (req, res) => {
+  const { deptId, status, ownerId, source, q } = req.query;
+  let tasks = loadTasks().tasks;
+  if (deptId)  tasks = tasks.filter(t => t.deptId === deptId);
+  if (status)  tasks = tasks.filter(t => t.status === status);
+  if (ownerId) tasks = tasks.filter(t => t.ownerId === ownerId);
+  if (source)  tasks = tasks.filter(t => t.source?.type === source);
+  if (q) {
+    const qq = String(q).toLowerCase();
+    tasks = tasks.filter(t => (t.title || "").toLowerCase().includes(qq) || (t.description || "").toLowerCase().includes(qq));
+  }
+  res.json({ tasks });
+});
+app.get("/webhook/mary/tasks/:id", (req, res) => {
+  const t = loadTasks().tasks.find(x => x.id === req.params.id);
+  if (!t) return res.status(404).json({ error: "not found" });
+  res.json(t);
+});
+app.post("/webhook/mary/tasks", (req, res) => {
+  try { res.json(taskCreate(req.body || {})); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.patch("/webhook/mary/tasks/:id", (req, res) => {
+  try { res.json(taskUpdate(req.params.id, req.body || {})); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.delete("/webhook/mary/tasks/:id", (req, res) => {
+  taskDelete(req.params.id);
+  res.json({ ok: true });
+});
+app.post("/webhook/mary/tasks/:id/comment", (req, res) => {
+  try { res.json(taskAddComment(req.params.id, req.body?.text || "", req.body?.author || "user")); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// Утренний дайджест: Mary смотрит задачи, возвращает топ-3 что сегодня + блокеры + что у других
+app.post("/webhook/mary/tasks/morning-digest", async (req, res) => {
+  const { deptId } = req.body || {};
+  if (!OPENROUTER_API_KEY) return res.status(503).json({ error: "LLM not configured" });
+  try {
+    let tasks = loadTasks().tasks;
+    if (deptId) tasks = tasks.filter(t => t.deptId === deptId);
+    const open = tasks.filter(t => t.status !== "done").slice(0, 50);
+    if (open.length === 0) return res.json({ digest: "Нет открытых задач — день начинается с чистого листа.", topPicks: [], blockers: [] });
+    const tasksText = open.map(t => `- [${t.id}] ${t.title} | owner: ${t.ownerId || "—"} | status: ${t.status} | due: ${t.dueDate || "—"} | priority: ${t.priority}${t.description ? " | " + t.description.slice(0, 100) : ""}`).join("\n");
+    const sys = `Ты — Mary, ассистент по утреннему дайджесту задач. Возьми список задач и верни СТРОГО JSON:
+{
+  "topPicks":[{"id":"task-...", "why":"коротко 1 предложение почему важно сегодня"}],
+  "blockers":[{"id":"task-...", "reason":"что блокирует"}],
+  "digest": "короткое summary 2-3 предложения для юзера"
+}
+Правила: topPicks ровно 3 (или меньше если задач меньше); blockers — только реально блокированные; digest на русском, в стиле «коротко и по делу».`;
+    const content = await callLLM({ system: sys, user: `Сегодня ${new Date().toLocaleDateString("ru")}\nЗадачи:\n${tasksText}`, jsonMode: true, maxTokens: 800, label: "morning-digest" });
+    let parsed; try { parsed = JSON.parse(content); } catch { parsed = { digest: content, topPicks: [], blockers: [] }; }
+    res.json(parsed);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Smart batching: группировка задач по теме через LLM
+app.post("/webhook/mary/tasks/batched", async (req, res) => {
+  const { deptId } = req.body || {};
+  if (!OPENROUTER_API_KEY) return res.status(503).json({ error: "LLM not configured" });
+  try {
+    let tasks = loadTasks().tasks.filter(t => t.status !== "done");
+    if (deptId) tasks = tasks.filter(t => t.deptId === deptId);
+    if (tasks.length < 3) return res.json({ groups: [] });
+    const text = tasks.map(t => `[${t.id}] ${t.title}${t.description ? " — " + t.description.slice(0, 80) : ""}`).join("\n");
+    const sys = `Ты группируешь задачи по темам/проектам. Верни СТРОГО JSON:
+{"groups":[{"theme":"короткое название темы 1-3 слова","taskIds":["task-..","task-.."]}]}
+Правила: 2-5 групп, минимум 2 задачи в группе. Несгруппированные не возвращай.`;
+    const content = await callLLM({ system: sys, user: `Задачи:\n${text}`, jsonMode: true, maxTokens: 600, label: "batching" });
+    let parsed; try { parsed = JSON.parse(content); } catch { parsed = { groups: [] }; }
+    res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
