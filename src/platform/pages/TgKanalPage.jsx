@@ -7529,10 +7529,10 @@ const KANBAN_COLUMNS = [
 
 // ── Tasks page (Kanban) — Taskk-style ────────────────────
 const TASK_COLUMNS = [
-  { id: "backlog", label: "Backlog",  color: "#3F95FF" },
-  { id: "doing",   label: "Doing",    color: "#FF8B3D" },
-  { id: "blocked", label: "Blocked",  color: "#FF3B30" },
-  { id: "done",    label: "Done",     color: "#34C759" },
+  { id: "backlog", label: "Бэклог",   color: "#3F95FF" },
+  { id: "doing",   label: "В работе", color: "#FF8B3D" },
+  { id: "blocked", label: "Блокеры",  color: "#FF3B30" },
+  { id: "done",    label: "Готово",   color: "#34C759" },
 ];
 const SOURCE_TAG = {
   mary:       { label: "Mary",    bg: "rgba(255,139,61,0.12)",  fg: "#FF8B3D" },
@@ -7603,12 +7603,12 @@ function TasksKanbanPage() {
               <polyline points="14 2 14 8 20 8" />
             </svg>
             <span>›</span>
-            <span>Board</span>
+            <span>Доска</span>
             <span>›</span>
             <span style={{
               padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 5,
               color: "#262633", fontWeight: 500,
-            }}>Overview</span>
+            }}>Обзор</span>
           </div>
 
           {/* H1 */}
@@ -7624,10 +7624,10 @@ function TasksKanbanPage() {
           }}>
             <div style={{ display: "flex", gap: 6 }}>
               {[
-                { id: "board",    label: "Board" },
-                { id: "list",     label: "List" },
-                { id: "timeline", label: "Week" },
-                { id: "due",      label: "Due Tasks" },
+                { id: "board",    label: "Доска" },
+                { id: "list",     label: "Список" },
+                { id: "timeline", label: "Неделя" },
+                { id: "due",      label: "Дедлайны" },
               ].map(t => (
                 <button key={t.id} onClick={() => setView(t.id)}
                   style={{
@@ -7773,7 +7773,7 @@ function TasksKanbanPage() {
                           <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 5v14M5 12h14" />
                           </svg>
-                          Add new
+                          Добавить
                         </button>
                       )}
                     </div>
