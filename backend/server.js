@@ -22,6 +22,8 @@ const CONV_FILE = path.join(KB_DIR, "..", "conversations.json");
 const DEPT_FILE = path.join(KB_DIR, "..", "departments.json");
 const SANDBOX_FILE = path.join(KB_DIR, "..", "sandbox-runs.json");
 const GOLDEN_FILE = path.join(KB_DIR, "..", "golden-tests.json");
+const TRANSCRIPTS_FILE = path.join(KB_DIR, "..", "transcripts.json");
+const TRANSCRIPTS_DIR = path.join(KB_DIR, "..", "audio");
 
 // ── Departments (отделы компании) ────────────────────────
 const DEFAULT_DEPARTMENTS = [
@@ -425,7 +427,7 @@ async function tgAlert(text) {
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "5mb" }));
+app.use(express.json({ limit: "50mb" })); // 50mb для base64 аудио
 
 // ── Researcher: данные ────────────────────────────────────
 let _postsCache = null;
@@ -2056,6 +2058,106 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit, 
 
 // Песочница всего отдела: цепочка агентов (output одного → input следующего).
 const DEFAULT_AGENT_ORDER = ["researcher", "marketer", "copywriter", "designer", "analyst"];
+
+// ── Транскрипты созвонов ────────────────────────────────
+function loadTranscripts() {
+  try { return JSON.parse(fs.readFileSync(TRANSCRIPTS_FILE, "utf8")); } catch { return { items: [] }; }
+}
+function saveTranscripts(data) {
+  fs.mkdirSync(path.dirname(TRANSCRIPTS_FILE), { recursive: true });
+  fs.writeFileSync(TRANSCRIPTS_FILE, JSON.stringify(data, null, 2), "utf8");
+}
+
+// Mock-транскрипт когда нет Whisper-ключа. Реалистичный созвон команды
+// с триггерами под workflow (блокер / голосование / решение / задачи).
+const MOCK_TRANSCRIPT = `[00:00] Виктория: Окей, начинаем стендап. Что у нас по релизу новой фичи AI-агенты?
+[00:18] Александр: Бекенд готов на 80%. Осталось обработка ошибок и тесты. Дедлайн — пятница.
+[00:35] Мария: Дизайн готов, передала Александру 2 дня назад. Жду фронт.
+[00:58] Александр: Фронт... я застрял на интеграции с auth-сервисом, не могу пройти OAuth. Сижу второй день.
+[01:18] Виктория: Это блокер. Когда найдёшь причину — отпиши.
+[01:32] Мария: Давайте сдвинем релиз на следующий понедельник? Будет безопаснее, успеем фронт доделать.
+[01:48] Александр: Согласен. Лучше сдвинуть.
+[01:55] Виктория: Я тоже за. Решено — релиз 26 мая. Александр координирует, ты теперь owner релиза.
+[02:14] Виктория: По воркшопу для команды в среду — кто идёт?
+[02:26] Александр: Я приду.
+[02:30] Мария: Я тоже.
+[02:36] Виктория: Окей, едем все. Заодно нужно подготовить демо для воркшопа — Мария, возьмёшь на себя?
+[02:50] Мария: Да, до вторника сделаю.
+[03:02] Виктория: Хорошо. По метрикам прошлой недели — Александр, обновишь дашборд?
+[03:15] Александр: Завтра соберу.
+[03:20] Виктория: Спасибо всем. Идём.`;
+
+// Заглушка STT — возвращает mock пока нет ключа. Когда появится — заменить на Whisper API call.
+async function transcribeAudioMock(audioBase64, fileName) {
+  // Имитируем задержку как у настоящего Whisper (4-7 сек)
+  await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
+  const sizeBytes = Buffer.from(audioBase64 || "", "base64").length;
+  const estimatedSec = Math.max(60, Math.floor(sizeBytes / 16000)); // ~16kbps opus
+  return {
+    transcript: MOCK_TRANSCRIPT,
+    durationSec: 200,  // мок 3:20
+    fileSize: sizeBytes,
+    mock: true,
+  };
+}
+
+// Endpoint: загрузка аудио → STT (mock) → сохранение
+app.post("/webhook/mary/transcripts", async (req, res) => {
+  const { audio, fileName = "recording.webm", deptId, conversationId } = req.body || {};
+  try {
+    const id = "tr-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+    // Сохраняем аудио на диск (для будущего реального Whisper)
+    if (audio) {
+      fs.mkdirSync(TRANSCRIPTS_DIR, { recursive: true });
+      const ext = fileName.split(".").pop() || "webm";
+      fs.writeFileSync(path.join(TRANSCRIPTS_DIR, `${id}.${ext}`), Buffer.from(audio, "base64"));
+    }
+    const stt = await transcribeAudioMock(audio, fileName);
+    const item = {
+      id, fileName, deptId, conversationId,
+      createdAt: new Date().toISOString(),
+      transcript: stt.transcript,
+      durationSec: stt.durationSec,
+      mock: stt.mock,
+      processed: false,
+      memo: null,
+    };
+    const all = loadTranscripts();
+    all.items.unshift(item);
+    saveTranscripts(all);
+    res.json({ ok: true, transcript: item });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get("/webhook/mary/transcripts/:id", (req, res) => {
+  const all = loadTranscripts();
+  const it = all.items.find(x => x.id === req.params.id);
+  if (!it) return res.status(404).json({ error: "not found" });
+  res.json(it);
+});
+
+// Обработка транскрипта Mary — выносит memo + применяет workflow tools.
+// Mary видит транскрипт + контекст threada и сама решает что вызывать.
+app.post("/webhook/mary/transcripts/:id/process", async (req, res) => {
+  const all = loadTranscripts();
+  const it = all.items.find(x => x.id === req.params.id);
+  if (!it) return res.status(404).json({ error: "not found" });
+  if (!OPENROUTER_API_KEY) return res.status(503).json({ error: "LLM not configured" });
+  try {
+    const ctx = `[Контекст]\n— Источник: транскрипт созвона${it.deptId ? ` отдела ${it.deptId}` : ""}\n— Длительность: ~${Math.round(it.durationSec/60)} мин\n${it.conversationId ? `— Тред: ${it.conversationId}\n` : ""}\n[Транскрипт]\n${it.transcript}`;
+    const userMsg = `${ctx}\n\n[Задача]\nРазбери этот транскрипт. Сделай ровно следующее:\n1) Выпиши memo в markdown: ## Решения / ## Блокеры / ## Задачи / ## Owner-ы\n2) Применяй workflow-tools если уместно: flag_blocker для каждого блокера, record_vote+add_decision для принятых решений, create_task для action items с owner.\n3) После всех tool-calls в финальном тексте — только короткое memo, не повторяй tool args в тексте.`;
+    const result = await runAgent({ message: userMsg, history: [] });
+    it.processed = true;
+    it.memo = result.text;
+    it.appliedTools = result.trace.map(t => ({ name: t.name, ok: t.ok, args: t.args, result: t.result }));
+    saveTranscripts(all);
+    res.json({ ok: true, memo: it.memo, applied: it.appliedTools, transcript: it });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
 
 function loadSandboxRuns() {
   try { return JSON.parse(fs.readFileSync(SANDBOX_FILE, "utf8")); } catch { return { runs: [] }; }
