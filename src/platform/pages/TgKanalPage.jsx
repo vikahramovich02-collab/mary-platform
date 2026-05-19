@@ -11312,59 +11312,332 @@ function HomePage({ onNavigate }) {
 }
 
 // ── Входящие ────────────────────────────────────────────
+// ── Inbox: TG-стиль (list слева + detail справа + фильтры) ──
+const INBOX_KIND = {
+  blocker:    { icon: "🚨", label: "Блокер",       color: "#FF3B30" },
+  task:       { icon: "✅", label: "Задача",       color: "#3F95FF" },
+  transcript: { icon: "📼", label: "Транскрипт",   color: "#7A86FF" },
+  vote:       { icon: "🗳", label: "Голосование",  color: "#FF8B3D" },
+  mention:    { icon: "💬", label: "Упоминание",   color: "#34C759" },
+  approval:   { icon: "📝", label: "На апрув",     color: "#FF8B3D" },
+  digest:     { icon: "☀️", label: "Дайджест",     color: "#FFD60A" },
+};
+
 function InboxPage({ onNavigate }) {
-  const inbox = [
-    { kind: "approval", title: "Маркетолог: 3 идеи постов на неделю", from: "Маркетолог", agent: true, color: "#FF8B3D", time: "5 мин назад", action: "tg-kanal" },
-    { kind: "ready",    title: "Копирайтер написал текст «Чек-лист SMM»", from: "Копирайтер", agent: true, color: "#7A86FF", time: "20 мин назад", action: "tg-kanal" },
-    { kind: "ready",    title: "Дизайнер сгенерил 3 обложки", from: "Дизайнер", agent: true, color: "#7A86FF", time: "30 мин назад", action: "tg-kanal" },
-    { kind: "report",   title: "Аналитик: отчёт по постам за неделю", from: "Аналитик", agent: true, color: "#FF6FB3", time: "сегодня в 09:00", action: "tg-kanal" },
-    { kind: "task",     title: "Александр Орлов прислал коммент к идее #2", from: "Александр Орлов", agent: false, color: "#FF8B3D", time: "вчера", action: "tg-kanal" },
-  ];
-  const KIND = {
-    approval: { label: "На апрув", color: "#FF8B3D" },
-    ready:    { label: "Готово",   color: "#34C759" },
-    report:   { label: "Отчёт",    color: "#7A86FF" },
-    task:     { label: "Сообщение", color: "#3F95FF" },
+  const [items, setItems] = useState([]);
+  const [counts, setCounts] = useState({});
+  const [filter, setFilter] = useState("all"); // all | unread | blocker | task | transcript | vote | mention | archived
+  const [query, setQuery] = useState("");
+  const [activeId, setActiveId] = useState(null);
+
+  const reload = () => {
+    const params = new URLSearchParams();
+    if (filter === "unread")    params.set("unread", "1");
+    else if (filter === "archived") params.set("archived", "1");
+    else if (filter !== "all")  params.set("kind", filter);
+    if (query.trim())           params.set("q", query.trim());
+    fetch(`/api/mary/inbox?${params}`).then(r => r.json()).then(d => {
+      setItems(d.items || []);
+      setCounts(d.counts || {});
+    });
   };
+  useEffect(() => { reload(); }, [filter, query]);
+  // Авто-рефреш каждые 30с
+  useEffect(() => {
+    const id = setInterval(reload, 30000);
+    return () => clearInterval(id);
+  }, [filter, query]);
+
+  const active = items.find(i => i.id === activeId);
+  // Auto mark as read когда открыл
+  useEffect(() => {
+    if (active && !active.read) {
+      fetch("/api/mary/inbox/read", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: active.id, read: true }),
+      }).then(reload);
+    }
+  }, [activeId]);
+
+  const archive = async (id) => {
+    await fetch("/api/mary/inbox/read", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, archived: true }),
+    });
+    setActiveId(null);
+    reload();
+  };
+  const goSource = (it) => {
+    const nav = it.source?.navTo || "";
+    if (nav.startsWith("task:")) onNavigate("tasks");
+    else if (nav.startsWith("transcript:")) onNavigate("chat-mary");
+    else if (nav.startsWith("chat:")) onNavigate("chat-mary");
+  };
+
+  // Группировка списка по дате
+  const groupByDate = (arr) => {
+    const today = new Date();
+    const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const startYesterday = startToday - 86400000;
+    const buckets = { today: [], yesterday: [], earlier: [] };
+    for (const it of arr) {
+      const t = new Date(it.ts).getTime();
+      if (t >= startToday) buckets.today.push(it);
+      else if (t >= startYesterday) buckets.yesterday.push(it);
+      else buckets.earlier.push(it);
+    }
+    return [
+      { label: "Сегодня", items: buckets.today },
+      { label: "Вчера",   items: buckets.yesterday },
+      { label: "Раньше",  items: buckets.earlier },
+    ].filter(g => g.items.length > 0);
+  };
+  const groups = groupByDate(items);
+
   return (
-    <PageShell title="Входящие" sub={`${inbox.length} элементов требуют твоего внимания`}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {inbox.map((it, i) => (
-          <button key={i} onClick={() => onNavigate(it.action)} style={{
-            display: "flex", alignItems: "center", gap: 14,
-            padding: "14px 18px",
-            background: "rgba(38,38,51,0.025)",
-            border: "none", borderRadius: 12,
-            cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-          }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
-            onMouseLeave={e => e.currentTarget.style.background = "rgba(38,38,51,0.025)"}>
-            <div style={{
-              width: 36, height: 36, borderRadius: "50%",
-              background: it.color + "26", color: it.color,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              flexShrink: 0, fontSize: 13, fontWeight: 600,
-            }}>{it.from.split(" ").map(w => w[0]).join("").slice(0, 2)}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 500, color: "#262633" }}>{it.title}</div>
-              <div style={{ fontSize: 12, color: "rgba(38,38,51,0.55)", marginTop: 3, display: "flex", gap: 8, alignItems: "center" }}>
-                <span>{it.from}</span>
-                <span>·</span>
-                <span>{it.time}</span>
-              </div>
+    <div style={{ display: "flex", flex: 1, minHeight: 0, background: color.white }}>
+      {/* Sidebar — list */}
+      <aside style={{
+        width: 360, minWidth: 360,
+        borderRight: "1px solid rgba(38,38,51,0.06)",
+        display: "flex", flexDirection: "column", background: color.white,
+      }}>
+        {/* Header */}
+        <div style={{ padding: "18px 16px 10px" }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: "#262633", margin: "0 0 12px" }}>
+            Входящие
+          </h2>
+          {/* Search */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "rgba(38,38,51,0.05)", borderRadius: 8, padding: "7px 10px",
+            marginBottom: 10,
+          }}>
+            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+            </svg>
+            <input
+              value={query} onChange={e => setQuery(e.target.value)}
+              placeholder="Поиск"
+              style={{
+                flex: 1, border: "none", outline: "none",
+                background: "transparent", fontSize: 12.5, color: "#262633",
+                fontFamily: "inherit", padding: 0,
+              }} />
+          </div>
+          {/* Filter tabs */}
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+            {[
+              { id: "all",      label: "Все",         count: counts.all },
+              { id: "unread",   label: "Новые",       count: counts.unread },
+              { id: "blocker",  label: "Блокеры",     count: counts.blocker },
+              { id: "task",     label: "Задачи",      count: counts.task },
+              { id: "vote",     label: "Голосования", count: counts.vote },
+              { id: "mention",  label: "Упоминания",  count: counts.mention },
+              { id: "transcript",label:"Транскрипты", count: counts.transcript },
+              { id: "archived", label: "Архив",       count: null },
+            ].filter(t => t.count !== 0 || t.id === "all" || t.id === "archived").map(t => (
+              <button key={t.id} onClick={() => setFilter(t.id)}
+                style={{
+                  padding: "4px 10px",
+                  background: filter === t.id ? "#262633" : "rgba(38,38,51,0.04)",
+                  color: filter === t.id ? color.white : "#262633",
+                  border: "none", borderRadius: 999,
+                  fontSize: 11.5, fontWeight: 500,
+                  cursor: "pointer", fontFamily: "inherit",
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                }}>
+                {t.label}{t.count != null && t.count > 0 && (
+                  <span style={{ opacity: 0.7 }}>{t.count}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* List */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "4px 8px 16px" }}>
+          {items.length === 0 && (
+            <div style={{ padding: 30, fontSize: 12.5, color: "rgba(38,38,51,0.5)", textAlign: "center" }}>
+              Пусто. Ни блокеров, ни задач, ни упоминаний.
             </div>
-            <span style={{
-              fontSize: 11, fontWeight: 500,
-              padding: "4px 10px", borderRadius: 999,
-              background: KIND[it.kind].color + "1A",
-              color: KIND[it.kind].color,
-              flexShrink: 0,
-            }}>{KIND[it.kind].label}</span>
-            <span style={{ display: "flex", color: "rgba(38,38,51,0.4)" }}>{ic.arrowRight}</span>
-          </button>
-        ))}
+          )}
+          {groups.map(g => (
+            <div key={g.label} style={{ marginBottom: 8 }}>
+              <div style={{
+                fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.5)",
+                textTransform: "uppercase", letterSpacing: "0.06em",
+                padding: "6px 8px",
+              }}>{g.label}</div>
+              {g.items.map(it => {
+                const k = INBOX_KIND[it.kind] || { icon: "•", color: "#262633", label: it.kind };
+                const isActive = it.id === activeId;
+                return (
+                  <button key={it.id}
+                    onClick={() => setActiveId(it.id)}
+                    style={{
+                      width: "100%", display: "flex", gap: 10,
+                      padding: "10px 10px",
+                      background: isActive ? "rgba(38,38,51,0.06)" : "transparent",
+                      border: "none", borderRadius: 8,
+                      cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                      position: "relative",
+                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: "50%",
+                      background: k.color + "1A", color: k.color,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 14, flexShrink: 0,
+                    }}>{k.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{
+                        fontSize: 12.5, fontWeight: it.read ? 400 : 600, color: "#262633",
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>{it.title}</div>
+                      <div style={{
+                        fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 2,
+                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                      }}>{it.preview}</div>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+                      <span style={{ fontSize: 10.5, color: "rgba(38,38,51,0.4)" }}>
+                        {new Date(it.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                      {!it.read && !it.archived && (
+                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#FF8B3D" }} />
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </aside>
+
+      {/* Detail */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: "rgba(247,247,247,0.4)" }}>
+        {!active ? (
+          <div style={{
+            flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+            color: "rgba(38,38,51,0.4)", fontSize: 13,
+          }}>
+            Выбери элемент слева
+          </div>
+        ) : (
+          <InboxDetail item={active} onArchive={() => archive(active.id)} onGoSource={() => goSource(active)} onNavigate={onNavigate} />
+        )}
       </div>
-    </PageShell>
+    </div>
+  );
+}
+
+function InboxDetail({ item, onArchive, onGoSource, onNavigate }) {
+  const k = INBOX_KIND[item.kind] || { icon: "•", color: "#262633", label: item.kind };
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "26px 32px" }}>
+      <div style={{ maxWidth: 740 }}>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: "50%",
+            background: k.color + "1A", color: k.color,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18, flexShrink: 0,
+          }}>{k.icon}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, color: k.color, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              {k.label}
+            </div>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: "#262633", margin: "2px 0 0", lineHeight: 1.3 }}>
+              {item.title}
+            </h2>
+          </div>
+          <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", flexShrink: 0 }}>
+            {new Date(item.ts).toLocaleString("ru", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+          </span>
+        </div>
+
+        {/* Content */}
+        <div style={{
+          background: color.white, border: "1px solid rgba(38,38,51,0.06)",
+          borderRadius: 12, padding: "16px 18px", marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 13.5, color: "#262633", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+            {item.preview}
+            {item.meta?.description && <div style={{ marginTop: 8, color: "rgba(38,38,51,0.7)" }}>{item.meta.description}</div>}
+            {item.meta?.fullText && <div style={{ marginTop: 8, color: "rgba(38,38,51,0.7)" }}>{item.meta.fullText}</div>}
+            {item.meta?.transcript && (
+              <details style={{ marginTop: 12 }}>
+                <summary style={{ cursor: "pointer", fontSize: 12, color: "rgba(38,38,51,0.55)" }}>Показать транскрипт</summary>
+                <div style={{
+                  marginTop: 8, padding: "10px 12px", background: "rgba(38,38,51,0.03)",
+                  borderRadius: 8, fontSize: 12, color: "rgba(38,38,51,0.75)",
+                  whiteSpace: "pre-wrap", maxHeight: 300, overflowY: "auto",
+                }}>{item.meta.transcript}</div>
+              </details>
+            )}
+          </div>
+        </div>
+
+        {/* Meta */}
+        {item.meta && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 16 }}>
+            {item.meta.priority === "high" && (
+              <span style={{ padding: "3px 9px", background: "rgba(255,59,48,0.1)", color: "#FF3B30", borderRadius: 999, fontSize: 11.5, fontWeight: 500 }}>↑ важно</span>
+            )}
+            {item.meta.dueDate && (
+              <span style={{ padding: "3px 9px", background: "rgba(38,38,51,0.05)", color: "rgba(38,38,51,0.7)", borderRadius: 999, fontSize: 11.5, fontWeight: 500 }}>до {item.meta.dueDate}</span>
+            )}
+            {item.meta.status && (
+              <span style={{ padding: "3px 9px", background: "rgba(38,38,51,0.05)", color: "rgba(38,38,51,0.7)", borderRadius: 999, fontSize: 11.5, fontWeight: 500 }}>{item.meta.status}</span>
+            )}
+            {item.meta.owner && (
+              <span style={{ padding: "3px 9px", background: "rgba(38,38,51,0.05)", color: "rgba(38,38,51,0.7)", borderRadius: 999, fontSize: 11.5, fontWeight: 500 }}>owner: {item.meta.owner}</span>
+            )}
+            {item.meta.votes && (
+              <span style={{ padding: "3px 9px", background: "rgba(255,139,61,0.1)", color: "#FF8B3D", borderRadius: 999, fontSize: 11.5, fontWeight: 500 }}>{item.meta.votes.length}/2 голосов</span>
+            )}
+            {item.deptId && (
+              <span style={{ padding: "3px 9px", background: "rgba(38,38,51,0.05)", color: "rgba(38,38,51,0.7)", borderRadius: 999, fontSize: 11.5, fontWeight: 500 }}>отдел: {item.deptId}</span>
+            )}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={onGoSource}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "8px 14px", background: "#262633", color: color.white,
+              border: "none", borderRadius: 8,
+              fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+            }}>
+            Перейти к источнику
+            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </button>
+          <button onClick={() => onNavigate("chat-mary")}
+            style={{
+              padding: "8px 14px", background: "transparent",
+              border: "1px solid rgba(38,38,51,0.18)", borderRadius: 8,
+              fontSize: 12.5, color: "#262633", fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+            }}>Спросить Mary</button>
+          <div style={{ flex: 1 }} />
+          {!item.archived && (
+            <button onClick={onArchive}
+              style={{
+                padding: "8px 14px", background: "transparent",
+                border: "1px solid rgba(38,38,51,0.18)", borderRadius: 8,
+                fontSize: 12.5, color: "rgba(38,38,51,0.7)", fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+              }}>Архив</button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -11644,6 +11917,14 @@ export default function TgKanalPage() {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("page") || "tg-kanal"
   ); // "tg-kanal" | "kb" | "integrations" | "tasks" | "chat-mary" | "home" | "inbox" | "team" | "bizproc" | "settings"
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Бэдж непрочитанных Входящих
+  const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
+  useEffect(() => {
+    const fetchUnread = () => fetch("/api/mary/inbox?unread=1").then(r => r.json()).then(d => setInboxUnreadCount(d.counts?.unread || 0)).catch(() => {});
+    fetchUnread();
+    const id = setInterval(fetchUnread, 30000);
+    return () => clearInterval(id);
+  }, [currentPage]);
   const [departments, setDepartments] = useState([]);
   const [openDepts, setOpenDepts] = useState({ smm: true });
   // Глобальный navigate для dept://X / page://Y ссылок из чата Mary
@@ -11800,7 +12081,15 @@ export default function TgKanalPage() {
           active={currentPage === "chat-mary"}
           onClick={() => setCurrentPage("chat-mary")}
         />
-        <SideRow icon={ic.inbox} label="Входящие" active={currentPage === "inbox"} onClick={() => setCurrentPage("inbox")} />
+        <SideRow icon={ic.inbox} label="Входящие" active={currentPage === "inbox"} onClick={() => setCurrentPage("inbox")}
+          trailing={inboxUnreadCount > 0 ? (
+            <span style={{
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              minWidth: 18, height: 18, padding: "0 5px",
+              background: "#FF3B30", color: color.white, borderRadius: 999,
+              fontSize: 10.5, fontWeight: 600,
+            }}>{inboxUnreadCount}</span>
+          ) : null} />
 
         <SectionHeader label="Компания" />
         <SideRow icon={ic.people}       label="Команда" active={currentPage === "team"} onClick={() => setCurrentPage("team")} />
