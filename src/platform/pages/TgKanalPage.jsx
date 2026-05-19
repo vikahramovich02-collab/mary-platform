@@ -7626,7 +7626,7 @@ function TasksKanbanPage() {
               {[
                 { id: "board",    label: "Board" },
                 { id: "list",     label: "List" },
-                { id: "timeline", label: "Timeline" },
+                { id: "timeline", label: "Week" },
                 { id: "due",      label: "Due Tasks" },
               ].map(t => (
                 <button key={t.id} onClick={() => setView(t.id)}
@@ -7783,14 +7783,22 @@ function TasksKanbanPage() {
             </div>
           )}
 
-          {view !== "board" && (
-            <div style={{
-              padding: 60, textAlign: "center",
-              fontSize: 14, color: "rgba(38,38,51,0.45)",
-              border: "1px dashed rgba(38,38,51,0.12)", borderRadius: 12,
-            }}>
-              View «{view}» в разработке. Сейчас работает Board.
-            </div>
+          {view === "list" && (
+            <TasksListView tasks={tasks} departments={departments} onPick={id => setActiveTaskId(id)} onUpdate={async (id, patch) => {
+              await fetch(`/api/mary/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+              reload();
+            }} />
+          )}
+          {view === "due" && (
+            <TasksListView
+              tasks={tasks.filter(t => t.dueDate).sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)))}
+              departments={departments} onPick={id => setActiveTaskId(id)} onUpdate={async (id, patch) => {
+                await fetch(`/api/mary/tasks/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) });
+                reload();
+              }} emptyLabel="Нет задач с дедлайном" />
+          )}
+          {view === "timeline" && (
+            <TasksWeekView tasks={tasks} departments={departments} onPick={id => setActiveTaskId(id)} />
           )}
         </div>
       </div>
@@ -7902,6 +7910,210 @@ function TaskCard({ t, departments, onClick, draggable, onDragStart, onDragEnd, 
           </span>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── List view: плоский список с сортировкой по колонке ──
+function TasksListView({ tasks, departments, onPick, onUpdate, emptyLabel = "Пока нет задач" }) {
+  const [sortBy, setSortBy] = useState("updatedAt");
+  const [sortDir, setSortDir] = useState("desc");
+  const sortClick = (col) => {
+    if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortBy(col); setSortDir("desc"); }
+  };
+  const sorted = [...tasks].sort((a, b) => {
+    const va = a[sortBy] || "", vb = b[sortBy] || "";
+    const r = String(va).localeCompare(String(vb));
+    return sortDir === "asc" ? r : -r;
+  });
+  if (!sorted.length) {
+    return (
+      <div style={{
+        padding: 60, textAlign: "center",
+        fontSize: 14, color: "rgba(38,38,51,0.45)",
+        border: "1px dashed rgba(38,38,51,0.12)", borderRadius: 12,
+      }}>{emptyLabel}</div>
+    );
+  }
+  const cols = [
+    { id: "title",     label: "Задача", flex: 3 },
+    { id: "deptId",    label: "Отдел",  flex: 1 },
+    { id: "ownerId",   label: "Owner",  flex: 1 },
+    { id: "status",    label: "Статус", flex: 1 },
+    { id: "priority",  label: "Приор.", flex: 0.6 },
+    { id: "dueDate",   label: "Due",    flex: 1 },
+  ];
+  return (
+    <div style={{
+      border: "1px solid rgba(38,38,51,0.08)", borderRadius: 12,
+      overflow: "hidden", background: color.white,
+    }}>
+      {/* Заголовки */}
+      <div style={{
+        display: "flex", gap: 14, padding: "10px 16px",
+        borderBottom: "1px solid rgba(38,38,51,0.08)",
+        fontSize: 11, fontWeight: 600, color: "rgba(38,38,51,0.55)",
+        textTransform: "uppercase", letterSpacing: "0.06em",
+      }}>
+        {cols.map(c => (
+          <button key={c.id} onClick={() => sortClick(c.id)}
+            style={{
+              flex: c.flex, textAlign: "left", padding: 0,
+              background: "transparent", border: "none",
+              color: "inherit", fontWeight: "inherit", fontSize: "inherit",
+              textTransform: "inherit", letterSpacing: "inherit", cursor: "pointer",
+              display: "inline-flex", alignItems: "center", gap: 4,
+              fontFamily: "inherit",
+            }}>
+            {c.label}
+            {sortBy === c.id && <span style={{ color: "#262633" }}>{sortDir === "asc" ? "↑" : "↓"}</span>}
+          </button>
+        ))}
+      </div>
+      {/* Строки */}
+      {sorted.map(t => {
+        const dept = departments.find(d => d.id === t.deptId);
+        const colObj = TASK_COLUMNS.find(c => c.id === t.status);
+        return (
+          <div key={t.id}
+            onClick={() => onPick(t.id)}
+            style={{
+              display: "flex", alignItems: "center", gap: 14,
+              padding: "12px 16px",
+              borderTop: "1px solid rgba(38,38,51,0.05)",
+              cursor: "pointer", transition: transition.fast,
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.025)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          >
+            <div style={{ flex: 3, fontSize: 13, fontWeight: 500, color: "#262633",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.title}</div>
+            <div style={{ flex: 1, fontSize: 12, color: dept?.color || "rgba(38,38,51,0.55)" }}>
+              {dept?.name || "—"}
+            </div>
+            <div style={{ flex: 1, fontSize: 12, color: "rgba(38,38,51,0.7)" }}>
+              {t.ownerId || "—"}
+            </div>
+            <div style={{ flex: 1 }}>
+              <select
+                value={t.status}
+                onClick={e => e.stopPropagation()}
+                onChange={e => { e.stopPropagation(); onUpdate(t.id, { status: e.target.value }); }}
+                style={{
+                  padding: "3px 7px",
+                  background: (colObj?.color || "#000") + "1A",
+                  color: colObj?.color || "#262633",
+                  border: "none", borderRadius: 999,
+                  fontSize: 11, fontWeight: 500, cursor: "pointer",
+                  fontFamily: "inherit", outline: "none",
+                }}>
+                {TASK_COLUMNS.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 0.6, fontSize: 12, color: t.priority === "high" ? "#FF3B30" : "rgba(38,38,51,0.6)" }}>
+              {t.priority === "high" ? "↑ важно" : t.priority === "low" ? "↓ низкий" : "обычный"}
+            </div>
+            <div style={{ flex: 1, fontSize: 12, color: "rgba(38,38,51,0.6)" }}>
+              {t.dueDate || "—"}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Week view: 7-дневная сетка по дням текущей недели ──
+function TasksWeekView({ tasks, departments, onPick }) {
+  // Понедельник как начало недели
+  const today = new Date();
+  const dow = (today.getDay() + 6) % 7; // 0=Пн, 6=Вс
+  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dow);
+  const days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d;
+  });
+  const dayKey = (d) => d.toISOString().slice(0, 10);
+  const labels = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+  // Группируем по dueDate (если parseable)
+  const buckets = {};
+  const noDate = [];
+  for (const t of tasks) {
+    if (!t.dueDate) { noDate.push(t); continue; }
+    // Пытаемся парсить ISO либо «завтра» — кладём в noDate если не получилось
+    const d = new Date(t.dueDate);
+    if (!isNaN(d.getTime())) {
+      const k = dayKey(d);
+      (buckets[k] = buckets[k] || []).push(t);
+    } else {
+      noDate.push(t);
+    }
+  }
+
+  const todayKey = dayKey(today);
+  return (
+    <div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 10 }}>
+        {days.map((d, i) => {
+          const k = dayKey(d);
+          const items = buckets[k] || [];
+          const isToday = k === todayKey;
+          return (
+            <div key={k} style={{
+              background: isToday ? "rgba(63,149,255,0.04)" : color.white,
+              border: isToday ? "1px solid rgba(63,149,255,0.25)" : "1px solid rgba(38,38,51,0.08)",
+              borderRadius: 10, padding: 10, minHeight: 220,
+              display: "flex", flexDirection: "column", gap: 8,
+            }}>
+              <div style={{
+                display: "flex", alignItems: "baseline", gap: 6,
+                marginBottom: 4,
+              }}>
+                <span style={{ fontSize: 11, color: "rgba(38,38,51,0.55)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                  {labels[i]}
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 600, color: isToday ? "#3F95FF" : "#262633" }}>
+                  {d.getDate()}
+                </span>
+                <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)" }}>
+                  {d.toLocaleDateString("ru", { month: "short" })}
+                </span>
+                <div style={{ flex: 1 }} />
+                {items.length > 0 && (
+                  <span style={{ fontSize: 11, color: "rgba(38,38,51,0.5)" }}>{items.length}</span>
+                )}
+              </div>
+              {items.map(t => (
+                <TaskCard key={t.id} t={t} departments={departments} onClick={() => onPick(t.id)} />
+              ))}
+              {items.length === 0 && (
+                <div style={{
+                  fontSize: 11, color: "rgba(38,38,51,0.35)",
+                  textAlign: "center", padding: "20px 0",
+                }}>—</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Без даты — отдельной полосой снизу */}
+      {noDate.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <div style={{
+            fontSize: 11, color: "rgba(38,38,51,0.55)", fontWeight: 600,
+            textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8,
+          }}>Без даты · {noDate.length}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 8 }}>
+            {noDate.map(t => (
+              <TaskCard key={t.id} t={t} departments={departments} onClick={() => onPick(t.id)} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
