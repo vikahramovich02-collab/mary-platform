@@ -11641,73 +11641,275 @@ function InboxDetail({ item, onArchive, onGoSource, onNavigate }) {
   );
 }
 
-// ── Команда (люди + агенты) ─────────────────────────────
+// ── Команда: чаты с коллегами + TG-интеграции (TG-стиль) ──
 function TeamPage() {
-  return (
-    <PageShell title="Команда" sub="Все сотрудники и AI-агенты в одном месте">
-      <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
-        Сотрудники · {MOCK_PEOPLE.length}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 8, marginBottom: 32 }}>
-        {MOCK_PEOPLE.map(p => (
-          <div key={p.id} style={{
-            display: "flex", alignItems: "center", gap: 14,
-            padding: "14px 16px",
-            background: "rgba(38,38,51,0.025)", borderRadius: 12,
-          }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: "50%",
-              background: p.color, color: color.white,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 13, fontWeight: 600, flexShrink: 0,
-            }}>{p.name.split(" ").map(w => w[0]).join("").slice(0, 2)}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 500, color: "#262633" }}>
-                {p.name} {p.isMe && <span style={{ fontSize: 11, color: "rgba(38,38,51,0.5)" }}>(ты)</span>}
-              </div>
-              <div style={{ fontSize: 12, color: "rgba(38,38,51,0.55)", marginTop: 2 }}>
-                {p.title} · {p.lastActive}
-              </div>
-            </div>
-            {p.role === "approver" && (
-              <span style={{
-                fontSize: 10, fontWeight: 500, padding: "3px 8px", borderRadius: 999,
-                background: "rgba(255,139,61,0.14)", color: "#FF8B3D",
-              }}>Апрувер</span>
-            )}
-          </div>
-        ))}
-      </div>
+  const [people, setPeople] = useState([]);
+  const [chats, setChats] = useState([]);
+  const [filter, setFilter] = useState("all"); // all | internal | tg
+  const [query, setQuery] = useState("");
+  const [activeId, setActiveId] = useState(null);
+  const [activeChat, setActiveChat] = useState(null);
+  const [text, setText] = useState("");
+  const [seeded, setSeeded] = useState(false);
+  const threadRef = useRef(null);
 
-      <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
-        AI-агенты · {AGENTS.length}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 8 }}>
-        {AGENTS.map(a => (
-          <div key={a.id} style={{
-            display: "flex", alignItems: "center", gap: 14,
-            padding: "14px 16px",
-            background: "rgba(38,38,51,0.025)", borderRadius: 12,
+  const reloadChats = () => fetch("/api/mary/conversations").then(r => r.json()).then(d => {
+    const items = (d.conversations || []).filter(c => c.scope?.startsWith("team/") || c.scope?.startsWith("tg/"));
+    setChats(items);
+  });
+  useEffect(() => {
+    fetch("/api/mary/team/people").then(r => r.json()).then(d => setPeople(d.people || []));
+    reloadChats();
+  }, []);
+  // Если ничего нет — сеяним
+  useEffect(() => {
+    if (!seeded && chats.length === 0) {
+      fetch("/api/mary/team/seed", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" })
+        .then(() => { setSeeded(true); reloadChats(); });
+    }
+  }, [chats.length, seeded]);
+  // Авто-рефреш активного чата
+  useEffect(() => {
+    if (!activeId) return;
+    const fetchOne = () => fetch(`/api/mary/conversations/${activeId}`).then(r => r.json()).then(d => setActiveChat(d));
+    fetchOne();
+    const id = setInterval(() => { fetchOne(); reloadChats(); }, 4000);
+    return () => clearInterval(id);
+  }, [activeId]);
+  // Скролл вниз при новом сообщении
+  useEffect(() => {
+    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
+  }, [activeChat?.messages?.length]);
+
+  const filtered = chats
+    .filter(c => filter === "all" || (filter === "internal" ? c.scope?.startsWith("team/") : c.scope?.startsWith("tg/")))
+    .filter(c => !query.trim() || (c.title || "").toLowerCase().includes(query.toLowerCase()))
+    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+  const sendMessage = async () => {
+    if (!text.trim() || !activeId) return;
+    const msg = text.trim();
+    setText("");
+    // Оптимистично
+    setActiveChat(c => c ? { ...c, messages: [...(c.messages||[]), { role: "user", agentId: "vika", text: msg, ts: new Date().toISOString() }] } : c);
+    await fetch(`/api/mary/team/${activeId}/send`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: msg }),
+    });
+    reloadChats();
+  };
+
+  const peopleById = Object.fromEntries(people.map(p => [p.id, p]));
+  const initialOf = (name) => name.split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  return (
+    <div style={{ display: "flex", flex: 1, minHeight: 0, background: color.white }}>
+      {/* Sidebar: чаты */}
+      <aside style={{
+        width: 320, minWidth: 320,
+        borderRight: "1px solid rgba(38,38,51,0.06)",
+        display: "flex", flexDirection: "column", background: color.white,
+      }}>
+        <div style={{ padding: "18px 16px 10px" }}>
+          <h2 style={{ fontSize: 17, fontWeight: 600, color: "#262633", margin: "0 0 12px" }}>Команда</h2>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            background: "rgba(38,38,51,0.05)", borderRadius: 8, padding: "7px 10px",
+            marginBottom: 10,
           }}>
+            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+            </svg>
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Поиск чата"
+              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, color: "#262633", fontFamily: "inherit", padding: 0 }} />
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {[
+              { id: "all", label: "Все" },
+              { id: "internal", label: "В платформе" },
+              { id: "tg", label: "Telegram" },
+            ].map(t => (
+              <button key={t.id} onClick={() => setFilter(t.id)}
+                style={{
+                  padding: "4px 10px",
+                  background: filter === t.id ? "#262633" : "rgba(38,38,51,0.04)",
+                  color: filter === t.id ? color.white : "#262633",
+                  border: "none", borderRadius: 999,
+                  fontSize: 11.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+                }}>{t.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 16px" }}>
+          {filtered.length === 0 && (
+            <div style={{ padding: 30, fontSize: 12.5, color: "rgba(38,38,51,0.5)", textAlign: "center" }}>
+              Нет чатов
+            </div>
+          )}
+          {filtered.map(c => {
+            const last = c.messages?.[c.messages.length - 1];
+            const isTg = c.scope?.startsWith("tg/");
+            const isGroup = c.meta?.kind === "group" || c.meta?.kind === "tg_group";
+            const isActive = c.id === activeId;
+            return (
+              <button key={c.id} onClick={() => setActiveId(c.id)}
+                style={{
+                  width: "100%", display: "flex", gap: 10,
+                  padding: "10px 10px",
+                  background: isActive ? "rgba(38,38,51,0.06)" : "transparent",
+                  border: "none", borderRadius: 8,
+                  cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: "50%",
+                  background: isGroup ? "rgba(63,149,255,0.15)" : "rgba(122,134,255,0.15)",
+                  color: isGroup ? "#3F95FF" : "#7A86FF",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 13, fontWeight: 600, flexShrink: 0,
+                }}>
+                  {isGroup ? "👥" : initialOf(c.title)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{
+                      fontSize: 13, fontWeight: 500, color: "#262633",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1,
+                    }}>{c.title}</span>
+                    {isTg && (
+                      <span style={{
+                        fontSize: 9.5, color: "#3F95FF", background: "rgba(63,149,255,0.1)",
+                        padding: "1px 5px", borderRadius: 4, fontWeight: 600, letterSpacing: "0.04em",
+                      }}>TG</span>
+                    )}
+                  </div>
+                  {last && (
+                    <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 2,
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <span style={{ color: "rgba(38,38,51,0.75)", fontWeight: 500 }}>
+                        {last.agentId === "vika" ? "Ты: " : (peopleById[last.agentId]?.name.split(" ")[0] || last.agentId) + ": "}
+                      </span>
+                      {last.text}
+                    </div>
+                  )}
+                </div>
+                <span style={{ fontSize: 10.5, color: "rgba(38,38,51,0.4)", flexShrink: 0, marginTop: 4 }}>
+                  {last && new Date(last.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </aside>
+
+      {/* Thread */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: "rgba(247,247,247,0.4)" }}>
+        {!activeChat ? (
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(38,38,51,0.4)", fontSize: 13 }}>
+            Выбери чат слева
+          </div>
+        ) : (
+          <>
+            {/* Header */}
             <div style={{
-              width: 40, height: 40, borderRadius: 10,
-              background: a.color + "26", color: a.color,
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-            }}>{ic.agentBot}</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, fontWeight: 500, color: "#262633" }}>{a.label}</div>
-              <div style={{ fontSize: 12, color: "rgba(38,38,51,0.55)", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                {a.role}
+              padding: "14px 20px", display: "flex", alignItems: "center", gap: 12,
+              background: color.white, borderBottom: "1px solid rgba(38,38,51,0.06)",
+            }}>
+              <div style={{
+                width: 34, height: 34, borderRadius: "50%",
+                background: (activeChat.meta?.kind === "group" || activeChat.meta?.kind === "tg_group") ? "rgba(63,149,255,0.15)" : "rgba(122,134,255,0.15)",
+                color: (activeChat.meta?.kind === "group" || activeChat.meta?.kind === "tg_group") ? "#3F95FF" : "#7A86FF",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 13, fontWeight: 600, flexShrink: 0,
+              }}>{(activeChat.meta?.kind === "group" || activeChat.meta?.kind === "tg_group") ? "👥" : initialOf(activeChat.title)}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#262633" }}>{activeChat.title}</div>
+                <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
+                  {activeChat.scope?.startsWith("tg/")
+                    ? `Telegram${activeChat.meta?.membersCount ? ` · ${activeChat.meta.membersCount} участников` : ""} · бот подключен`
+                    : (activeChat.meta?.kind === "group" ? `Группа · ${(activeChat.meta?.peopleIds || []).length + 1} участников` : "1-на-1")}
+                </div>
+              </div>
+              {activeChat.scope?.startsWith("tg/") && (
+                <span style={{ fontSize: 11, color: "#3F95FF", background: "rgba(63,149,255,0.1)",
+                  padding: "3px 9px", borderRadius: 999, fontWeight: 500 }}>через Telegram</span>
+              )}
+            </div>
+
+            {/* Messages */}
+            <div ref={threadRef} style={{ flex: 1, overflowY: "auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
+              {(activeChat.messages || []).map((m, i) => {
+                const isMe = m.agentId === "vika";
+                const author = isMe ? null : (peopleById[m.agentId] || { id: m.agentId, name: m.agentId, color: "#7A86FF" });
+                return (
+                  <div key={i} style={{
+                    display: "flex", gap: 8,
+                    justifyContent: isMe ? "flex-end" : "flex-start",
+                    alignItems: "flex-end",
+                  }}>
+                    {!isMe && author && (
+                      <div style={{
+                        width: 28, height: 28, borderRadius: "50%",
+                        background: author.color, color: color.white,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        fontSize: 11, fontWeight: 600, flexShrink: 0,
+                      }}>{initialOf(author.name)}</div>
+                    )}
+                    <div style={{ maxWidth: "70%" }}>
+                      {!isMe && (
+                        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.55)", marginBottom: 2, marginLeft: 2 }}>
+                          {author?.name || m.agentId}
+                        </div>
+                      )}
+                      <div style={{
+                        background: isMe ? "#262633" : color.white,
+                        color: isMe ? color.white : "#262633",
+                        padding: "8px 12px", borderRadius: 14,
+                        fontSize: 13, lineHeight: 1.45, whiteSpace: "pre-wrap",
+                        border: isMe ? "none" : "1px solid rgba(38,38,51,0.06)",
+                      }}>{m.text}</div>
+                      <div style={{
+                        fontSize: 10.5, color: "rgba(38,38,51,0.4)", marginTop: 2,
+                        textAlign: isMe ? "right" : "left",
+                      }}>
+                        {new Date(m.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: "12px 20px 18px", background: color.white, borderTop: "1px solid rgba(38,38,51,0.06)" }}>
+              <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", gap: 8, alignItems: "center",
+                background: color.white, border: "1px solid rgba(38,38,51,0.12)", borderRadius: 14, padding: "8px 12px" }}>
+                <input value={text} onChange={e => setText(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                  placeholder={activeChat.scope?.startsWith("tg/") ? "Написать в Telegram-группу" : "Написать сообщение"}
+                  style={{ flex: 1, border: "none", outline: "none", background: "transparent",
+                    fontSize: 13.5, color: "#262633", fontFamily: "inherit", padding: 0 }} />
+                <button onClick={sendMessage} disabled={!text.trim()}
+                  style={{
+                    width: 30, height: 30,
+                    background: text.trim() ? "#262633" : "rgba(38,38,51,0.3)",
+                    border: "none", borderRadius: "50%",
+                    color: color.white, cursor: text.trim() ? "pointer" : "not-allowed",
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    fontFamily: "inherit",
+                  }}>
+                  <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 19V5M5 12l7-7 7 7" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <span style={{
-              fontSize: 10, fontWeight: 500, padding: "3px 8px", borderRadius: 999,
-              background: "rgba(52,199,89,0.14)", color: "#34C759",
-            }}>online</span>
-          </div>
-        ))}
+          </>
+        )}
       </div>
-    </PageShell>
+    </div>
   );
 }
 
