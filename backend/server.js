@@ -3046,6 +3046,25 @@ app.post("/webhook/mary/departments/:deptId/sandbox/stream", async (req, res) =>
   }
 });
 
+// PATCH профиля агента (model, systemPrompt, tools, memory, responseFormat, tasks)
+app.patch("/webhook/mary/agents/:deptId/:agentId/profile", (req, res) => {
+  const { deptId, agentId } = req.params;
+  const patch = req.body || {};
+  const allowed = ["model", "systemPrompt", "tools", "memory", "responseFormat", "tasks", "role", "color"];
+  try {
+    const data = loadDepartments();
+    const dept = data.departments.find(d => d.id === deptId);
+    if (!dept) return res.status(404).json({ error: "department not found" });
+    const agent = (dept.agents || []).find(a => a.id === agentId);
+    if (!agent) return res.status(404).json({ error: "agent not found" });
+    for (const k of allowed) {
+      if (patch[k] !== undefined) agent[k] = patch[k];
+    }
+    saveDepartments(data);
+    res.json({ ok: true, agent });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.post("/webhook/mary/agents/:deptId/:agentId/sandbox/stream", async (req, res) => {
   const { deptId, agentId } = req.params;
   const { inputs = {}, dryRun = false } = req.body || {};
