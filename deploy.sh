@@ -150,16 +150,17 @@ if [ -n "$TG_TOKEN" ] && [ -n "$TG_CHATS" ]; then
     backend)  WHAT="backend (uptime сброшен)" ;;
   esac
 
+  NL=$'\n'
   TEXT="${EMOJI} <b>Mary deploy</b> · ${WHAT}"
-  TEXT="${TEXT}%0A⏱ ${DEPLOY_DUR}с"
+  TEXT="${TEXT}${NL}⏱ ${DEPLOY_DUR}с"
   if [ "$UPTIME" != "?" ] && [ -n "$UPTIME" ]; then
     TEXT="${TEXT} · backend uptime ${UPTIME}с · posts ${POSTS}"
   fi
   if [ -n "$NOTE" ]; then
     NOTE_ESCAPED=$(echo "$NOTE" | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
-    TEXT="${TEXT}%0A%0A📝 ${NOTE_ESCAPED}"
+    TEXT="${TEXT}${NL}${NL}📝 ${NOTE_ESCAPED}"
   fi
-  TEXT="${TEXT}%0A%0A<a href=\"http://77.237.241.242/?page=tg-kanal\">открыть платформу</a>"
+  TEXT="${TEXT}${NL}${NL}<a href=\"http://77.237.241.242/?page=tg-kanal\">открыть платформу</a>"
 
   SENT=0
   for CHAT in $TG_CHATS; do
