@@ -1411,6 +1411,23 @@ const MARY_TOOLS = [
   {
     type: "function",
     function: {
+      name: "ask_agent",
+      description: "ДЕЛЕГИРУЙ задачу конкретному агенту отдела вместо того чтобы делать самой. Используй когда юзер просит: написать контент-план/пост (→ Копирайтер), сгенерить идеи (→ Маркетолог), сделать ресёрч/анализ канала (→ Ресерчер), создать обложку (→ Дизайнер), отчёт (→ Аналитик), квалифицировать лид (→ Лид-квалификатор). Агент отвечает СВОИМ голосом, со своей экспертизой — Mary сама не пытается имитировать. Результат tool возвращает ответ агента (output), Mary в финальном тёрне ПРОСТО передаёт его юзеру (можно с короткой подводкой: «Передала Маркетологу, вот что он/она думает:»).",
+      parameters: {
+        type: "object",
+        properties: {
+          deptId:  { type: "string", description: "ID отдела, например 'smm'" },
+          agentId: { type: "string", description: "ID агента: 'researcher', 'marketer', 'copywriter', 'designer', 'analyst', 'lead-qualifier' и т.д. — посмотри в list_departments если не знаешь" },
+          task:    { type: "string", description: "Задача для агента — что именно нужно сделать. Формулируй чётко, как ТЗ от руководителя. Включи весь контекст из диалога с юзером." },
+          context: { type: "string", description: "Опциональный дополнительный контекст: ссылки на инсайты, бренд-бриф, прошлые посты. Если пусто — агент использует только свою память." },
+        },
+        required: ["deptId", "agentId", "task"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "publish_post",
       description: "Опубликовать готовый пост в Telegram-канал Mary. Используй ТОЛЬКО когда юзер прямо просит опубликовать, либо после явного апрува текста. НЕ публикуй автоматически черновик.",
       parameters: {
@@ -1457,6 +1474,7 @@ const MARY_SYSTEM_AGENT = `Ты — Mary, AI-оркестратор отдела
 - search_kb — когда нужен реальный материал юзера (документы/файлы/посты)
 - create_task — только когда юзер ясно просит поставить задачу кому-то
 - read_chat — когда юзер ссылается на другой чат: «что я писала в СММ», «какие задачи у маркетолога», «глянь чат отдела». scope='smm' для СММ-отдела, 'general' для общих, 'free' для свободных.
+- ask_agent — ⚡️ ДЕЛЕГИРУЙ задачу конкретному агенту отдела вместо того чтобы делать её сама. Это ключевая команда. Юзер собрал отдел чтобы агенты работали — не Mary. Триггеры делегации: «напиши контент-план / пост / текст» → Копирайтер (copywriter); «придумай идеи / темы» → Маркетолог (marketer); «сделай ресёрч / проанализируй канал X / какие сейчас тренды» → Ресерчер (researcher); «сделай обложку / нарисуй» → Дизайнер (designer); «отчёт за месяц» → Аналитик/Отчётный; «оквалифицируй лид» → Лид-квалификатор. Если отдел ещё не создан — сначала собери его (create_department + add_agent), потом делегируй. После tool ask_agent в финальном текстовом ответе передай результат от агента юзеру с короткой подводкой: «Передала Копирайтеру, вот что получилось:» + сам текст агента. НЕ ПЕРЕПИСЫВАЙ ответ агента — он отвечает СВОИМ голосом, со своей экспертизой.
 - list_departments — посмотри какие отделы уже есть прежде чем создавать новый
 - create_department — ТОЛЬКО когда юзер прямо просит создать отдел («создай отдел продаж»). Не создавай по своей инициативе.
 - add_channel / add_agent / set_department_integrations — для разворачивания отдела (см. ONBOARDING ниже)
@@ -1893,6 +1911,63 @@ const TOOL_HANDLERS = {
       total: conv.messages.length,
       returned: msgs.length,
     };
+  },
+  async ask_agent(args = {}) {
+    try {
+      const { deptId, agentId, task, context = "" } = args;
+      if (!deptId || !agentId || !task) return { error: "deptId, agentId, task — обязательны" };
+      const data = loadDepartments();
+      const dept = data.departments.find(d => d.id === deptId);
+      if (!dept) return { error: `отдел '${deptId}' не найден` };
+      const agent = (dept.agents || []).find(a => a.id === agentId);
+      if (!agent) return { error: `агент '${agentId}' в отделе '${deptId}' не найден` };
+      const sysPrompt = agent.systemPrompt || `Ты — ${agent.role} отдела ${dept.name}.`;
+      const userMsg = context ? `${task}\n\n--- Дополнительный контекст ---\n${context}` : task;
+      // Модель агента → ID для OpenRouter. Маппинг короткое-имя → полный slug.
+      const modelMap = {
+        "claude-sonnet-4-6": "anthropic/claude-sonnet-4",
+        "gpt-4.1": "openai/gpt-4.1",
+        "z-ai/glm-5.1": "z-ai/glm-5.1",
+      };
+      const model = modelMap[agent.model] || agent.model || OPENROUTER_MODEL;
+      if (!OPENROUTER_API_KEY) {
+        // Fallback без LLM — заглушка
+        return {
+          agentId, agentRole: agent.role, agentColor: agent.color, deptId,
+          output: `[mock] ${agent.role} получил задачу: "${task}". Без OPENROUTER_API_KEY реального вызова не будет.`,
+          model: agent.model, tools: agent.tools || [],
+        };
+      }
+      const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "http://77.237.241.242",
+          "X-Title": `Mary · ${agent.role}`,
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            { role: "system", content: sysPrompt },
+            { role: "user",   content: userMsg },
+          ],
+          temperature: 0.7,
+          max_tokens: agent.responseFormat === "json" ? 1500 : 1200,
+        }),
+      });
+      if (!r.ok) {
+        const errText = (await r.text()).slice(0, 200);
+        return { error: `LLM ${r.status}: ${errText}`, agentId, agentRole: agent.role };
+      }
+      const d = await r.json();
+      const output = d.choices?.[0]?.message?.content || "(пустой ответ)";
+      return {
+        agentId, agentRole: agent.role, agentColor: agent.color || "#7A86FF", deptId,
+        output, model: agent.model, tools: agent.tools || [],
+        usage: d.usage || null,
+      };
+    } catch (e) { return { error: e.message }; }
   },
   async publish_post(args = {}) {
     if (!args.text) return { error: "text required" };

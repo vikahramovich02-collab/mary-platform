@@ -9396,6 +9396,7 @@ function ChatMaryPage() {
   const [draftId, setDraftId] = useState(null);     // id draft-сообщения Mary в стриме
   // Live-визуализатор того что Mary сейчас собирает
   const [build, setBuild] = useState(null); // { type: "department", deptId, name, channels:[], agents:[], integrations:[] }
+  const [activeAgentIds, setActiveAgentIds] = useState(new Set()); // агенты которые сейчас работают (ask_agent running)
   const [showActivity, setShowActivity] = useState(false);
   const [activity, setActivity] = useState([]); // лог последних tool calls
 
@@ -9508,6 +9509,10 @@ function ChatMaryPage() {
               tools.push({ name: data.name, args: data.args, status: "running", startedAt: Date.now() });
               return { ...m, _toolStatus: data.name, _toolStatusStartedAt: Date.now(), _tools: tools };
             }));
+            // Делегация задачи агенту — подсвечиваем ноду
+            if (data.name === "ask_agent" && data.args?.agentId) {
+              setActiveAgentIds(prev => new Set([...prev, data.args.agentId]));
+            }
           } else if (event === "tool_end") {
             setMessages(prev => prev.map(m => {
               if (m._id !== newDraftId) return m;
@@ -9544,6 +9549,34 @@ function ChatMaryPage() {
                 channels: d.channels || [],
                 agents: d.agents || [],
                 integrations: d.integrations || [],
+              });
+            }
+            // ── Делегация: ask_agent вернул output → отдельное сообщение от агента ──
+            if (data.name === "ask_agent" && data.ok && data.result?.output) {
+              const r = data.result;
+              setMessages(prev => [...prev, {
+                _id: "agent-" + Date.now() + "-" + Math.random().toString(36).slice(2,6),
+                role: "assistant",
+                agentId: r.agentId,
+                agentRole: r.agentRole,
+                agentColor: r.agentColor || "#7A86FF",
+                deptId: r.deptId,
+                fromMary: true,  // флаг: «передала <agent>»
+                text: r.output,
+                ts: new Date().toISOString(),
+              }]);
+              // Снимаем подсветку с этого агента
+              setActiveAgentIds(prev => {
+                const next = new Set(prev);
+                next.delete(r.agentId);
+                return next;
+              });
+            } else if (data.name === "ask_agent") {
+              // Tool упал — всё равно снимаем подсветку
+              setActiveAgentIds(prev => {
+                const next = new Set(prev);
+                if (data.args?.agentId) next.delete(data.args.agentId);
+                return next;
               });
             }
           } else if (event === "done") {
@@ -10136,6 +10169,7 @@ function ChatMaryPage() {
         <ActivityPanel
           build={build}
           activity={activity}
+          activeAgentIds={activeAgentIds}
           currentTool={(() => {
             // Если есть streaming message с активным tool — показываем его
             const lastStreaming = [...messages].reverse().find(m => m._streaming && m._tools?.length);
@@ -10181,7 +10215,7 @@ function ChatMaryPage() {
 }
 
 // ── Activity Panel: workflow + log ──────────────────────
-function ActivityPanel({ build, activity, currentTool, onClose }) {
+function ActivityPanel({ build, activity, currentTool, activeAgentIds, onClose }) {
   const [tab, setTab] = useState(build ? "build" : "log");
   // Если build впервые появляется во время работы — автоматически переключаемся на него.
   useEffect(() => { if (build && tab === "log" && activity.length <= 2) setTab("build"); }, [build]);
@@ -10264,7 +10298,7 @@ function ActivityPanel({ build, activity, currentTool, onClose }) {
       </div>
 
       {tab === "build" && build ? (
-        <BuildCanvas build={build} />
+        <BuildCanvas build={build} activeAgentIds={activeAgentIds} />
       ) : (
         <ActivityLog activity={activity} />
       )}
@@ -10353,9 +10387,10 @@ function ActivityLog({ activity }) {
 }
 
 // ── Live workflow builder — как полноценный граф отдела ──
-function BuildCanvas({ build }) {
+function BuildCanvas({ build, activeAgentIds }) {
   const accent = build.color || "#7A86FF";
   const [expandedAgentIdx, setExpandedAgentIdx] = useState(null);
+  const activeSet = activeAgentIds instanceof Set ? activeAgentIds : new Set();
 
   // Layout: каналы слева → отдел центр → агенты справа (вертикально)
   const NODE_W = 200, NODE_H = 56, GAP_Y = 14, COL_GAP = 110;
@@ -10461,7 +10496,7 @@ function BuildCanvas({ build }) {
             isMain
           />
 
-          {/* Агенты (справа) — кликабельные */}
+          {/* Агенты (справа) — кликабельные, подсветка если работает */}
           {build.agents.map((a, i) => (
             <BuildNode key={a.id || i}
               x={COL_X.agents} y={yFor(agentsCount, i) + 36}
@@ -10470,6 +10505,7 @@ function BuildCanvas({ build }) {
               title={a.role} sub={a.tasks || "AI-агент"}
               animate={i === agentsCount - 1}
               expanded={expandedAgentIdx === i}
+              active={activeSet.has(a.id)}
               onClick={() => setExpandedAgentIdx(expandedAgentIdx === i ? null : i)}
             />
           ))}
@@ -10541,7 +10577,7 @@ function BuildCanvas({ build }) {
   );
 }
 
-function BuildNode({ x, y, w, h, icon, iconBg, iconColor, title, sub, animate, isMain, onClick, expanded }) {
+function BuildNode({ x, y, w, h, icon, iconBg, iconColor, title, sub, animate, isMain, onClick, expanded, active }) {
   const ICONS = {
     agent: <svg width={16} height={16} viewBox="0 0 24 24"><rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/><rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/><circle cx="9.3" cy="13" r="1.4" fill="white"/><circle cx="14.7" cy="13" r="1.4" fill="white"/></svg>,
     dept:  <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8c0-1.5-.4-2.9-1.2-4.1-.5.4-1.2.6-1.9.6-1.7 0-3-1.3-3-3 0-.6.2-1.2.4-1.7C13.6 3.3 12.8 3 12 3z"/><circle cx="17" cy="6.5" r="2"/></svg>,
@@ -10555,18 +10591,38 @@ function BuildNode({ x, y, w, h, icon, iconBg, iconColor, title, sub, animate, i
         width: w, height: h,
         background: color.white,
         borderRadius: 24,
-        border: expanded ? `1.5px solid ${iconColor}` : "none",
-        boxShadow: isMain
-          ? `0 4px 16px ${iconColor}33`
-          : expanded
-            ? `0 4px 12px ${iconColor}40`
-            : "0 1px 2px rgba(38,38,51,0.04)",
+        border: active ? `2px solid ${iconColor}` : expanded ? `1.5px solid ${iconColor}` : "none",
+        boxShadow: active
+          ? `0 0 0 4px ${iconColor}22, 0 6px 18px ${iconColor}55`
+          : isMain
+            ? `0 4px 16px ${iconColor}33`
+            : expanded
+              ? `0 4px 12px ${iconColor}40`
+              : "0 1px 2px rgba(38,38,51,0.04)",
         display: "flex", alignItems: "center", gap: 10,
         padding: "0 12px",
         animation: animate ? "build-pop 0.45s cubic-bezier(0.4, 0, 0.2, 1)" : "none",
         cursor: onClick ? "pointer" : "default",
         fontFamily: "inherit", textAlign: "left",
+        transition: "box-shadow 0.2s, border 0.2s",
       }}>
+      {active && (
+        <span style={{
+          position: "absolute", top: -8, left: 12,
+          padding: "1px 7px",
+          background: iconColor, color: color.white,
+          fontSize: 9.5, fontWeight: 600,
+          borderRadius: 999, letterSpacing: "0.04em", textTransform: "uppercase",
+          display: "inline-flex", alignItems: "center", gap: 4,
+          boxShadow: `0 2px 6px ${iconColor}66`,
+        }}>
+          <span style={{
+            width: 5, height: 5, borderRadius: "50%", background: color.white,
+            animation: "marypulse 1.2s ease-in-out infinite",
+          }} />
+          работает
+        </span>
+      )}
       <div style={{
         width: 36, height: 36, borderRadius: 11,
         background: iconBg, color: iconColor,
@@ -11433,9 +11489,59 @@ function OptionsBlock({ options, multi, onPick }) {
   );
 }
 
+// Сообщение от агента (через ask_agent) — другой аватар, плажка «Mary → [Role]»
+function AgentChatBubble({ m }) {
+  const initial = (m.agentRole || "?").trim().slice(0, 2).toUpperCase();
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
+      {/* Аватар агента — кружок с инициалами в цвете агента */}
+      <div style={{
+        width: 28, height: 28, borderRadius: 7,
+        background: m.agentColor || "#7A86FF", color: color.white,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, fontSize: 11, fontWeight: 600,
+      }}>{initial}</div>
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 640, paddingTop: 2 }}>
+        {/* Плажка делегации: Mary → [Role] */}
+        {m.fromMary && (
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "3px 10px", marginBottom: 8,
+            background: "rgba(38,38,51,0.05)", borderRadius: 999,
+            fontSize: 11, color: "rgba(38,38,51,0.65)", fontWeight: 500,
+          }}>
+            <svg width={10} height={10} viewBox="0 0 24 24">
+              <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/>
+              <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/>
+              <circle cx="9.3" cy="13" r="1.4" fill="white"/>
+              <circle cx="14.7" cy="13" r="1.4" fill="white"/>
+            </svg>
+            <span>Mary</span>
+            <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: m.agentColor || "#7A86FF" }} />
+            <span style={{ color: "#262633", fontWeight: 600 }}>{m.agentRole}</span>
+          </div>
+        )}
+        <div style={{
+          fontSize: 14, color: "#262633", lineHeight: 1.55,
+        }}>
+          {renderMarkdown(m.text || "")}
+        </div>
+        <ActionBar text={m.text || ""} />
+      </div>
+    </div>
+  );
+}
+
 function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  // Сообщение от агента (делегирован через ask_agent)
+  if (m.agentId && m.agentRole) {
+    return <AgentChatBubble m={m} />;
+  }
   if (m.role === "user") {
     if (editing) {
       return (
