@@ -756,12 +756,14 @@ app.patch("/webhook/mary/conversations/:id", (req, res) => {
 // Принять одно сообщение в conversation (для случаев без stream)
 // ── Team / TG-mock seed ──────────────────────────────
 // Создаёт mock-сотрудников + 3 «подключенных TG-группы» + 2 внутренних чата с сообщениями.
+// Единый источник людей платформы (раньше было два — backend + frontend mocks)
 const MOCK_PEOPLE_LIST = [
-  { id: "alex",    name: "Александр Орлов",    role: "Бекенд-лид",      color: "#3F95FF" },
-  { id: "maria",   name: "Мария Дудник",       role: "Дизайнер",        color: "#FF6FB3" },
-  { id: "ivan",    name: "Иван Соколов",       role: "Маркетинг",       color: "#FF8B3D" },
-  { id: "katya",   name: "Катя Сафина",        role: "Контент",         color: "#7A86FF" },
-  { id: "andrey",  name: "Андрей Шумилов",     role: "Аналитик",        color: "#34C759" },
+  { id: "vika",    name: "Виктория Ахрамович", title: "Head of SMM",      handle: "@vika",       acl: "approver", role: "Head of SMM",      color: "#8A38F5", isMe: true },
+  { id: "alex",    name: "Александр Орлов",    title: "Бекенд-лид",       handle: "@a.orlov",    acl: "approver", role: "Бекенд-лид",       color: "#3F95FF" },
+  { id: "maria",   name: "Мария Дудник",       title: "Дизайнер",         handle: "@m.dudnik",   acl: "member",   role: "Дизайнер",         color: "#FF6FB3" },
+  { id: "ivan",    name: "Иван Соколов",       title: "Маркетинг-лид",    handle: "@i.sokolov",  acl: "approver", role: "Маркетинг",        color: "#FF8B3D" },
+  { id: "katya",   name: "Катя Сафина",        title: "Контент-менеджер", handle: "@k.safina",   acl: "member",   role: "Контент",          color: "#7A86FF" },
+  { id: "andrey",  name: "Андрей Шумилов",     title: "Аналитик",         handle: "@a.shumilov", acl: "member",   role: "Аналитик",         color: "#34C759" },
 ];
 
 app.get("/webhook/mary/team/people", (req, res) => {
@@ -912,7 +914,7 @@ function sendTeamMessage(conversationId, text) {
       const c2 = data2.conversations.find(x => x.id === conversationId);
       if (!c2) return;
       // Выбираем участника чата (если есть peopleIds в meta) или любого
-      const candidates = (c2.meta?.peopleIds || MOCK_PEOPLE_LIST.map(p => p.id)).filter(id => id !== "vika");
+      const candidates = (c2.meta?.peopleIds || MOCK_PEOPLE_LIST.filter(p => !p.isMe).map(p => p.id)).filter(id => id !== "vika");
       const persona = MOCK_PEOPLE_LIST.find(p => p.id === candidates[Math.floor(Math.random() * candidates.length)]);
       if (!persona) return;
       const reply = await generateTeamReply(c2, persona);

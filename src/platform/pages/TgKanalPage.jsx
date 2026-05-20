@@ -1971,6 +1971,7 @@ function DeptChatWelcome({ onPick }) {
 }
 
 function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChange, dockedHeight = 420, onDockedHeightChange, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks }) {
+  const peopleList = usePeople();
   const taskDraftRef = useRef({});
   const [localMode, setLocalMode] = useState("docked");
   const mode = modeProp ?? localMode;
@@ -2182,7 +2183,8 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
   // Мок-загрузка и релевантность по описанию задачи
   function rankPeople(desc) {
     const d = (desc || "").toLowerCase();
-    return MOCK_PEOPLE.map(p => {
+    const source = peopleList.length > 0 ? peopleList : MOCK_PEOPLE;
+    return source.map(p => {
       const title = p.title.toLowerCase();
       let rel = 25;
       if (/(пост|текст|копи)/.test(d) && /копирайтер/.test(title)) rel = 92;
@@ -2190,7 +2192,9 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
       else if (/(стратег|план|концепт)/.test(d) && /стратег/.test(title)) rel = 85;
       else if (/(smm|канал|пост|охват)/.test(d) && /smm/.test(title)) rel = 78;
       else if (/head/.test(title)) rel = 70;
-      const load = Math.floor(20 + (p.id * 13) % 70);
+      // Псевдо-нагрузка из хеша id (стабильно для одного и того же человека)
+      const hash = String(p.id).split("").reduce((a, c) => a + c.charCodeAt(0), 0);
+      const load = 20 + (hash * 13) % 70;
       return { ...p, relevance: rel, load };
     }).sort((a, b) => (b.relevance - b.load) - (a.relevance - a.load));
   }
@@ -4982,12 +4986,42 @@ const RAIL_DRAWER_TITLE = {
   people: "Люди",
 };
 
+// Module-level кэш людей (загружается с backend /api/mary/team/people, единый источник).
+// Используется через хук usePeople() который ре-рендерит компоненты при обновлении.
+let CACHED_PEOPLE = [];
+const peopleListeners = new Set();
+function loadPeopleOnce() {
+  if (loadPeopleOnce._loading || CACHED_PEOPLE.length > 0) return;
+  loadPeopleOnce._loading = true;
+  fetch("/api/mary/team/people").then(r => r.json()).then(d => {
+    CACHED_PEOPLE = (d.people || []).map(p => ({
+      ...p,
+      // алиасы для обратной совместимости со старым кодом
+      role: p.acl || p.role,           // 'approver' / 'member' для PeopleContent
+      handle: p.handle || `@${p.id}`,
+      title: p.title || p.role,
+      lastActive: p.lastActive || (p.isMe ? "сейчас online" : "недавно"),
+    }));
+    peopleListeners.forEach(fn => fn(CACHED_PEOPLE));
+  }).catch(() => {}).finally(() => { loadPeopleOnce._loading = false; });
+}
+function usePeople() {
+  const [people, setPeople] = useState(CACHED_PEOPLE);
+  useEffect(() => {
+    if (CACHED_PEOPLE.length === 0) loadPeopleOnce();
+    const fn = (p) => setPeople(p);
+    peopleListeners.add(fn);
+    return () => peopleListeners.delete(fn);
+  }, []);
+  return people;
+}
+// Минимальный fallback пока backend не ответил — чтобы UI не падал
 const MOCK_PEOPLE = [
-  { id: 1, name: "Виктория Ахрамович", handle: "@vika",       role: "approver", title: "Head of SMM",      color: "#8A38F5", avatar: "/brand_logo.png", joined: "5 мая 2026", lastActive: "сейчас online", isMe: true },
-  { id: 2, name: "Александр Орлов",     handle: "@a.orlov",    role: "approver", title: "Контент-стратег",  color: "#FF8B3D",                            joined: "5 мая 2026", lastActive: "10 мин назад" },
-  { id: 3, name: "Алёна Иванова",       handle: "@alena.iv",   role: "member",   title: "SMM-менеджер",     color: "#3F95FF",                            joined: "12 мая 2026", lastActive: "1 час назад" },
-  { id: 4, name: "Дмитрий Петров",      handle: "@d.petrov",   role: "member",   title: "Копирайтер",       color: "#7A86FF",                            joined: "14 мая 2026", lastActive: "вчера" },
-  { id: 5, name: "Мария Соколова",      handle: "@m.sokolova", role: "member",   title: "Дизайнер",         color: "#FF6FB3",                            joined: "20 мая 2026", lastActive: "2 дня назад" },
+  { id: "vika",  name: "Виктория Ахрамович", handle: "@vika",     role: "approver", title: "Head of SMM",  color: "#8A38F5", isMe: true },
+  { id: "alex",  name: "Александр Орлов",    handle: "@a.orlov",  role: "approver", title: "Бекенд-лид",   color: "#3F95FF" },
+  { id: "maria", name: "Мария Дудник",       handle: "@m.dudnik", role: "member",   title: "Дизайнер",     color: "#FF6FB3" },
+  { id: "ivan",  name: "Иван Соколов",       handle: "@i.sokolov", role: "approver", title: "Маркетинг",   color: "#FF8B3D" },
+  { id: "katya", name: "Катя Сафина",        handle: "@k.safina", role: "member",   title: "Контент",      color: "#7A86FF" },
 ];
 
 const MOCK_TASKS = [
@@ -6549,7 +6583,9 @@ function KbPopup({ item, onClose }) {
 function PeopleContent() {
   const [tab, setTab] = useState("all");
   const [profile, setProfile] = useState(null);
-  const list = tab === "approvers" ? MOCK_PEOPLE.filter(p => p.role === "approver") : MOCK_PEOPLE;
+  const people = usePeople();
+  const source = people.length > 0 ? people : MOCK_PEOPLE;
+  const list = tab === "approvers" ? source.filter(p => p.role === "approver") : source;
   return (
     <>
       <div style={{ display: "flex", gap: 4, padding: "0 0 12px" }}>
@@ -8279,11 +8315,11 @@ function IntegrationCard({ it, onToggle }) {
 // ── Страница «Задачи» (канбан) ──────────────────────────────
 // Доп. мок задач на реальных людей (кроме AGENTS.tasks)
 const PEOPLE_TASKS = [
-  { id: "p1", title: "Согласовать контент-план на май", desc: "проверить идеи Маркетолога", assigneeKind: "person", assigneeId: 1, status: "На апруве",   dept: "smm", channel: "tg-kanal" },
-  { id: "p2", title: "Снять короткое видео с лица бренда", desc: "30 сек, формат Reels",     assigneeKind: "person", assigneeId: 1, status: "Запланирована", dept: "smm", channel: "tg-kanal" },
-  { id: "p3", title: "Написать манифест канала", desc: "большой пилотный пост",              assigneeKind: "person", assigneeId: 2, status: "В работе",     dept: "smm", channel: "tg-kanal" },
-  { id: "p4", title: "Подобрать 5 экспертов для интервью", desc: "из ниши indie-hackers",     assigneeKind: "person", assigneeId: 4, status: "В работе",     dept: "smm", channel: "tg-kanal" },
-  { id: "p5", title: "Обновить визуальный гайд бренда", desc: "обновить палитру и шрифты",   assigneeKind: "person", assigneeId: 3, status: "Готово",       dept: "smm", channel: "tg-kanal" },
+  { id: "p1", title: "Согласовать контент-план на май", desc: "проверить идеи Маркетолога", assigneeKind: "person", assigneeId: "vika",  status: "На апруве",   dept: "smm", channel: "tg-kanal" },
+  { id: "p2", title: "Снять короткое видео с лица бренда", desc: "30 сек, формат Reels",     assigneeKind: "person", assigneeId: "vika",  status: "Запланирована", dept: "smm", channel: "tg-kanal" },
+  { id: "p3", title: "Написать манифест канала", desc: "большой пилотный пост",              assigneeKind: "person", assigneeId: "katya", status: "В работе",     dept: "smm", channel: "tg-kanal" },
+  { id: "p4", title: "Подобрать 5 экспертов для интервью", desc: "из ниши indie-hackers",     assigneeKind: "person", assigneeId: "ivan",  status: "В работе",     dept: "smm", channel: "tg-kanal" },
+  { id: "p5", title: "Обновить визуальный гайд бренда", desc: "обновить палитру и шрифты",   assigneeKind: "person", assigneeId: "maria", status: "Готово",       dept: "smm", channel: "tg-kanal" },
 ];
 
 const KANBAN_COLUMNS = [
@@ -9088,6 +9124,8 @@ function TasksPage({ pendingTasks = [], onOpenChat }) {
   const [hrOpen, setHrOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all"); // all | agents | people
+  const peopleList = usePeople();
+  const peopleSource = peopleList.length > 0 ? peopleList : MOCK_PEOPLE;
 
   // Все задачи: AGENTS.tasks + PEOPLE_TASKS + pendingTasks
   const agentTasks = AGENTS.flatMap(a =>
@@ -9107,7 +9145,7 @@ function TasksPage({ pendingTasks = [], onOpenChat }) {
   );
   const peopleTasks = PEOPLE_TASKS.map(t => ({
     ...t,
-    assignee: MOCK_PEOPLE.find(p => p.id === t.assigneeId),
+    assignee: peopleSource.find(p => p.id === t.assigneeId),
   }));
   const pending = pendingTasks.map(t => ({
     id: `pend-${t.id}`,
@@ -9117,7 +9155,7 @@ function TasksPage({ pendingTasks = [], onOpenChat }) {
     assigneeKind: t.kind,
     assignee: t.kind === "agent"
       ? AGENTS.find(a => a.label.toLowerCase() === t.assignee.toLowerCase())
-      : MOCK_PEOPLE.find(p => p.name === t.assignee),
+      : peopleSource.find(p => p.name === t.assignee),
     dept: "smm",
     channel: "tg-kanal",
     pending: true,
