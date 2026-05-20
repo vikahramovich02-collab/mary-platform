@@ -2872,29 +2872,46 @@ async function runDepartmentSandbox({ deptId, input = "", dryRun = false, judge 
 
   for (const agent of ordered) {
     const aStart = Date.now();
-    const aCostBefore = costAcc.usd, aTokensBefore = costAcc.tokens;
     emit("agent_start", { agentId: agent.id, role: agent.role });
-    const triggers = (agent.pipeline?.nodes || []).filter(n => n.type === "trigger");
-    const agentInputs = {};
-    if (triggers[0]) agentInputs[triggers[0].id] = prevSummary;
     try {
-      const outputs = await runSandbox({
-        deptId, agentId: agent.id, inputs: agentInputs, dryRun, costAcc,
-        emit: (event, data) => emit(event, { ...data, agentId: agent.id }),
-      });
-      const outputNodes = (agent.pipeline?.nodes || []).filter(n => n.type === "output");
-      const finalNode = outputNodes[outputNodes.length - 1] || (agent.pipeline?.nodes || []).slice(-1)[0];
-      prevSummary = outputs[finalNode?.id] || prevSummary;
-      results[agent.id] = prevSummary;
+      let output;
+      if (dryRun) {
+        // Mock-режим — старая логика runSandbox per-node
+        const triggers = (agent.pipeline?.nodes || []).filter(n => n.type === "trigger");
+        const agentInputs = {};
+        if (triggers[0]) agentInputs[triggers[0].id] = prevSummary;
+        const outputs = await runSandbox({
+          deptId, agentId: agent.id, inputs: agentInputs, dryRun: true, costAcc,
+          emit: (event, data) => emit(event, { ...data, agentId: agent.id }),
+        });
+        const outputNodes = (agent.pipeline?.nodes || []).filter(n => n.type === "output");
+        const finalNode = outputNodes[outputNodes.length - 1] || (agent.pipeline?.nodes || []).slice(-1)[0];
+        output = outputs[finalNode?.id] || prevSummary;
+      } else {
+        // Реальная прогонка через ask_agent — Mary-style делегация
+        const taskFromPrev = ordered.indexOf(agent) === 0
+          ? (input || "Запустись с дефолтным контекстом")
+          : `Получил вход от предыдущего агента:\n\n${prevSummary}\n\nПродолжи свою часть пайплайна по системному промпту.`;
+        const r = await TOOL_HANDLERS.ask_agent({ deptId, agentId: agent.id, task: taskFromPrev });
+        if (r.error) throw new Error(r.error);
+        output = r.output || "";
+        if (r.usage) {
+          const t = (r.usage.prompt_tokens || 0) + (r.usage.completion_tokens || 0);
+          costAcc.tokens += t;
+          // Грубая оценка стоимости (claude-sonnet): ~$3/M input, ~$15/M output
+          costAcc.usd += ((r.usage.prompt_tokens || 0) * 3 + (r.usage.completion_tokens || 0) * 15) / 1e6;
+        }
+      }
+      prevSummary = output;
+      results[agent.id] = output;
       const meta = {
         durationMs: Date.now() - aStart,
-        tokens: costAcc.tokens - aTokensBefore,
-        costUsd: costAcc.usd - aCostBefore,
+        tokens: 0, costUsd: 0, // per-agent точные значения сложно — собираем глобально
       };
       agentMeta[agent.id] = meta;
-      emit("agent_end", { agentId: agent.id, output: prevSummary, ...meta });
+      emit("agent_end", { agentId: agent.id, output, ...meta });
     } catch (e) {
-      emit("agent_end", { agentId: agent.id, error: e.message });
+      emit("agent_end", { agentId: agent.id, error: e.message, durationMs: Date.now() - aStart });
       break;
     }
   }

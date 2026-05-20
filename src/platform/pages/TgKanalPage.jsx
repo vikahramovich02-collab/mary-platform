@@ -516,7 +516,7 @@ function PipelineItem({ p, onOpenKb, blocked }) {
   );
 }
 
-function AgentCard({ a, expanded, selected, dragging, approvals, onApprove, onMouseDown, onToggle, onOpenKb, onOpenChat, onOpenSettings, onOpenFlow }) {
+function AgentCard({ a, expanded, selected, active, dragging, approvals, onApprove, onMouseDown, onToggle, onOpenKb, onOpenChat, onOpenSettings, onOpenFlow }) {
   const [h, setH] = useState(false);
   const [running, setRunning] = useState(true);
   const hasPipeline = (a.pipeline?.length || 0) > 0;
@@ -539,18 +539,38 @@ function AgentCard({ a, expanded, selected, dragging, approvals, onApprove, onMo
         width: CARD_W,
         background: color.white,
         borderRadius: 24,
-        boxShadow: dragging
-          ? "0 12px 32px rgba(38,38,51,0.18)"
-          : (selected || expanded || h)
-          ? "0 2px 6px rgba(38,38,51,0.05)"
-          : "0 1px 2px rgba(38,38,51,0.03)",
+        border: active ? `2px solid ${a.color}` : "none",
+        boxShadow: active
+          ? `0 0 0 4px ${a.color}22, 0 6px 20px ${a.color}55`
+          : dragging
+            ? "0 12px 32px rgba(38,38,51,0.18)"
+            : (selected || expanded || h)
+              ? "0 2px 6px rgba(38,38,51,0.05)"
+              : "0 1px 2px rgba(38,38,51,0.03)",
         display: "flex", flexDirection: "column",
         cursor: dragging ? "grabbing" : "grab",
         transition: dragging ? "none" : transition.fast,
-        zIndex: dragging ? 10 : (expanded || selected) ? 4 : 1,
+        zIndex: active ? 8 : dragging ? 10 : (expanded || selected) ? 4 : 1,
         userSelect: "none",
       }}
     >
+      {active && (
+        <span style={{
+          position: "absolute", top: -10, left: 18,
+          padding: "2px 9px",
+          background: a.color, color: color.white,
+          fontSize: 10, fontWeight: 600,
+          borderRadius: 999, letterSpacing: "0.04em", textTransform: "uppercase",
+          display: "inline-flex", alignItems: "center", gap: 5,
+          boxShadow: `0 2px 6px ${a.color}66`, zIndex: 1,
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: "50%", background: color.white,
+            animation: "marypulse 1.2s ease-in-out infinite",
+          }} />
+          работает
+        </span>
+      )}
       {/* Header (всегда виден) */}
       <div style={{
         display: "flex", alignItems: "center", gap: 12,
@@ -3270,10 +3290,6 @@ function AgentFlowCanvas({ agent, onClose }) {
         })}
       </div>
       </div>
-      {/* Bottom panel: Settings / Logs / Output */}
-      {agent.profile && (
-        <AgentBottomPanel agent={agent} profile={agent.profile} />
-      )}
     </div>
   );
 }
@@ -3554,12 +3570,27 @@ function DepartmentSandbox({ deptId, onClose }) {
 }
 
 // Bottom panel в drill-down: Settings / Logs / Output (Sim-style)
-function AgentBottomPanel({ agent, profile }) {
+function AgentBottomPanel({ agent, profile, sandboxStatus = {}, sandboxOutputs = {}, sandboxRunning = false, onRun }) {
   const [tab, setTab] = useState("settings");
   const [selectedNodeId, setSelectedNodeId] = useState(null);
-  // Demo runs — обычно прокидывается извне; пока mock на месте, потом подключим к реальному sandbox state
-  const runs = []; // [{ nodeId, label, durationMs, status, output }]
-  const selectedRun = runs.find(r => r.nodeId === selectedNodeId);
+  // Преобразуем sandboxStatus в runs[] для AgentLogsView
+  const nodes = agent?.flow?.nodes || [];
+  const runs = nodes
+    .filter(n => sandboxStatus[n.id])
+    .map(n => ({
+      nodeId: n.id,
+      label: n.title || n.id,
+      durationMs: sandboxStatus[n.id]?.durationMs || 0,
+      status: sandboxStatus[n.id] === "running" ? "running"
+            : sandboxStatus[n.id] === "error" ? "error" : "done",
+      output: sandboxOutputs[n.id] || "",
+    }));
+  const selectedRun = runs.find(r => r.nodeId === selectedNodeId) || runs[runs.length - 1];
+
+  // Авто-открыть Logs когда начался прогон
+  useEffect(() => {
+    if (sandboxRunning && tab === "settings") setTab("logs");
+  }, [sandboxRunning]);
 
   const tabBtn = (id, label) => (
     <button onClick={() => setTab(id)} style={{
@@ -4063,6 +4094,13 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
   const [pipelineByAgentId, setPipelineByAgentId] = useState({});
   // profileByAgentId: { agentId → { model, systemPrompt, tools, memory, responseFormat, tasks } } — должностная инструкция
   const [profileByAgentId, setProfileByAgentId] = useState({});
+  // activeAgentIds — слушаем глобальный event из ChatMaryPage чтобы подсветить ноды
+  const [activeAgentIds, setActiveAgentIds] = useState(() => window.__maryActiveAgents || new Set());
+  useEffect(() => {
+    const onAgents = (e) => setActiveAgentIds(new Set(e.detail?.ids || []));
+    window.addEventListener("mary-active-agents", onAgents);
+    return () => window.removeEventListener("mary-active-agents", onAgents);
+  }, []);
   // Sandbox: статус узлов при прогоне, outputs, inputs формы
   const [sandboxStatus, setSandboxStatus] = useState({});  // nodeId → "running"|"done"|"error"
   const [sandboxOutputs, setSandboxOutputs] = useState({});  // nodeId → text
@@ -4484,6 +4522,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
                 a={a}
                 expanded={expandedId === a.id}
                 selected={selectedAgentId === a.id}
+                active={activeAgentIds.has(a.id)}
                 dragging={draggingId === a.id}
                 approvals={approvals}
                 onApprove={onApprove}
@@ -4519,15 +4558,21 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         <KbPopup item={pipelineKb} onClose={() => setPipelineKb(null)} />
       )}
 
-      {/* Sandbox panel — справа когда юзер залез в агента */}
-      {drilledAgent && (
-        <SandboxPanel
-          agent={drilledAgent}
-          status={sandboxStatus}
-          outputs={sandboxOutputs}
-          running={sandboxRunning}
-          onRun={runSandbox}
-        />
+      {/* Bottom panel: Settings / Logs / Output — Sim-style */}
+      {drilledAgent && drilledAgent.profile && (
+        <div style={{
+          position: "absolute", left: 0, right: 0, bottom: 0,
+          zIndex: 7,
+        }}>
+          <AgentBottomPanel
+            agent={drilledAgent}
+            profile={drilledAgent.profile}
+            sandboxStatus={sandboxStatus}
+            sandboxOutputs={sandboxOutputs}
+            sandboxRunning={sandboxRunning}
+            onRun={runSandbox}
+          />
+        </div>
       )}
 
       {/* Tool/zoom bar — поднимается над докнутым чатом */}
@@ -9665,6 +9710,11 @@ function ChatMaryPage() {
   // Live-визуализатор того что Mary сейчас собирает
   const [build, setBuild] = useState(null); // { type: "department", deptId, name, channels:[], agents:[], integrations:[] }
   const [activeAgentIds, setActiveAgentIds] = useState(new Set()); // агенты которые сейчас работают (ask_agent running)
+  // Публикуем activeAgentIds глобально чтобы dept-page GraphCanvas мог подсветить ноды
+  useEffect(() => {
+    window.__maryActiveAgents = activeAgentIds;
+    window.dispatchEvent(new CustomEvent("mary-active-agents", { detail: { ids: [...activeAgentIds] } }));
+  }, [activeAgentIds]);
   const [showActivity, setShowActivity] = useState(false);
   const [activity, setActivity] = useState([]); // лог последних tool calls
 
