@@ -11332,6 +11332,7 @@ function InboxPage({ onNavigate }) {
   const [counts, setCounts] = useState({});
   const [filter, setFilter] = useState("all"); // all | unread | blocker | task | transcript | vote | mention | archived
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [activeId, setActiveId] = useState(null);
 
   const reload = () => {
@@ -11407,31 +11408,63 @@ function InboxPage({ onNavigate }) {
         borderRight: "1px solid rgba(38,38,51,0.06)",
         display: "flex", flexDirection: "column", background: color.white,
       }}>
-        {/* Header */}
-        <div style={{ padding: "18px 16px 10px" }}>
-          <h2 style={{ fontSize: 17, fontWeight: 600, color: "#262633", margin: "0 0 12px" }}>
-            Входящие
-          </h2>
-          {/* Search */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            background: "rgba(38,38,51,0.05)", borderRadius: 8, padding: "7px 10px",
-            marginBottom: 10,
-          }}>
-            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-            </svg>
-            <input
-              value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="Поиск"
-              style={{
-                flex: 1, border: "none", outline: "none",
-                background: "transparent", fontSize: 12.5, color: "#262633",
-                fontFamily: "inherit", padding: 0,
-              }} />
-          </div>
-          {/* Filter tabs */}
-          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        {/* Header — компактный ряд иконок как в Чате Mary */}
+        <div style={{ padding: "14px 14px 8px" }}>
+          {searchOpen ? (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6,
+              height: 24,
+              background: "rgba(38,38,51,0.06)",
+              borderRadius: 7, padding: "0 8px",
+              border: "1.5px solid #3F95FF",
+            }}>
+              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.55)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                autoFocus
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === "Escape") { setQuery(""); setSearchOpen(false); } }}
+                placeholder="Поиск во входящих"
+                style={{
+                  flex: 1, border: "none", outline: "none",
+                  background: "transparent", fontSize: 12, color: "#262633",
+                  fontFamily: "inherit", padding: 0,
+                }}
+              />
+              <button onClick={() => { setQuery(""); setSearchOpen(false); }} title="Закрыть"
+                style={{ background: "transparent", border: "none", padding: 0,
+                  display: "inline-flex", color: "rgba(38,38,51,0.5)", cursor: "pointer", fontFamily: "inherit" }}>
+                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ display: "inline-flex", width: 24, height: 24, alignItems: "center", justifyContent: "center", color: "rgba(38,38,51,0.55)" }}>
+                {ic.collapse}
+              </span>
+              <button onClick={() => setSearchOpen(true)} title="Поиск"
+                style={{
+                  width: 24, height: 24, padding: 0,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  background: "transparent", border: "none", borderRadius: 6,
+                  color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
+                  marginLeft: "auto",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+                </svg>
+              </button>
+            </div>
+          )}
+          {/* Filter chips — компактные */}
+          <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 10 }}>
             {[
               { id: "all",       label: "Все",         count: counts.all },
               { id: "unread",    label: "Новые",       count: counts.unread },
@@ -11445,13 +11478,14 @@ function InboxPage({ onNavigate }) {
             ].filter(t => t.count !== 0 || t.id === "all" || t.id === "archived").map(t => (
               <button key={t.id} onClick={() => setFilter(t.id)}
                 style={{
-                  padding: "4px 10px",
-                  background: filter === t.id ? "#262633" : "rgba(38,38,51,0.04)",
-                  color: filter === t.id ? color.white : "#262633",
-                  border: "none", borderRadius: 999,
-                  fontSize: 11.5, fontWeight: 500,
+                  padding: "3px 9px",
+                  background: filter === t.id ? "#262633" : "transparent",
+                  color: filter === t.id ? color.white : "rgba(38,38,51,0.7)",
+                  border: filter === t.id ? "none" : "1px solid rgba(38,38,51,0.1)",
+                  borderRadius: 999,
+                  fontSize: 11, fontWeight: 500,
                   cursor: "pointer", fontFamily: "inherit",
-                  display: "inline-flex", alignItems: "center", gap: 5,
+                  display: "inline-flex", alignItems: "center", gap: 4,
                 }}>
                 {t.label}{t.count != null && t.count > 0 && (
                   <span style={{ opacity: 0.7 }}>{t.count}</span>
@@ -11851,6 +11885,7 @@ function TeamPage() {
   const [chats, setChats] = useState([]);
   const [filter, setFilter] = useState("all"); // all | internal | tg
   const [query, setQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [activeChat, setActiveChat] = useState(null);
   const [text, setText] = useState("");
@@ -11914,20 +11949,50 @@ function TeamPage() {
         borderRight: "1px solid rgba(38,38,51,0.06)",
         display: "flex", flexDirection: "column", background: color.white,
       }}>
-        <div style={{ padding: "18px 16px 10px" }}>
-          <h2 style={{ fontSize: 17, fontWeight: 600, color: "#262633", margin: "0 0 12px" }}>Команда</h2>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            background: "rgba(38,38,51,0.05)", borderRadius: 8, padding: "7px 10px",
-            marginBottom: 10,
-          }}>
-            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
-            </svg>
-            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Поиск чата"
-              style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, color: "#262633", fontFamily: "inherit", padding: 0 }} />
-          </div>
-          <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ padding: "14px 14px 8px" }}>
+          {searchOpen ? (
+            <div style={{
+              display: "flex", alignItems: "center", gap: 6,
+              height: 24,
+              background: "rgba(38,38,51,0.06)",
+              borderRadius: 7, padding: "0 8px",
+              border: "1.5px solid #3F95FF",
+            }}>
+              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.55)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+              </svg>
+              <input autoFocus value={query} onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === "Escape") { setQuery(""); setSearchOpen(false); } }}
+                placeholder="Поиск чата"
+                style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12, color: "#262633", fontFamily: "inherit", padding: 0 }} />
+              <button onClick={() => { setQuery(""); setSearchOpen(false); }} title="Закрыть"
+                style={{ background: "transparent", border: "none", padding: 0, display: "inline-flex", color: "rgba(38,38,51,0.5)", cursor: "pointer", fontFamily: "inherit" }}>
+                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ display: "inline-flex", width: 24, height: 24, alignItems: "center", justifyContent: "center", color: "rgba(38,38,51,0.55)" }}>
+                {ic.collapse}
+              </span>
+              <button onClick={() => setSearchOpen(true)} title="Поиск"
+                style={{
+                  width: 24, height: 24, padding: 0,
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  background: "transparent", border: "none", borderRadius: 6,
+                  color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+                </svg>
+              </button>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 4, marginTop: 10 }}>
             {[
               { id: "all", label: "Все" },
               { id: "internal", label: "В платформе" },
@@ -11935,11 +12000,12 @@ function TeamPage() {
             ].map(t => (
               <button key={t.id} onClick={() => setFilter(t.id)}
                 style={{
-                  padding: "4px 10px",
-                  background: filter === t.id ? "#262633" : "rgba(38,38,51,0.04)",
-                  color: filter === t.id ? color.white : "#262633",
-                  border: "none", borderRadius: 999,
-                  fontSize: 11.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+                  padding: "3px 9px",
+                  background: filter === t.id ? "#262633" : "transparent",
+                  color: filter === t.id ? color.white : "rgba(38,38,51,0.7)",
+                  border: filter === t.id ? "none" : "1px solid rgba(38,38,51,0.1)",
+                  borderRadius: 999,
+                  fontSize: 11, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
                 }}>{t.label}</button>
             ))}
           </div>
