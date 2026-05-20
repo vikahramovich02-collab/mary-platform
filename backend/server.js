@@ -2022,9 +2022,20 @@ const TOOL_HANDLERS = {
       if (!deptId || !agentId || !task) return { error: "deptId, agentId, task — обязательны" };
       const data = loadDepartments();
       const dept = data.departments.find(d => d.id === deptId);
-      if (!dept) return { error: `отдел '${deptId}' не найден` };
-      const agent = (dept.agents || []).find(a => a.id === agentId);
-      if (!agent) return { error: `агент '${agentId}' в отделе '${deptId}' не найден` };
+      if (!dept) {
+        const available = (data.departments || []).map(d => d.id).join(", ");
+        return { error: `отдел '${deptId}' не найден. Доступные: ${available}` };
+      }
+      // Fuzzy: по id точно, иначе по role (case-insensitive substring)
+      let agent = (dept.agents || []).find(a => a.id === agentId);
+      if (!agent) {
+        const k = String(agentId).toLowerCase();
+        agent = (dept.agents || []).find(a => (a.role || "").toLowerCase().includes(k) || (a.id || "").toLowerCase().includes(k));
+      }
+      if (!agent) {
+        const available = (dept.agents || []).map(a => `${a.id}(${a.role})`).join(", ");
+        return { error: `агент '${agentId}' в отделе '${deptId}' не найден. Доступные: ${available}` };
+      }
       const sysPrompt = agent.systemPrompt || `Ты — ${agent.role} отдела ${dept.name}.`;
       const userMsg = context ? `${task}\n\n--- Дополнительный контекст ---\n${context}` : task;
       // Модель агента → ID для OpenRouter. Маппинг короткое-имя → полный slug.
@@ -2105,9 +2116,24 @@ function detectsLoop(trace) {
       && last6[1] === last6[3] && last6[3] === last6[5];
 }
 
+// Динамический контекст: список реальных отделов и агентов (чтобы Mary не угадывала agentId)
+function buildLiveContext() {
+  try {
+    const data = loadDepartments();
+    const lines = ["## 🏢 РЕАЛЬНЫЕ ОТДЕЛЫ И АГЕНТЫ СЕЙЧАС (используй точные id для ask_agent):"];
+    for (const d of (data.departments || [])) {
+      const agents = (d.agents || []).map(a => `${a.id} (${a.role})`).join(", ") || "пусто";
+      lines.push(`• **${d.id}** — «${d.name}»: ${agents}`);
+    }
+    return lines.join("\n");
+  } catch { return ""; }
+}
+
 async function runAgent({ message, history, maxSteps = 15 }) {
+  const liveCtx = buildLiveContext();
+  const sys = liveCtx ? `${MARY_SYSTEM_AGENT}\n\n${liveCtx}` : MARY_SYSTEM_AGENT;
   const messages = [
-    { role: "system", content: MARY_SYSTEM_AGENT },
+    { role: "system", content: sys },
     ...history.slice(-30).map(h => ({
       role: h.agentId === "user" ? "user" : "assistant",
       content: h.text || "",
@@ -2200,8 +2226,10 @@ async function runAgent({ message, history, maxSteps = 15 }) {
 
 // ── Streaming agent: SSE ─────────────────────────────────
 async function runAgentStream({ message, history, maxSteps = 15, emit }) {
+  const liveCtx = buildLiveContext();
+  const sys = liveCtx ? `${MARY_SYSTEM_AGENT}\n\n${liveCtx}` : MARY_SYSTEM_AGENT;
   const messages = [
-    { role: "system", content: MARY_SYSTEM_AGENT },
+    { role: "system", content: sys },
     ...history.slice(-30).map(h => ({
       role: h.agentId === "user" ? "user" : "assistant",
       content: h.text || "",
