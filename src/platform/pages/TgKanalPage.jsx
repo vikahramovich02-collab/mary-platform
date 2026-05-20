@@ -1579,13 +1579,26 @@ function FinalPostCard({ msg, onAction }) {
         borderRadius: 14,
         overflow: "hidden",
       }}>
-        {/* Mock cover */}
+        {/* Placeholder обложки (Designer ещё не подключён к image-gen) */}
         <div style={{
-          height: 130,
+          height: 130, position: "relative",
           background: `linear-gradient(135deg, ${palette[0]}, ${palette[1]} 60%, ${palette[2]})`,
           display: "flex", alignItems: "center", justifyContent: "center",
-          color: color.white, fontWeight: 600, fontSize: 16, textAlign: "center", padding: "0 20px",
-        }}>{msg.idea?.title}</div>
+          color: color.white, padding: "0 20px",
+        }}>
+          <div style={{ textAlign: "center" }}>
+            <div style={{
+              fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em",
+              opacity: 0.85, fontWeight: 600,
+            }}>placeholder обложки</div>
+            <div style={{
+              fontSize: 14, fontWeight: 600, marginTop: 4, lineHeight: 1.3,
+            }}>{msg.idea?.title}</div>
+            <div style={{
+              fontSize: 10.5, opacity: 0.7, marginTop: 6,
+            }}>сгенерирует Дизайнер когда подключим image-generation</div>
+          </div>
+        </div>
         {/* Channel header */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px 6px" }}>
           <div style={{
@@ -1606,16 +1619,14 @@ function FinalPostCard({ msg, onAction }) {
           whiteSpace: "pre-wrap",
           maxHeight: 220, overflow: "auto",
         }}>{msg.body}</div>
-        {/* Mock metrics */}
+        {/* Метрики появляются ТОЛЬКО после публикации (раньше тут был fake-прогноз) */}
         <div style={{
-          display: "flex", alignItems: "center", gap: 14,
           padding: "8px 14px 12px",
           borderTop: "1px solid rgba(38,38,51,0.06)",
-          fontSize: 12, color: "rgba(38,38,51,0.55)",
+          fontSize: 11.5, color: "rgba(38,38,51,0.45)",
+          fontStyle: "italic",
         }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{ic.eye} прогноз ~12k</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{ic.heart} ER ~6%</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{ic.bubbleSm} ~80</span>
+          Метрики появятся после публикации
         </div>
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
