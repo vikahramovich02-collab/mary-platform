@@ -10,9 +10,11 @@
     "deploy": "bash deploy.sh",
     "deploy:front": "bash deploy.sh frontend",
     "deploy:back": "bash deploy.sh backend",
-    "test": "node --test tests/backend.test.mjs && node tests/e2e.spec.mjs",
+    "test": "node tests/all.mjs",
+    "test:all": "node tests/all.mjs --all",
+    "test:flow": "node tests/full-flow.mjs",
     "test:backend": "node --test tests/backend.test.mjs",
-    "test:e2e": "node tests/e2e.spec.mjs"
+    "test:playwright": "node tests/e2e.spec.mjs"
   },
   "dependencies": {
     "react": "^19.0.0",
