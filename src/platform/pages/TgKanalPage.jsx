@@ -11580,32 +11580,23 @@ function InboxTeamThread({ conversationId, isTg, onGoSource, onArchive, archived
   const isGroup = chat.meta?.kind === "group" || chat.meta?.kind === "tg_group";
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-      {/* Header */}
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: color.white }}>
+      {/* Header — минималистично, как в Чате Mary */}
       <div style={{
-        padding: "14px 24px", display: "flex", alignItems: "center", gap: 12,
-        background: color.white, borderBottom: "1px solid rgba(38,38,51,0.06)",
+        padding: "20px 28px 14px", display: "flex", alignItems: "center", gap: 10,
       }}>
-        <div style={{
-          width: 34, height: 34, borderRadius: "50%",
-          background: isGroup ? "rgba(63,149,255,0.15)" : "rgba(122,134,255,0.15)",
-          color: isGroup ? "#3F95FF" : "#7A86FF",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 13, fontWeight: 600, flexShrink: 0,
-        }}>{isGroup ? "👥" : initialOf(chat.title)}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "#262633" }}>{chat.title}</div>
-          <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
-            {isTg
-              ? `Telegram${chat.meta?.membersCount ? ` · ${chat.meta.membersCount} участников` : ""} · бот подключен`
-              : (isGroup ? `Группа · ${(chat.meta?.peopleIds || []).length + 1} участников` : "1-на-1")}
-          </div>
-        </div>
-        {isTg && (
-          <span style={{ fontSize: 11, color: "#3F95FF", background: "rgba(63,149,255,0.1)",
-            padding: "3px 9px", borderRadius: 999, fontWeight: 500 }}>через Telegram</span>
-        )}
-        <button onClick={onGoSource}
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: "#262633", margin: 0 }}>
+          {chat.title}
+        </h2>
+        <span style={{
+          fontSize: 11.5, color: "rgba(38,38,51,0.55)",
+          background: "rgba(38,38,51,0.05)",
+          padding: "3px 9px", borderRadius: 999, fontWeight: 500,
+        }}>
+          {isTg ? "Telegram" : (isGroup ? "Группа" : "1-на-1")}
+        </span>
+        <div style={{ flex: 1 }} />
+        <button onClick={onGoSource} title="Открыть в «Команде»"
           style={{ padding: "6px 12px", background: "transparent", border: "1px solid rgba(38,38,51,0.18)",
             borderRadius: 8, fontSize: 12, color: "#262633", fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
           Открыть в «Команде»
@@ -11619,72 +11610,116 @@ function InboxTeamThread({ conversationId, isTg, onGoSource, onArchive, archived
         )}
       </div>
 
-      {/* Messages */}
-      <div ref={threadRef} style={{ flex: 1, overflowY: "auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 8, background: "rgba(247,247,247,0.4)" }}>
-        {(chat.messages || []).map((m, i) => {
-          const isMe = m.agentId === "vika";
-          const author = isMe ? null : (peopleById[m.agentId] || { id: m.agentId, name: m.agentId, color: "#7A86FF" });
-          return (
-            <div key={i} style={{
-              display: "flex", gap: 8,
-              justifyContent: isMe ? "flex-end" : "flex-start",
-              alignItems: "flex-end",
-            }}>
-              {!isMe && author && (
-                <div style={{
-                  width: 28, height: 28, borderRadius: "50%",
-                  background: author.color, color: color.white,
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, fontWeight: 600, flexShrink: 0,
-                }}>{initialOf(author.name)}</div>
-              )}
-              <div style={{ maxWidth: "70%" }}>
-                {!isMe && (
-                  <div style={{ fontSize: 11, color: "rgba(38,38,51,0.55)", marginBottom: 2, marginLeft: 2 }}>
-                    {author?.name || m.agentId}
+      {/* Messages — стиль как в Чате Mary */}
+      <div ref={threadRef} style={{ flex: 1, overflowY: "auto", padding: "8px 0 16px" }}>
+        <div style={{ maxWidth: 760, width: "100%", margin: "0 auto", padding: "0 28px" }}>
+          {(chat.messages || []).map((m, i) => {
+            const isMe = m.agentId === "vika";
+            const author = isMe ? null : (peopleById[m.agentId] || { id: m.agentId, name: m.agentId, color: "#7A86FF" });
+            const prev = (chat.messages || [])[i - 1];
+            const sameAuthor = prev && prev.agentId === m.agentId;
+
+            if (isMe) {
+              return (
+                <div key={i} style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+                  <div style={{
+                    background: "rgba(38,38,51,0.06)", color: "#262633",
+                    padding: "10px 14px", borderRadius: 16,
+                    maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
+                  }}>{m.text}</div>
+                </div>
+              );
+            }
+            return (
+              <div key={i} style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
+                <div style={{ width: 28, flexShrink: 0 }}>
+                  {!sameAuthor && (
+                    <div style={{
+                      width: 28, height: 28, borderRadius: "50%",
+                      background: author.color, color: color.white,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 11, fontWeight: 600,
+                    }}>{initialOf(author.name)}</div>
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 0, maxWidth: 640, paddingTop: 2 }}>
+                  {!sameAuthor && (
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#262633", marginBottom: 3 }}>
+                      {author.name}
+                      <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "rgba(38,38,51,0.45)" }}>
+                        {new Date(m.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ fontSize: 14, color: "#262633", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+                    {m.text}
                   </div>
-                )}
-                <div style={{
-                  background: isMe ? "#262633" : color.white,
-                  color: isMe ? color.white : "#262633",
-                  padding: "8px 12px", borderRadius: 14,
-                  fontSize: 13, lineHeight: 1.45, whiteSpace: "pre-wrap",
-                  border: isMe ? "none" : "1px solid rgba(38,38,51,0.06)",
-                }}>{m.text}</div>
-                <div style={{
-                  fontSize: 10.5, color: "rgba(38,38,51,0.4)", marginTop: 2,
-                  textAlign: isMe ? "right" : "left",
-                }}>
-                  {new Date(m.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })}
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Input */}
-      <div style={{ padding: "12px 24px 18px", background: color.white, borderTop: "1px solid rgba(38,38,51,0.06)" }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center",
-          background: color.white, border: "1px solid rgba(38,38,51,0.12)", borderRadius: 14, padding: "8px 12px" }}>
-          <input value={text} onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder={isTg ? "Написать в Telegram" : "Написать сообщение"}
-            style={{ flex: 1, border: "none", outline: "none", background: "transparent",
-              fontSize: 13.5, color: "#262633", fontFamily: "inherit", padding: 0 }} />
-          <button onClick={send} disabled={!text.trim()}
-            style={{
-              width: 30, height: 30,
-              background: text.trim() ? "#262633" : "rgba(38,38,51,0.3)",
-              border: "none", borderRadius: "50%",
-              color: color.white, cursor: text.trim() ? "pointer" : "not-allowed",
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "inherit",
-            }}>
-            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 19V5M5 12l7-7 7 7" />
-            </svg>
-          </button>
+      {/* Input — как в Чате Mary */}
+      <div style={{ padding: "12px 24px 18px" }}>
+        <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          <div style={{
+            background: color.white,
+            border: "1px solid rgba(38,38,51,0.12)",
+            borderRadius: 16,
+            padding: "12px 14px",
+            display: "flex", flexDirection: "column", gap: 10,
+          }}>
+            <input
+              value={text}
+              onChange={e => setText(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+              placeholder={isTg ? "Написать в Telegram" : "Написать сообщение"}
+              style={{
+                width: "100%", border: "none", outline: "none",
+                fontSize: 14, color: "#262633",
+                background: "transparent", fontFamily: "inherit",
+                padding: 0, minHeight: 22,
+              }}
+            />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <button title="Добавить"
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 28, height: 28,
+                  background: "transparent",
+                  border: "1px solid rgba(38,38,51,0.18)",
+                  borderRadius: "50%",
+                  color: "rgba(38,38,51,0.7)",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>{ic.plus}</button>
+              <button title="Прикрепить"
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 28, height: 28,
+                  background: "transparent", border: "none", borderRadius: 7,
+                  color: "rgba(38,38,51,0.55)",
+                  cursor: "pointer", fontFamily: "inherit",
+                }}>{ic.attach}</button>
+              <div style={{ flex: 1 }} />
+              <button onClick={send} disabled={!text.trim()} title="Отправить"
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 30, height: 30,
+                  background: text.trim() ? "#262633" : "rgba(38,38,51,0.35)",
+                  border: "none", borderRadius: "50%",
+                  color: color.white,
+                  cursor: text.trim() ? "pointer" : "not-allowed",
+                  fontFamily: "inherit",
+                }}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 19V5" />
+                  <path d="M5 12l7-7 7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -11973,106 +12008,135 @@ function TeamPage() {
         </div>
       </aside>
 
-      {/* Thread */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: "rgba(247,247,247,0.4)" }}>
+      {/* Thread — стиль как в Чате Mary */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: color.white }}>
         {!activeChat ? (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(38,38,51,0.4)", fontSize: 13 }}>
             Выбери чат слева
           </div>
         ) : (
           <>
-            {/* Header */}
-            <div style={{
-              padding: "14px 20px", display: "flex", alignItems: "center", gap: 12,
-              background: color.white, borderBottom: "1px solid rgba(38,38,51,0.06)",
-            }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: "50%",
-                background: (activeChat.meta?.kind === "group" || activeChat.meta?.kind === "tg_group") ? "rgba(63,149,255,0.15)" : "rgba(122,134,255,0.15)",
-                color: (activeChat.meta?.kind === "group" || activeChat.meta?.kind === "tg_group") ? "#3F95FF" : "#7A86FF",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 13, fontWeight: 600, flexShrink: 0,
-              }}>{(activeChat.meta?.kind === "group" || activeChat.meta?.kind === "tg_group") ? "👥" : initialOf(activeChat.title)}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#262633" }}>{activeChat.title}</div>
-                <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
-                  {activeChat.scope?.startsWith("tg/")
-                    ? `Telegram${activeChat.meta?.membersCount ? ` · ${activeChat.meta.membersCount} участников` : ""} · бот подключен`
-                    : (activeChat.meta?.kind === "group" ? `Группа · ${(activeChat.meta?.peopleIds || []).length + 1} участников` : "1-на-1")}
-                </div>
-              </div>
-              {activeChat.scope?.startsWith("tg/") && (
-                <span style={{ fontSize: 11, color: "#3F95FF", background: "rgba(63,149,255,0.1)",
-                  padding: "3px 9px", borderRadius: 999, fontWeight: 500 }}>через Telegram</span>
-              )}
+            {/* Header — минималистично */}
+            <div style={{ padding: "20px 28px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 600, color: "#262633", margin: 0 }}>{activeChat.title}</h2>
+              <span style={{
+                fontSize: 11.5, color: "rgba(38,38,51,0.55)",
+                background: "rgba(38,38,51,0.05)",
+                padding: "3px 9px", borderRadius: 999, fontWeight: 500,
+              }}>
+                {activeChat.scope?.startsWith("tg/")
+                  ? "Telegram"
+                  : ((activeChat.meta?.kind === "group" || activeChat.meta?.kind === "tg_group") ? "Группа" : "1-на-1")}
+              </span>
             </div>
 
             {/* Messages */}
-            <div ref={threadRef} style={{ flex: 1, overflowY: "auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 8 }}>
-              {(activeChat.messages || []).map((m, i) => {
-                const isMe = m.agentId === "vika";
-                const author = isMe ? null : (peopleById[m.agentId] || { id: m.agentId, name: m.agentId, color: "#7A86FF" });
-                return (
-                  <div key={i} style={{
-                    display: "flex", gap: 8,
-                    justifyContent: isMe ? "flex-end" : "flex-start",
-                    alignItems: "flex-end",
-                  }}>
-                    {!isMe && author && (
-                      <div style={{
-                        width: 28, height: 28, borderRadius: "50%",
-                        background: author.color, color: color.white,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 11, fontWeight: 600, flexShrink: 0,
-                      }}>{initialOf(author.name)}</div>
-                    )}
-                    <div style={{ maxWidth: "70%" }}>
-                      {!isMe && (
-                        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.55)", marginBottom: 2, marginLeft: 2 }}>
-                          {author?.name || m.agentId}
+            <div ref={threadRef} style={{ flex: 1, overflowY: "auto", padding: "8px 0 16px" }}>
+              <div style={{ maxWidth: 760, width: "100%", margin: "0 auto", padding: "0 28px" }}>
+                {(activeChat.messages || []).map((m, i) => {
+                  const isMe = m.agentId === "vika";
+                  const author = isMe ? null : (peopleById[m.agentId] || { id: m.agentId, name: m.agentId, color: "#7A86FF" });
+                  const prev = (activeChat.messages || [])[i - 1];
+                  const sameAuthor = prev && prev.agentId === m.agentId;
+
+                  if (isMe) {
+                    return (
+                      <div key={i} style={{ display: "flex", justifyContent: "flex-end", marginBottom: 14 }}>
+                        <div style={{
+                          background: "rgba(38,38,51,0.06)", color: "#262633",
+                          padding: "10px 14px", borderRadius: 16,
+                          maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
+                        }}>{m.text}</div>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div key={i} style={{ display: "flex", gap: 12, marginBottom: 14, alignItems: "flex-start" }}>
+                      <div style={{ width: 28, flexShrink: 0 }}>
+                        {!sameAuthor && (
+                          <div style={{
+                            width: 28, height: 28, borderRadius: "50%",
+                            background: author.color, color: color.white,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 11, fontWeight: 600,
+                          }}>{initialOf(author.name)}</div>
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0, maxWidth: 640, paddingTop: 2 }}>
+                        {!sameAuthor && (
+                          <div style={{ fontSize: 12, fontWeight: 600, color: "#262633", marginBottom: 3 }}>
+                            {author.name}
+                            <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "rgba(38,38,51,0.45)" }}>
+                              {new Date(m.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                        )}
+                        <div style={{ fontSize: 14, color: "#262633", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+                          {m.text}
                         </div>
-                      )}
-                      <div style={{
-                        background: isMe ? "#262633" : color.white,
-                        color: isMe ? color.white : "#262633",
-                        padding: "8px 12px", borderRadius: 14,
-                        fontSize: 13, lineHeight: 1.45, whiteSpace: "pre-wrap",
-                        border: isMe ? "none" : "1px solid rgba(38,38,51,0.06)",
-                      }}>{m.text}</div>
-                      <div style={{
-                        fontSize: 10.5, color: "rgba(38,38,51,0.4)", marginTop: 2,
-                        textAlign: isMe ? "right" : "left",
-                      }}>
-                        {new Date(m.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })}
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Input */}
-            <div style={{ padding: "12px 20px 18px", background: color.white, borderTop: "1px solid rgba(38,38,51,0.06)" }}>
-              <div style={{ maxWidth: 760, margin: "0 auto", display: "flex", gap: 8, alignItems: "center",
-                background: color.white, border: "1px solid rgba(38,38,51,0.12)", borderRadius: 14, padding: "8px 12px" }}>
-                <input value={text} onChange={e => setText(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-                  placeholder={activeChat.scope?.startsWith("tg/") ? "Написать в Telegram-группу" : "Написать сообщение"}
-                  style={{ flex: 1, border: "none", outline: "none", background: "transparent",
-                    fontSize: 13.5, color: "#262633", fontFamily: "inherit", padding: 0 }} />
-                <button onClick={sendMessage} disabled={!text.trim()}
-                  style={{
-                    width: 30, height: 30,
-                    background: text.trim() ? "#262633" : "rgba(38,38,51,0.3)",
-                    border: "none", borderRadius: "50%",
-                    color: color.white, cursor: text.trim() ? "pointer" : "not-allowed",
-                    display: "inline-flex", alignItems: "center", justifyContent: "center",
-                    fontFamily: "inherit",
-                  }}>
-                  <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 19V5M5 12l7-7 7 7" />
-                  </svg>
-                </button>
+            {/* Input — двухрядный как в Чате Mary */}
+            <div style={{ padding: "12px 24px 18px" }}>
+              <div style={{ maxWidth: 760, margin: "0 auto" }}>
+                <div style={{
+                  background: color.white,
+                  border: "1px solid rgba(38,38,51,0.12)",
+                  borderRadius: 16,
+                  padding: "12px 14px",
+                  display: "flex", flexDirection: "column", gap: 10,
+                }}>
+                  <input value={text} onChange={e => setText(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+                    placeholder={activeChat.scope?.startsWith("tg/") ? "Написать в Telegram-группу" : "Написать сообщение"}
+                    style={{
+                      width: "100%", border: "none", outline: "none",
+                      fontSize: 14, color: "#262633",
+                      background: "transparent", fontFamily: "inherit",
+                      padding: 0, minHeight: 22,
+                    }} />
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <button title="Добавить"
+                      style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        width: 28, height: 28,
+                        background: "transparent",
+                        border: "1px solid rgba(38,38,51,0.18)",
+                        borderRadius: "50%",
+                        color: "rgba(38,38,51,0.7)",
+                        cursor: "pointer", fontFamily: "inherit",
+                      }}>{ic.plus}</button>
+                    <button title="Прикрепить"
+                      style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        width: 28, height: 28,
+                        background: "transparent", border: "none", borderRadius: 7,
+                        color: "rgba(38,38,51,0.55)",
+                        cursor: "pointer", fontFamily: "inherit",
+                      }}>{ic.attach}</button>
+                    <div style={{ flex: 1 }} />
+                    <button onClick={sendMessage} disabled={!text.trim()} title="Отправить"
+                      style={{
+                        display: "inline-flex", alignItems: "center", justifyContent: "center",
+                        width: 30, height: 30,
+                        background: text.trim() ? "#262633" : "rgba(38,38,51,0.35)",
+                        border: "none", borderRadius: "50%",
+                        color: color.white,
+                        cursor: text.trim() ? "pointer" : "not-allowed",
+                        fontFamily: "inherit",
+                      }}>
+                      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 19V5" />
+                        <path d="M5 12l7-7 7 7" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </>
