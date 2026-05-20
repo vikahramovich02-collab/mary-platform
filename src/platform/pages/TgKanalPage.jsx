@@ -10845,11 +10845,8 @@ function renderMarkdown(text) {
 function parseNumberedOptions(text) {
   if (!text) return { body: text, options: null };
   const lines = text.split("\n");
-  const opts = [];
   let i = lines.length - 1;
-  // схлопываем хвостовые пустые строки
   while (i >= 0 && lines[i].trim() === "") i--;
-  // собираем подряд идущие "N. ..." с конца
   const collected = [];
   while (i >= 0) {
     const m = lines[i].match(/^\s*\d+\.\s+(.+?)\s*$/);
@@ -10858,7 +10855,25 @@ function parseNumberedOptions(text) {
     i--;
   }
   if (collected.length < 2) return { body: text, options: null };
-  // тело — всё до первой опции, обрезаем хвостовые пустые строки
+  const bodyLines = lines.slice(0, i + 1);
+  while (bodyLines.length && bodyLines[bodyLines.length - 1].trim() === "") bodyLines.pop();
+  return { body: bodyLines.join("\n"), options: collected };
+}
+
+// Multi-select: хвост из строк "- [ ] вариант" или "* [ ] вариант" в конце текста.
+function parseChecklistOptions(text) {
+  if (!text) return { body: text, options: null };
+  const lines = text.split("\n");
+  let i = lines.length - 1;
+  while (i >= 0 && lines[i].trim() === "") i--;
+  const collected = [];
+  while (i >= 0) {
+    const m = lines[i].match(/^\s*[-*]\s*\[\s*\]\s+(.+?)\s*$/);
+    if (!m) break;
+    collected.unshift(m[1].replace(/\*\*/g, ""));
+    i--;
+  }
+  if (collected.length < 2) return { body: text, options: null };
   const bodyLines = lines.slice(0, i + 1);
   while (bodyLines.length && bodyLines[bodyLines.length - 1].trim() === "") bodyLines.pop();
   return { body: bodyLines.join("\n"), options: collected };
@@ -10982,6 +10997,126 @@ function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, pinned 
   );
 }
 
+function OptionsBlock({ options, multi, onPick }) {
+  const [selected, setSelected] = useState(() => new Set());
+  const toggle = (idx) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+  const submit = () => {
+    const picked = options.filter((_, i) => selected.has(i));
+    if (picked.length === 0) return;
+    onPick(picked.join(", "));
+  };
+
+  if (!multi) {
+    return (
+      <div style={{
+        marginTop: 14,
+        borderTop: "1px solid rgba(38,38,51,0.08)",
+        borderBottom: "1px solid rgba(38,38,51,0.08)",
+      }}>
+        {options.map((opt, idx) => (
+          <button key={idx} onClick={() => onPick(opt)}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              width: "100%",
+              padding: "10px 4px",
+              background: "transparent",
+              border: "none",
+              borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.08)" : "none",
+              fontSize: 13, fontWeight: 400, color: "#262633",
+              lineHeight: 1.3,
+              textAlign: "left", fontFamily: "inherit",
+              cursor: "pointer", transition: transition.fast,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+            <span style={{
+              flexShrink: 0, width: 18, textAlign: "right",
+              color: "rgba(38,38,51,0.45)", fontWeight: 500,
+              fontVariantNumeric: "tabular-nums",
+            }}>{idx + 1}.</span>
+            <span style={{ flex: 1 }}>{opt}</span>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+                 stroke="rgba(38,38,51,0.45)" strokeWidth={1.6}
+                 strokeLinecap="round" strokeLinejoin="round"
+                 style={{ transform: "scale(0.85)", flexShrink: 0 }}>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  // multi-select UI
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", marginBottom: 6, fontWeight: 500 }}>
+        Можно выбрать несколько
+      </div>
+      <div style={{
+        borderTop: "1px solid rgba(38,38,51,0.08)",
+        borderBottom: "1px solid rgba(38,38,51,0.08)",
+      }}>
+        {options.map((opt, idx) => {
+          const checked = selected.has(idx);
+          return (
+            <button key={idx} onClick={() => toggle(idx)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                width: "100%",
+                padding: "10px 4px",
+                background: checked ? "rgba(38,38,51,0.04)" : "transparent",
+                border: "none",
+                borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.08)" : "none",
+                fontSize: 13, fontWeight: 400, color: "#262633",
+                lineHeight: 1.3,
+                textAlign: "left", fontFamily: "inherit",
+                cursor: "pointer", transition: transition.fast,
+              }}
+              onMouseEnter={e => { if (!checked) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+              onMouseLeave={e => { if (!checked) e.currentTarget.style.background = "transparent"; }}>
+              <span style={{
+                flexShrink: 0,
+                width: 16, height: 16, borderRadius: 4,
+                border: checked ? "1.5px solid #262633" : "1.5px solid rgba(38,38,51,0.25)",
+                background: checked ? "#262633" : "transparent",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                marginLeft: 4,
+              }}>
+                {checked && (
+                  <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke={color.white} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12l5 5L20 7" />
+                  </svg>
+                )}
+              </span>
+              <span style={{ flex: 1 }}>{opt}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+        <button onClick={submit} disabled={selected.size === 0}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "7px 14px",
+            background: selected.size > 0 ? "#262633" : "rgba(38,38,51,0.15)",
+            color: color.white, border: "none", borderRadius: 8,
+            fontSize: 12.5, fontWeight: 500, fontFamily: "inherit",
+            cursor: selected.size > 0 ? "pointer" : "not-allowed",
+          }}>
+          Отправить{selected.size > 0 && ` · ${selected.size}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -11083,7 +11218,12 @@ function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
   }
   // Парсим опции только для законченного последнего сообщения Mary
   const showOptions = isLast && !m._streaming && !m._toolStatus && onPickOption;
-  const { body, options } = showOptions ? parseNumberedOptions(m.text) : { body: m.text, options: null };
+  // Сначала пробуем чек-лист (multi-select), потом нумерованный (single-select)
+  const checklist = showOptions ? parseChecklistOptions(m.text) : { body: m.text, options: null };
+  const numbered  = showOptions && !checklist.options ? parseNumberedOptions(m.text) : { body: m.text, options: null };
+  const body = checklist.options ? checklist.body : (numbered.options ? numbered.body : m.text);
+  const options = checklist.options || numbered.options;
+  const multi   = !!checklist.options;
   return (
     <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
       <div style={{
@@ -11117,45 +11257,7 @@ function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
           )}
         </div>
         {options && options.length >= 2 && (
-          <div style={{
-            marginTop: 14,
-            borderTop: "1px solid rgba(38,38,51,0.08)",
-            borderBottom: "1px solid rgba(38,38,51,0.08)",
-          }}>
-            {options.map((opt, idx) => (
-              <button
-                key={idx}
-                onClick={() => onPickOption(opt)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  width: "100%",
-                  padding: "10px 4px",
-                  background: "transparent",
-                  border: "none",
-                  borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.08)" : "none",
-                  fontSize: 13, fontWeight: 400, color: "#262633",
-                  lineHeight: 1.3,
-                  textAlign: "left", fontFamily: "inherit",
-                  cursor: "pointer", transition: transition.fast,
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              >
-                <span style={{
-                  flexShrink: 0, width: 18, textAlign: "right",
-                  color: "rgba(38,38,51,0.45)", fontWeight: 500,
-                  fontVariantNumeric: "tabular-nums",
-                }}>{idx + 1}.</span>
-                <span style={{ flex: 1 }}>{opt}</span>
-                <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-                     stroke="rgba(38,38,51,0.45)" strokeWidth={1.6}
-                     strokeLinecap="round" strokeLinejoin="round"
-                     style={{ transform: "scale(0.85)", flexShrink: 0 }}>
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
-            ))}
-          </div>
+          <OptionsBlock options={options} multi={multi} onPick={onPickOption} />
         )}
         {m._streaming && !m.text && !m._toolStatus && (
           <div style={{ display: "inline-flex", gap: 4, padding: "8px 0" }}>
