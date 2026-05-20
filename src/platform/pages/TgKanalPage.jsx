@@ -2057,9 +2057,6 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
   function appendAgent(agentId, extra) {
     setAllMessages(prev => [...prev, { id: "a" + Date.now() + Math.random(), agentId, time: nowTime(), ...extra }]);
   }
-  function generateTextForIdea(idea) {
-    return `${idea.hook || ""}\n\nАгент-оркестратор Mary за неделю:\n— спарсил 51 пост из 31 канала\n— выделил 4 темы и 3 формата, которые сейчас в моменте\n— собрал 4 идеи постов под мой бриф\n— сгенерил 12 обложек и оставил по 1 финальной\n— подготовил тексты с хуком, телом и призывом\n\nЯ всё это пересмотрела за 30 минут и нажала «Опубликовать».\n\n${idea.angle.includes("чек-лист") ? "Чек-лист в комментах ↓" : "Подпишись, если интересно как я строю SMM-отдел из агентов."}`;
-  }
   function paletteForIdea(idea) {
     if (idea.angle.includes("AI"))   return ["#3F95FF", "#7A86FF", "#262633"];
     if (idea.angle.includes("Indie")) return ["#FF8B3D", "#FF6FB3", "#7A86FF"];
@@ -2098,12 +2095,8 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
     Promise.all(ideas.map(idea => callCopywriterWrite(idea))).then(results => {
       const validResults = results.filter(r => r && r.body);
       if (validResults.length === 0) {
-        // Fallback на mock если backend недоступен
         appendAgent("copywriter", {
-          text: `Беру в работу ${ideas.length === 1 ? "идею" : `${ideas.length} идеи`}. Готов первый драфт по каждой:`,
-          type: "text",
-          body: ideas.map(it => `📌 ${it.title}\n\n${generateTextForIdea(it)}`).join("\n\n———————\n\n"),
-          ideaIds: ideas.map(i => i.id),
+          text: "Копирайтер не ответил — backend недоступен. Попробуй ещё раз или воспользуйся Чатом Mary (там делегация через ask_agent(copywriter)).",
         });
       } else {
         appendAgent("copywriter", {
@@ -2128,11 +2121,15 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
     setTimeout(async () => {
       // Финальный пост с реальным текстом от копирайтера
       const finalText = await callCopywriterWrite(ideas[0]);
+      if (!finalText || !finalText.body) {
+        appendMary({ text: "Не удалось собрать финальный пост — Копирайтер не отвечает." });
+        return;
+      }
       appendMary({
         text: `Текст и обложки готовы по всем ${ideas.length} ${ideas.length === 1 ? "идее" : "идеям"}. Собрала превью первого поста — глянь и жми «Опубликовать», если ок:`,
         type: "finalPost",
         idea: ideas[0],
-        body: (finalText && finalText.body) || generateTextForIdea(ideas[0]),
+        body: finalText.body,
         palette: paletteForIdea(ideas[0]),
         channel: "@mary_smm",
         scheduledFor: "сегодня в 12:00",
@@ -2516,14 +2513,7 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
     }
   }
   function triggerAgentMock(agentId) {
-    const ideasItems = [
-      { id: "i1", angle: "AI-агенты · кейс с цифрой", title: "Как 5 AI-агентов делают за меня недельный контент-план — кейс Mary", hook: "До Mary я тратила 14 часов в неделю на контент. Сейчас — 40 минут.", angleNote: "Хук с конкретной цифрой → +30% охват по ресёрчу" },
-      { id: "i2", angle: "Indie · личная история",     title: "Год назад я закрыла агентство и пошла в SaaS. Вот что узнала", hook: "Год назад мне пришла мысль: «Если бы у меня был помощник, который ведёт весь SMM».", angleNote: "Личные истории > expertise-постов в 2.4× по ER" },
-      { id: "i3", angle: "B2B · разбор-объяснялка",    title: "Почему GPT не справляется с SMM (и как помогает оркестратор агентов)", hook: "Если ChatGPT пишет тебе посты — ты в ловушке промпт-инжиниринга.", angleNote: "Контр-нарратив против общего хайпа на GPT" },
-      { id: "i4", angle: "TG-рост · мини-чек-лист",    title: "Чек-лист: как настроить SMM-отдел из AI-агентов за выходные", hook: "Чек-лист из 7 шагов — от парсинга до автопостинга.", angleNote: "Чек-листы по ресёрчу: длина 300-600 знаков работает лучше всего" },
-    ];
     if (agentId === "marketer") {
-      // Реальный вызов маркетолога — он сам подтянет insights ресерчера
       callMarketerIdeate({ count: 4 }).then(data => {
         if (data && data.items?.length) {
           appendAgent("marketer", {
@@ -2532,22 +2522,14 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
             items: data.items,
           });
         } else {
-          appendAgent("marketer", { type: "ideas", text: "Вот 4 идеи постов — отметь те, что берём в работу:", items: ideasItems });
+          appendAgent("marketer", { text: "Не получилось получить идеи — backend не отвечает. Попробуй через минуту или используй Чат Mary (там делегация через ask_agent)." });
         }
       });
     } else if (agentId === "copywriter") {
-      // Реальный копирайтер — берёт первую mock-идею для демо (когда нет конкретной)
-      callCopywriterWrite(ideasItems[0]).then(data => {
-        appendAgent("copywriter", {
-          text: "Вот драфт.",
-          type: "text",
-          body: (data && data.body) || generateTextForIdea(ideasItems[0]),
-        });
-      });
+      appendAgent("copywriter", { text: "Чтобы Копирайтер написал текст — нужна конкретная идея. Выбери идею у Маркетолога или попроси в Чате Mary: «напиши пост про X»." });
     } else if (agentId === "designer") {
-      appendAgent("designer", { text: "3 варианта обложки:", type: "visual", palette: ["#3F95FF", "#7A86FF", "#262633"] });
+      appendAgent("designer", { text: "Дизайнер пока не подключён через backend. Воспользуйся Чатом Mary: «нарисуй обложку для X»." });
     } else if (agentId === "researcher") {
-      // Реальный вызов backend — анализ 25 топ-постов через GLM 5.1
       callResearcherInsights().then(data => {
         if (data && data.themes?.length) {
           appendAgent("researcher", {
@@ -2558,86 +2540,63 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
             notes: data.observations || [],
           });
         } else {
-          // Fallback если backend не ответил
-          appendAgent("researcher", { type: "research", text: "Топ-постов:", items: [
-            { ch: "neural_prosecco", postId: 4821, title: "OpenAI Realtime API — latency 320 мс" },
-            { ch: "ai_product",      postId: 991,  title: "Anthropic Computer Use — Claude кликает сам" },
-          ] });
+          appendAgent("researcher", { text: "Не получилось собрать инсайты — backend не отвечает или нет свежих постов в БД. Попробуй позже." });
         }
       });
     } else if (agentId === "analyst") {
-      appendAgent("analyst", { text: "Сводка по последним 5 постам:\n\n— ср. охват: 8.2k\n— ср. ER: 5.4%\n— топ-пост: «Чек-лист SMM-отдела» (12.1k охват, 7.8% ER)" });
+      appendAgent("analyst", { text: "Аналитик пока не подключён — нужны реальные метрики из канала. Подключи Telegram-канал в Настройках, тогда дам сводку." });
     }
   }
   function handleFreeMessage(content) {
     const d = (content || "").toLowerCase();
-    const ideasItems = [
-      { id: "i1", angle: "AI-агенты · кейс с цифрой", title: "Как 5 AI-агентов делают за меня недельный контент-план — кейс Mary", hook: "До Mary я тратила 14 часов в неделю на контент. Сейчас — 40 минут.", angleNote: "Хук с конкретной цифрой → +30% охват по ресёрчу" },
-      { id: "i2", angle: "Indie · личная история",     title: "Год назад я закрыла агентство и пошла в SaaS. Вот что узнала", hook: "Год назад мне пришла мысль: «Если бы у меня был помощник, который ведёт весь SMM».", angleNote: "Личные истории > expertise-постов в 2.4× по ER" },
-      { id: "i3", angle: "B2B · разбор-объяснялка",    title: "Почему GPT не справляется с SMM (и как помогает оркестратор агентов)", hook: "Если ChatGPT пишет тебе посты — ты в ловушке промпт-инжиниринга.", angleNote: "Контр-нарратив против общего хайпа на GPT" },
-      { id: "i4", angle: "TG-рост · мини-чек-лист",    title: "Чек-лист: как настроить SMM-отдел из AI-агентов за выходные", hook: "Чек-лист из 7 шагов — от парсинга до автопостинга.", angleNote: "Чек-листы по ресёрчу: длина 300-600 знаков работает лучше всего" },
-    ];
 
-    // Контент-план / идеи постов → Маркетолог
+    // Контент-план / идеи постов → Маркетолог (реальный backend)
     if (/(контент.?план|план.{0,10}пост|идеи|темы постов)/.test(d)) {
-      appendMary({ text: "Окей, ставлю задачу Маркетологу — соберёт контент-план на неделю с учётом твоего брифа и трендов из последнего ресёрча." });
-      setTimeout(() => {
-        appendAgent("marketer", {
-          type: "ideas",
-          text: "Готово. Вот 4 идеи постов на след. неделю — отметь те, что берём в работу:",
-          items: ideasItems,
-        });
-      }, 2500);
+      appendMary({ text: "Окей, ставлю задачу Маркетологу — соберёт контент-план на основе свежего ресёрча." });
+      callMarketerIdeate({ count: 4, brief: content }).then(data => {
+        if (data && data.items?.length) {
+          appendAgent("marketer", {
+            type: "ideas",
+            text: `Подобрал ${data.items.length} идей. Отметь те, что берём в работу:`,
+            items: data.items,
+          });
+        } else {
+          appendAgent("marketer", { text: "Не получилось получить идеи — попробуй ещё раз или используй Чат Mary." });
+        }
+      });
       return;
     }
-    // Текст поста → Копирайтер
+    // Текст поста → Копирайтер (требует идею)
     if (/(напиши пост|напиши текст|текст поста|пост на тему)/.test(d)) {
-      appendMary({ text: "Передаю Копирайтеру — он напишет драфт в твоём ToV (личные истории + цифры, без воды)." });
-      setTimeout(() => {
-        const idea = ideasItems[0];
-        appendAgent("copywriter", {
-          text: "Вот драфт. Если что-то не так — нажми «Доработать» и опиши:",
-          type: "text",
-          body: generateTextForIdea(idea),
-        });
-      }, 2300);
+      appendMary({ text: "Чтобы Копирайтер написал — нужна конкретная идея. Сначала Маркетолог даст 4 варианта, выберешь, потом текст." });
       return;
     }
-    // Обложка / визуал → Дизайнер
+    // Обложка / визуал → Дизайнер (не подключён)
     if (/(обложк|визуал|картинк|дизайн|оформлен)/.test(d)) {
-      appendMary({ text: "Прошу Дизайнера — даст 3 варианта в брендстиле." });
-      setTimeout(() => {
-        appendAgent("designer", {
-          text: "3 варианта обложки — выбирай:",
-          type: "visual",
-          palette: ["#3F95FF", "#7A86FF", "#262633"],
-        });
-      }, 2300);
+      appendMary({ text: "Дизайнер пока не подключён через backend. Воспользуйся Чатом Mary: там делегация идёт через ask_agent (designer)." });
       return;
     }
-    // Ресёрч → Ресерчер
+    // Ресёрч → Ресерчер (реальный backend)
     if (/(ресёрч|ресерч|конкурент|спарси|посты конкурентов|тренд|инсайт)/.test(d)) {
-      appendMary({ text: "Ресерчер уже на ходу — собирает свежие посты по 31 каналу. Через минуту даст подборку." });
-      setTimeout(() => {
-        appendAgent("researcher", {
-          type: "research",
-          text: "Спарсил топ-постов за 24ч:",
-          items: [
-            { ch: "neural_prosecco", postId: 4821, title: "OpenAI Realtime API — latency 320 мс" },
-            { ch: "ai_product",      postId: 991,  title: "Anthropic Computer Use — Claude кликает сам" },
-          ],
-        });
-      }, 2500);
+      appendMary({ text: "Ресерчер — на связи. Сейчас принесёт темы и форматы." });
+      callResearcherInsights().then(data => {
+        if (data && data.themes?.length) {
+          appendAgent("researcher", {
+            type: "insights",
+            text: `Проанализировал ${data.sampleSize} постов за ${data.lookbackDays} дней. Темы и форматы:`,
+            trends: data.themes.map(t => ({ label: t.label, direction: t.direction || "stable", note: t.note || "" })),
+            formats: data.formats || [],
+            notes: data.observations || [],
+          });
+        } else {
+          appendAgent("researcher", { text: "Не получилось собрать инсайты — backend не отвечает или нет свежих постов в БД." });
+        }
+      });
       return;
     }
-    // Аналитика → Аналитик
+    // Аналитика → пока без реального backend
     if (/(аналитик|метрик|охват|er|отчёт|статистик)/.test(d)) {
-      appendMary({ text: "Спрошу Аналитика — он принесёт цифры по последним постам." });
-      setTimeout(() => {
-        appendAgent("analyst", {
-          text: "Сводка по последним 5 постам:\n\n— ср. охват: 8.2k\n— ср. ER: 5.4%\n— топ-пост: «Чек-лист SMM-отдела» (12.1k охват, 7.8% ER)\n— просадка: посты с длинной >800 знаков (–34% ER)\n\nРекомендация: держим длину 300-600 знаков, больше чек-листов и кейсов с цифрами.",
-        });
-      }, 2300);
+      appendMary({ text: "Аналитик пока не подключён — нужны реальные метрики из канала. Подключи Telegram-канал в Настройках." });
       return;
     }
     // Опубликовать
@@ -2645,9 +2604,9 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
       appendMary({ text: "Какой пост публикуем? Дай номер или название из последних, или попроси новый." });
       return;
     }
-    // Дефолтный ответ Mary — задаёт уточняющий вопрос
+    // Дефолтный ответ — направить в Чат Mary где полноценная делегация
     appendMary({
-      text: "Понял. Опиши задачу подробнее — я передам нужному агенту (Ресерчер / Маркетолог / Копирайтер / Дизайнер / Аналитик) или сделаю сама.",
+      text: "Понял. Опиши задачу подробнее — я передам нужному агенту. Для сложных задач (мульти-агент / контекст) удобнее в Чате Mary: там реальная делегация через ask_agent.",
     });
   }
   // Принимаем pendingMaryMessage снаружи — добавляем в тред один раз
