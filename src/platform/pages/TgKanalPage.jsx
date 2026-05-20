@@ -12554,6 +12554,8 @@ export default function TgKanalPage() {
         borderRight: "1px solid rgba(38,38,51,0.06)",
         display: "flex",
         flexDirection: "column",
+        height: "100vh",
+        overflow: "hidden",
       }}>
         {/* Logo + collapse */}
         <div style={{
@@ -12629,41 +12631,41 @@ export default function TgKanalPage() {
             >{ic.plus}</span>
           }
         />
-        {/* Динамический список отделов (Mary добавляет через create_department) */}
-        {departments.map(d => {
-          const isOpen = openDepts[d.id] !== false; // по умолчанию открыты
-          const hasChannels = (d.channels || []).length > 0;
-          return (
-            <div key={d.id}>
-              <SideRow
-                icon={
-                  <span style={{ display: "flex", color: d.color }}>
-                    {d.icon === "hr" ? ic.hr : d.icon === "people" ? ic.people : ic.dept}
-                  </span>
-                }
-                label={d.name}
-                trailing={hasChannels && (
-                  <span style={{ display: "flex", color: "#262633" }}>{isOpen ? ic.chevronUp : ic.chevron}</span>
-                )}
-                onClick={() => hasChannels ? setOpenDepts(o => ({ ...o, [d.id]: !isOpen })) : null}
-              />
-              {isOpen && (d.channels || []).map(ch => (
+        {/* Динамический список отделов — скроллится внутри своей зоны,
+            чтобы футер (Помощь/Настройки) оставался видимым снизу */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden" }}>
+          {departments.map(d => {
+            const isOpen = openDepts[d.id] !== false; // по умолчанию открыты
+            const hasChannels = (d.channels || []).length > 0;
+            return (
+              <div key={d.id}>
                 <SideRow
-                  key={ch.id}
-                  label={ch.name}
-                  indent={28}
-                  active={currentPage === ch.page}
-                  onClick={() => setCurrentPage(ch.page)}
+                  icon={
+                    <span style={{ display: "flex", color: d.color }}>
+                      {d.icon === "hr" ? ic.hr : d.icon === "people" ? ic.people : ic.dept}
+                    </span>
+                  }
+                  label={d.name}
+                  trailing={hasChannels && (
+                    <span style={{ display: "flex", color: "#262633" }}>{isOpen ? ic.chevronUp : ic.chevron}</span>
+                  )}
+                  onClick={() => hasChannels ? setOpenDepts(o => ({ ...o, [d.id]: !isOpen })) : null}
                 />
-              ))}
-            </div>
-          );
-        })}
+                {isOpen && (d.channels || []).map(ch => (
+                  <SideRow
+                    key={ch.id}
+                    label={ch.name}
+                    indent={28}
+                    active={currentPage === ch.page}
+                    onClick={() => setCurrentPage(ch.page)}
+                  />
+                ))}
+              </div>
+            );
+          })}
+        </div>
 
-        {/* Spacer */}
-        <div style={{ flex: 1 }} />
-
-        <div style={{ paddingBottom: 14 }}>
+        <div style={{ paddingBottom: 14, borderTop: "1px solid rgba(38,38,51,0.04)", paddingTop: 6 }}>
           <SideRow icon={ic.help}     label="Помощь" active={currentPage === "help"} onClick={() => setCurrentPage("help")} />
           <SideRow icon={ic.support}  label="Поддержка" active={currentPage === "support"} onClick={() => setCurrentPage("support")} />
           <SideRow icon={ic.settings} label="Настройки" active={currentPage === "settings"} onClick={() => setCurrentPage("settings")} />
