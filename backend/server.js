@@ -2504,12 +2504,13 @@ function buildInbox(currentUser = "Виктория") {
     }
   }
 
-  // 💬 УПОМИНАНИЯ — последние сообщения с "Виктория" / "@vika"
+  // 💬 УПОМИНАНИЯ — последние сообщения от Mary с "Виктория" (только реальные обращения, не самопредставление)
   for (const c of convs) {
     const msgs = c.messages || [];
     for (let i = Math.max(0, msgs.length - 10); i < msgs.length; i++) {
       const m = msgs[i];
       if (m.role === "user") continue;
+      if (m.agentId === "mary" || !m.agentId) continue; // самопредставления Mary — не упоминание
       if (!new RegExp(currentUser, "i").test(m.text || "")) continue;
       const id = `mn-${c.id}-${i}`;
       items.push({
@@ -2520,8 +2521,27 @@ function buildInbox(currentUser = "Виктория") {
         source: { type: "conversation", refId: c.id, navTo: `chat:${c.id}` },
         meta: { fullText: m.text, threadTitle: c.title },
       });
-      break;  // одно последнее упоминание на тред
+      break;
     }
+  }
+
+  // 👥 ЧАТЫ С СОТРУДНИКАМИ — новые сообщения в team/* и tg/* (где автор не текущий юзер)
+  for (const c of convs) {
+    if (!c.scope?.startsWith("team/") && !c.scope?.startsWith("tg/")) continue;
+    const msgs = c.messages || [];
+    // Последнее сообщение НЕ от vika
+    const lastFromOther = [...msgs].reverse().find(m => m.agentId && m.agentId !== "vika");
+    if (!lastFromOther) continue;
+    const id = `tc-${c.id}`;
+    const isTg = c.scope.startsWith("tg/");
+    items.push({
+      id, kind: "team_chat",
+      title: c.title,
+      preview: `${lastFromOther.agentId}: ${(lastFromOther.text || "").slice(0, 120)}`,
+      ts: lastFromOther.ts,
+      source: { type: "team", refId: c.id, navTo: "page://team" },
+      meta: { isTg, lastAuthor: lastFromOther.agentId, lastText: lastFromOther.text, threadTitle: c.title },
+    });
   }
 
   // Сортируем новые сверху, добавляем read/archived состояние
@@ -2548,7 +2568,7 @@ app.get("/webhook/mary/inbox", (req, res) => {
   // counts по kind для табов
   const all = buildInbox(req.query.user || "Виктория").filter(x => !x.archived);
   const counts = { all: all.length, unread: all.filter(x => !x.read).length };
-  for (const k of ["blocker", "task", "transcript", "vote", "mention"]) {
+  for (const k of ["blocker", "task", "transcript", "vote", "mention", "team_chat"]) {
     counts[k] = all.filter(x => x.kind === k).length;
   }
   res.json({ items, counts });

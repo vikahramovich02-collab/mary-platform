@@ -9750,11 +9750,7 @@ function ChatMaryPage() {
               { id: "smm-pin", title: "СММ", scope: "smm", color: "#FF8B3D" },
               { id: "sales-pin", title: "Продажи", scope: "smm", color: "#3F95FF" },
             ];
-            // Раздел «Команда» — последние 6 чатов с сотрудниками (team/* и tg/*)
-            const teamChats = conversations
-              .filter(c => c.scope?.startsWith("team/") || c.scope?.startsWith("tg/"))
-              .sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))
-              .slice(0, 6);
+            const teamChats = []; // Команда живёт во Входящих, не тут
             // Закреплённые юзером чаты — отдельной секцией, удаляем их из date-buckets
             const pinnedItems = sorted.filter(c => pinnedChats.includes(c.id));
             const pinnedSet = new Set(pinnedItems.map(c => c.id));
@@ -9786,54 +9782,6 @@ function ChatMaryPage() {
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.title}</span>
                       </div>
                     ))}
-                  </div>
-                )}
-                {teamChats.length > 0 && (
-                  <div style={{ marginBottom: 10 }}>
-                    <div style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "4px 10px 4px",
-                    }}>
-                      <span style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 510 }}>Команда</span>
-                      <button
-                        onClick={() => window.__maryNavigate?.("page://team")}
-                        title="Открыть все чаты команды"
-                        style={{
-                          background: "transparent", border: "none", padding: 0,
-                          fontSize: 10, color: "rgba(38,38,51,0.45)",
-                          cursor: "pointer", fontFamily: "inherit",
-                        }}>все →</button>
-                    </div>
-                    {teamChats.map(c => {
-                      const isTg = c.scope?.startsWith("tg/");
-                      return (
-                        <div key={c.id}
-                          onClick={() => window.__maryNavigate?.("page://team")}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 8,
-                            padding: "5px 10px", fontSize: 12, color: "#262633",
-                            cursor: "pointer", borderRadius: 6,
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
-                          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                        >
-                          <span style={{
-                            width: 18, height: 18, borderRadius: "50%",
-                            background: isTg ? "rgba(63,149,255,0.15)" : "rgba(122,134,255,0.15)",
-                            color: isTg ? "#3F95FF" : "#7A86FF",
-                            display: "inline-flex", alignItems: "center", justifyContent: "center",
-                            fontSize: 9, fontWeight: 600, flexShrink: 0,
-                          }}>{c.title.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase()}</span>
-                          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</span>
-                          {isTg && (
-                            <span style={{
-                              fontSize: 9, color: "#3F95FF", background: "rgba(63,149,255,0.1)",
-                              padding: "1px 4px", borderRadius: 3, fontWeight: 600,
-                            }}>TG</span>
-                          )}
-                        </div>
-                      );
-                    })}
                   </div>
                 )}
                 {pinnedItems.length > 0 && (
@@ -11369,6 +11317,7 @@ function HomePage({ onNavigate }) {
 // ── Входящие ────────────────────────────────────────────
 // ── Inbox: TG-стиль (list слева + detail справа + фильтры) ──
 const INBOX_KIND = {
+  team_chat:  { icon: "👤", label: "Сообщение",    color: "#3F95FF" },
   blocker:    { icon: "🚨", label: "Блокер",       color: "#FF3B30" },
   task:       { icon: "✅", label: "Задача",       color: "#3F95FF" },
   transcript: { icon: "📼", label: "Транскрипт",   color: "#7A86FF" },
@@ -11483,14 +11432,15 @@ function InboxPage({ onNavigate }) {
           {/* Filter tabs */}
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
             {[
-              { id: "all",      label: "Все",         count: counts.all },
-              { id: "unread",   label: "Новые",       count: counts.unread },
-              { id: "blocker",  label: "Блокеры",     count: counts.blocker },
-              { id: "task",     label: "Задачи",      count: counts.task },
-              { id: "vote",     label: "Голосования", count: counts.vote },
-              { id: "mention",  label: "Упоминания",  count: counts.mention },
-              { id: "transcript",label:"Транскрипты", count: counts.transcript },
-              { id: "archived", label: "Архив",       count: null },
+              { id: "all",       label: "Все",         count: counts.all },
+              { id: "unread",    label: "Новые",       count: counts.unread },
+              { id: "team_chat", label: "Сообщения",   count: counts.team_chat },
+              { id: "blocker",   label: "Блокеры",     count: counts.blocker },
+              { id: "task",      label: "Задачи",      count: counts.task },
+              { id: "vote",      label: "Голосования", count: counts.vote },
+              { id: "mention",   label: "Упоминания",  count: counts.mention },
+              { id: "transcript",label: "Транскрипты", count: counts.transcript },
+              { id: "archived",  label: "Архив",       count: null },
             ].filter(t => t.count !== 0 || t.id === "all" || t.id === "archived").map(t => (
               <button key={t.id} onClick={() => setFilter(t.id)}
                 style={{
