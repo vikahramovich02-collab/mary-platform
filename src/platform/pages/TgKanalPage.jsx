@@ -9883,6 +9883,7 @@ function ChatMaryPage() {
   // Live-визуализатор того что Mary сейчас собирает
   const [build, setBuild] = useState(null); // { type: "department", deptId, name, channels:[], agents:[], integrations:[] }
   const [activeAgentIds, setActiveAgentIds] = useState(new Set()); // агенты которые сейчас работают (ask_agent running)
+  const [artifacts, setArtifacts] = useState([]); // [{ id, agentId, agentRole, agentColor, title, content, ts }]
   // Публикуем activeAgentIds глобально чтобы dept-page GraphCanvas мог подсветить ноды
   useEffect(() => {
     window.__maryActiveAgents = activeAgentIds;
@@ -10042,7 +10043,7 @@ function ChatMaryPage() {
                 integrations: d.integrations || [],
               });
             }
-            // ── Делегация: ask_agent вернул output → отдельное сообщение от агента ──
+            // ── Делегация: ask_agent вернул output → отдельное сообщение от агента + артефакт ──
             if (data.name === "ask_agent" && data.ok && data.result?.output) {
               const r = data.result;
               setMessages(prev => [...prev, {
@@ -10056,6 +10057,18 @@ function ChatMaryPage() {
                 text: r.output,
                 ts: new Date().toISOString(),
               }]);
+              // Артефакт-таб в правой панели — открываем автоматически
+              const artId = "art-" + Date.now() + "-" + Math.random().toString(36).slice(2, 5);
+              const taskShort = (data.args?.task || "").slice(0, 40).replace(/\n.*/, "");
+              setArtifacts(prev => [...prev, {
+                id: artId,
+                agentId: r.agentId,
+                agentRole: r.agentRole,
+                agentColor: r.agentColor || "#7A86FF",
+                title: taskShort || r.agentRole || "Документ",
+                content: r.output,
+                ts: new Date().toISOString(),
+              }].slice(-10)); // максимум 10 артефактов
               // Снимаем подсветку с этого агента
               setActiveAgentIds(prev => {
                 const next = new Set(prev);
@@ -10661,6 +10674,8 @@ function ChatMaryPage() {
           build={build}
           activity={activity}
           activeAgentIds={activeAgentIds}
+          artifacts={artifacts}
+          onCloseArtifact={(id) => setArtifacts(prev => prev.filter(a => a.id !== id))}
           currentTool={(() => {
             // Если есть streaming message с активным tool — показываем его
             const lastStreaming = [...messages].reverse().find(m => m._streaming && m._tools?.length);
@@ -10706,12 +10721,18 @@ function ChatMaryPage() {
 }
 
 // ── Activity Panel: workflow + log ──────────────────────
-function ActivityPanel({ build, activity, currentTool, activeAgentIds, onClose }) {
+function ActivityPanel({ build, activity, currentTool, activeAgentIds, artifacts = [], onCloseArtifact, onClose }) {
   const [tab, setTab] = useState(build ? "build" : "log");
   // Если build впервые появляется во время работы — автоматически переключаемся на него.
   useEffect(() => { if (build && tab === "log" && activity.length <= 2) setTab("build"); }, [build]);
-  // Ширина растёт когда отдел крупный
-  const wide = (build?.agents?.length || 0) >= 3;
+  // При появлении нового артефакта — авто-открыть его
+  const lastArtId = artifacts[artifacts.length - 1]?.id;
+  useEffect(() => {
+    if (lastArtId) setTab(`art:${lastArtId}`);
+  }, [lastArtId]);
+  // Ширина растёт: 540 → 620 для большого отдела → 720 для открытого артефакта (документ)
+  const isArtifactTab = tab.startsWith("art:");
+  const width = isArtifactTab ? 720 : ((build?.agents?.length || 0) >= 3 ? 620 : 540);
   const TOOL_LABELS = {
     create_department: (a) => `создаёт отдел «${a?.name || "…"}»`,
     add_channel:       (a) => `добавляет канал «${a?.name || "…"}»`,
@@ -10722,7 +10743,7 @@ function ActivityPanel({ build, activity, currentTool, activeAgentIds, onClose }
   const toolLabel = currentTool ? (TOOL_LABELS[currentTool.name]?.(currentTool.args) || `выполняет ${currentTool.name}`) : null;
   return (
     <aside style={{
-      width: wide ? 620 : 540, minWidth: wide ? 620 : 540,
+      width: width, minWidth: width,
       borderLeft: "1px solid rgba(38,38,51,0.06)",
       display: "flex", flexDirection: "column",
       background: color.white,
@@ -10782,13 +10803,53 @@ function ActivityPanel({ build, activity, currentTool, activeAgentIds, onClose }
         >
           Активность <span style={{ color: "rgba(38,38,51,0.4)", marginLeft: 4 }}>{activity.length}</span>
         </button>
+        {/* Артефакты-табы — каждый файл агента */}
+        {artifacts.map(a => {
+          const active = tab === `art:${a.id}`;
+          return (
+            <div key={a.id} style={{
+              display: "inline-flex", alignItems: "center", gap: 4,
+              padding: "5px 4px 5px 10px",
+              background: active ? "rgba(38,38,51,0.05)" : "transparent",
+              borderRadius: 8,
+            }}>
+              <button onClick={() => setTab(`art:${a.id}`)}
+                style={{
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "transparent", border: "none",
+                  fontSize: 12.5, color: "#262633", fontWeight: 500,
+                  cursor: "pointer", fontFamily: "inherit", padding: 0,
+                  maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: a.agentColor }} />
+                <span>{a.title}</span>
+              </button>
+              <button onClick={() => {
+                onCloseArtifact?.(a.id);
+                if (active) setTab(build ? "build" : "log");
+              }} title="Закрыть"
+                style={{
+                  width: 16, height: 16, padding: 0,
+                  background: "transparent", border: "none", borderRadius: 4,
+                  color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                }}>
+                <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          );
+        })}
         <div style={{ flex: 1 }} />
         <button onClick={onClose} title="Свернуть" style={{
           ...zoomBtn, color: "rgba(38,38,51,0.5)", padding: 6,
         }}>{ic.close}</button>
       </div>
 
-      {tab === "build" && build ? (
+      {tab.startsWith("art:") ? (
+        <ArtifactView artifact={artifacts.find(a => `art:${a.id}` === tab)} />
+      ) : tab === "build" && build ? (
         <BuildCanvas build={build} activeAgentIds={activeAgentIds} />
       ) : (
         <ActivityLog activity={activity} />
@@ -10806,6 +10867,76 @@ function ActivityPanel({ build, activity, currentTool, activeAgentIds, onClose }
         <span>Mary онлайн</span>
       </div>
     </aside>
+  );
+}
+
+// Артефакт-таб: «документ» который создал агент (output ask_agent)
+function ArtifactView({ artifact }) {
+  const [copied, setCopied] = useState(false);
+  if (!artifact) {
+    return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(38,38,51,0.4)", fontSize: 13 }}>Артефакт не найден</div>;
+  }
+  const onCopy = () => {
+    navigator.clipboard?.writeText(artifact.content || "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const onSaveKb = async () => {
+    const name = `${artifact.agentRole} · ${new Date(artifact.ts).toLocaleDateString("ru")}.md`;
+    try {
+      await fetch("/api/mary/kb/file", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, content: artifact.content }),
+      });
+      alert(`Сохранено в Базу знаний: «${name}»`);
+    } catch (e) { alert("Не удалось сохранить: " + e.message); }
+  };
+  const initial = (artifact.agentRole || "?").trim().slice(0, 2).toUpperCase();
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, background: color.white }}>
+      {/* Header */}
+      <div style={{
+        padding: "14px 18px",
+        borderBottom: "1px solid rgba(38,38,51,0.06)",
+        display: "flex", alignItems: "center", gap: 10,
+      }}>
+        <div style={{
+          width: 30, height: 30, borderRadius: 8,
+          background: artifact.agentColor, color: color.white,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11, fontWeight: 600, flexShrink: 0,
+        }}>{initial}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {artifact.title}
+          </div>
+          <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
+            {artifact.agentRole} · {new Date(artifact.ts).toLocaleString("ru", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+          </div>
+        </div>
+        <button onClick={onCopy} title="Копировать"
+          style={{ padding: "5px 11px", fontSize: 12, fontWeight: 500,
+            background: copied ? "rgba(52,199,89,0.12)" : "transparent",
+            color: copied ? "#34C759" : "#262633",
+            border: "1px solid rgba(38,38,51,0.18)", borderRadius: 7,
+            cursor: "pointer", fontFamily: "inherit" }}>
+          {copied ? "✓ Скопировано" : "Копировать"}
+        </button>
+        <button onClick={onSaveKb} title="Сохранить в Базу знаний"
+          style={{ padding: "5px 11px", fontSize: 12, fontWeight: 500,
+            background: "#262633", color: color.white,
+            border: "none", borderRadius: 7,
+            cursor: "pointer", fontFamily: "inherit" }}>
+          В БЗ
+        </button>
+      </div>
+      {/* Content */}
+      <div style={{ flex: 1, overflow: "auto", padding: "18px 22px" }}>
+        <div style={{ fontSize: 14, color: "#262633", lineHeight: 1.6 }}>
+          {renderMarkdown(artifact.content || "")}
+        </div>
+      </div>
+    </div>
   );
 }
 
