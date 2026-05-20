@@ -11375,6 +11375,7 @@ function InboxPage({ onNavigate }) {
     const nav = it.source?.navTo || "";
     if (nav.startsWith("task:")) onNavigate("tasks");
     else if (nav.startsWith("transcript:")) onNavigate("chat-mary");
+    else if (nav.startsWith("page://team")) onNavigate("team");
     else if (nav.startsWith("chat:")) onNavigate("chat-mary");
   };
 
@@ -11539,8 +11540,171 @@ function InboxPage({ onNavigate }) {
   );
 }
 
+// Полноценный TG-диалог внутри Inbox detail для team_chat
+function InboxTeamThread({ conversationId, isTg, onGoSource, onArchive, archived }) {
+  const [chat, setChat] = useState(null);
+  const [people, setPeople] = useState([]);
+  const [text, setText] = useState("");
+  const threadRef = useRef(null);
+
+  const reload = () => fetch(`/api/mary/conversations/${conversationId}`).then(r => r.json()).then(setChat).catch(() => {});
+  useEffect(() => {
+    fetch("/api/mary/team/people").then(r => r.json()).then(d => setPeople(d.people || [])).catch(() => {});
+    reload();
+    const id = setInterval(reload, 4000);
+    return () => clearInterval(id);
+  }, [conversationId]);
+  useEffect(() => {
+    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
+  }, [chat?.messages?.length]);
+
+  const peopleById = Object.fromEntries(people.map(p => [p.id, p]));
+  const initialOf = (name) => (name || "").split(/\s+/).filter(Boolean).map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  const send = async () => {
+    if (!text.trim() || !conversationId) return;
+    const msg = text.trim();
+    setText("");
+    setChat(c => c ? { ...c, messages: [...(c.messages||[]), { role: "user", agentId: "vika", text: msg, ts: new Date().toISOString() }] } : c);
+    await fetch(`/api/mary/team/${conversationId}/send`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: msg }),
+    });
+    reload();
+  };
+
+  if (!chat) {
+    return <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "rgba(38,38,51,0.4)", fontSize: 13 }}>Загрузка…</div>;
+  }
+
+  const isGroup = chat.meta?.kind === "group" || chat.meta?.kind === "tg_group";
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+      {/* Header */}
+      <div style={{
+        padding: "14px 24px", display: "flex", alignItems: "center", gap: 12,
+        background: color.white, borderBottom: "1px solid rgba(38,38,51,0.06)",
+      }}>
+        <div style={{
+          width: 34, height: 34, borderRadius: "50%",
+          background: isGroup ? "rgba(63,149,255,0.15)" : "rgba(122,134,255,0.15)",
+          color: isGroup ? "#3F95FF" : "#7A86FF",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 13, fontWeight: 600, flexShrink: 0,
+        }}>{isGroup ? "👥" : initialOf(chat.title)}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#262633" }}>{chat.title}</div>
+          <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
+            {isTg
+              ? `Telegram${chat.meta?.membersCount ? ` · ${chat.meta.membersCount} участников` : ""} · бот подключен`
+              : (isGroup ? `Группа · ${(chat.meta?.peopleIds || []).length + 1} участников` : "1-на-1")}
+          </div>
+        </div>
+        {isTg && (
+          <span style={{ fontSize: 11, color: "#3F95FF", background: "rgba(63,149,255,0.1)",
+            padding: "3px 9px", borderRadius: 999, fontWeight: 500 }}>через Telegram</span>
+        )}
+        <button onClick={onGoSource}
+          style={{ padding: "6px 12px", background: "transparent", border: "1px solid rgba(38,38,51,0.18)",
+            borderRadius: 8, fontSize: 12, color: "#262633", fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
+          Открыть в «Команде»
+        </button>
+        {!archived && (
+          <button onClick={onArchive}
+            style={{ padding: "6px 12px", background: "transparent", border: "1px solid rgba(38,38,51,0.18)",
+              borderRadius: 8, fontSize: 12, color: "rgba(38,38,51,0.7)", fontWeight: 500, cursor: "pointer", fontFamily: "inherit" }}>
+            Архив
+          </button>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div ref={threadRef} style={{ flex: 1, overflowY: "auto", padding: "16px 24px", display: "flex", flexDirection: "column", gap: 8, background: "rgba(247,247,247,0.4)" }}>
+        {(chat.messages || []).map((m, i) => {
+          const isMe = m.agentId === "vika";
+          const author = isMe ? null : (peopleById[m.agentId] || { id: m.agentId, name: m.agentId, color: "#7A86FF" });
+          return (
+            <div key={i} style={{
+              display: "flex", gap: 8,
+              justifyContent: isMe ? "flex-end" : "flex-start",
+              alignItems: "flex-end",
+            }}>
+              {!isMe && author && (
+                <div style={{
+                  width: 28, height: 28, borderRadius: "50%",
+                  background: author.color, color: color.white,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 11, fontWeight: 600, flexShrink: 0,
+                }}>{initialOf(author.name)}</div>
+              )}
+              <div style={{ maxWidth: "70%" }}>
+                {!isMe && (
+                  <div style={{ fontSize: 11, color: "rgba(38,38,51,0.55)", marginBottom: 2, marginLeft: 2 }}>
+                    {author?.name || m.agentId}
+                  </div>
+                )}
+                <div style={{
+                  background: isMe ? "#262633" : color.white,
+                  color: isMe ? color.white : "#262633",
+                  padding: "8px 12px", borderRadius: 14,
+                  fontSize: 13, lineHeight: 1.45, whiteSpace: "pre-wrap",
+                  border: isMe ? "none" : "1px solid rgba(38,38,51,0.06)",
+                }}>{m.text}</div>
+                <div style={{
+                  fontSize: 10.5, color: "rgba(38,38,51,0.4)", marginTop: 2,
+                  textAlign: isMe ? "right" : "left",
+                }}>
+                  {new Date(m.ts).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Input */}
+      <div style={{ padding: "12px 24px 18px", background: color.white, borderTop: "1px solid rgba(38,38,51,0.06)" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center",
+          background: color.white, border: "1px solid rgba(38,38,51,0.12)", borderRadius: 14, padding: "8px 12px" }}>
+          <input value={text} onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+            placeholder={isTg ? "Написать в Telegram" : "Написать сообщение"}
+            style={{ flex: 1, border: "none", outline: "none", background: "transparent",
+              fontSize: 13.5, color: "#262633", fontFamily: "inherit", padding: 0 }} />
+          <button onClick={send} disabled={!text.trim()}
+            style={{
+              width: 30, height: 30,
+              background: text.trim() ? "#262633" : "rgba(38,38,51,0.3)",
+              border: "none", borderRadius: "50%",
+              color: color.white, cursor: text.trim() ? "pointer" : "not-allowed",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "inherit",
+            }}>
+            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InboxDetail({ item, onArchive, onGoSource, onNavigate }) {
   const k = INBOX_KIND[item.kind] || { icon: "•", color: "#262633", label: item.kind };
+
+  // Для чатов с коллегами — полноценный TG-style диалог
+  if (item.kind === "team_chat" && item.source?.refId) {
+    return <InboxTeamThread
+      conversationId={item.source.refId}
+      isTg={!!item.meta?.isTg}
+      archived={!!item.archived}
+      onGoSource={onGoSource}
+      onArchive={onArchive}
+    />;
+  }
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "26px 32px" }}>
       <div style={{ maxWidth: 740 }}>
