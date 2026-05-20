@@ -94,9 +94,71 @@ function deptAddAgent(deptId, agent) {
   if (!dept) throw new Error(`отдел '${deptId}' не найден`);
   agent.id = agent.id || (String(agent.role || "agent").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20));
   if (!agent.pipeline) agent.pipeline = defaultPipelineFor(agent.role || agent.id);
+  // Должностная инструкция — дефолты по роли, перекрываются переданными значениями
+  const profile = defaultProfileFor(agent.role || agent.id);
+  agent.model          = agent.model          || profile.model;
+  agent.systemPrompt   = agent.systemPrompt   || profile.systemPrompt;
+  agent.tools          = agent.tools          || profile.tools;
+  agent.memory         = agent.memory         || profile.memory;
+  agent.responseFormat = agent.responseFormat || profile.responseFormat;
   dept.agents.push(agent);
   saveDepartments(data);
   return agent;
+}
+
+// Дефолтная «должностная инструкция» по типу роли
+function defaultProfileFor(roleOrId) {
+  const key = String(roleOrId || "").toLowerCase();
+  const base = {
+    model: "claude-sonnet-4-6",
+    memory: "short",
+    responseFormat: "text",
+    tools: [],
+    systemPrompt: "",
+  };
+  if (/(researcher|ресерч|аналитик|insight)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["web-search", "knowledge-base", "telegram-parser"], memory: "long",
+      systemPrompt: "Ты — исследователь отдела. Твоя задача: парсить контент по нишевым каналам/источникам, дедуплицировать, фильтровать релевантное, кластеризовать по темам, синтезировать инсайты недели. На выходе — структурированный отчёт: топ-посты, темы, форматы-хуки. Не выдумывай факты — каждый инсайт привязан к источнику." };
+  }
+  if (/(marketer|маркетол|strateg|стратег)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["knowledge-base"], memory: "short",
+      systemPrompt: "Ты — маркетолог отдела. Берёшь инсайты от ресерчера + бренд-бриф и генеришь 7-10 идей постов в неделю, ранжируешь по бренд-критериям (соответствие ToV, потенциальный охват, новизна). На выходе — список идей с обоснованием." };
+  }
+  if (/(copywriter|копирайт|writer)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["knowledge-base"], memory: "short", responseFormat: "text",
+      systemPrompt: "Ты — копирайтер. По идее от маркетолога пишешь черновик поста в стиле бренда (живой, человечный, без консультантщины). Структура: хук → суть → инсайт → CTA. Длина под платформу: TG — 600-1200 знаков, IG — 800-1500." };
+  }
+  if (/(designer|дизайн)/.test(key)) {
+    return { ...base, model: "gpt-4.1", tools: ["image-generation", "knowledge-base"], memory: "short",
+      systemPrompt: "Ты — дизайнер. По готовому посту создаёшь 3 варианта обложек в брендстиле. Используй цветовую палитру и шрифты бренда. На выходе — 3 PNG + краткое обоснование выбора." };
+  }
+  if (/(editor|редактор|qa)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["knowledge-base"], memory: "short",
+      systemPrompt: "Ты — главный редактор. Проверяешь черновик: фактическая точность, сила хука, ритм, СТА, соответствие платформе. На выходе — правки + оценка готовности (ready/needs-work/redo)." };
+  }
+  if (/(triage|триаж|тикет|support|поддерж)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["knowledge-base", "crm"], memory: "long",
+      systemPrompt: "Ты — триаж-агент службы поддержки. Читаешь входящие обращения, классифицируешь по типу (баг / вопрос / фича-реквест / billing), определяешь приоритет, генерируешь черновик ответа на основе базы знаний." };
+  }
+  if (/(lead|лид|qualif|квалифик)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["crm", "knowledge-base"], memory: "long", responseFormat: "json",
+      systemPrompt: "Ты — лид-квалификатор продаж. Получаешь входящие лиды (формы, email, чат), задаёшь уточняющие вопросы для квалификации (бюджет, сроки, ЛПР), скоринг по BANT, передаёшь в CRM с тегами." };
+  }
+  if (/(account|аккаунт|менеджер|crm)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["crm", "email", "knowledge-base"], memory: "long",
+      systemPrompt: "Ты — аккаунт-менеджер. Ведёшь сделки в CRM: фоллоу-апы, отправка КП, напоминания, эскалация при тишине >7 дней." };
+  }
+  if (/(report|отчёт|финанс|бухгалт)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["google-sheets", "knowledge-base"], memory: "short", responseFormat: "json",
+      systemPrompt: "Ты — финансовый отчётный агент. Ежемесячно собираешь данные из таблиц (бюджет, расходы, налоги, cash flow), формируешь сводный отчёт с дельтами к плану." };
+  }
+  if (/(hr|recru|рекру|подбор|найм)/.test(key)) {
+    return { ...base, model: "claude-sonnet-4-6", tools: ["knowledge-base", "email"], memory: "long",
+      systemPrompt: "Ты — HR-агент по подбору. Скринишь резюме по критериям вакансии, генеришь первичные вопросы для собеседования, ведёшь воронку кандидатов." };
+  }
+  // дефолт
+  return { ...base,
+    systemPrompt: "Ты — специализированный AI-агент отдела. Описание задачи будет добавлено руководителем (Mary) при настройке." };
 }
 
 // ── Pipeline (внутренний воркфлоу агента) ─────────────────
@@ -1116,16 +1178,21 @@ const MARY_TOOLS = [
     type: "function",
     function: {
       name: "add_agent",
-      description: "Добавить AI-агента в отдел. Агент = специализированная роль (Ресерчер, Маркетолог, Копирайтер, Дизайнер, Аналитик, Менеджер, Аккаунт, Лид-квалификатор и т.д.). Цвет hex выбери уместный.",
+      description: "Добавить AI-агента в отдел с полной должностной инструкцией. Обязательно заполняй systemPrompt (полная роль), model и tools — это видно клиенту в drill-down агента и используется при прогоне pipeline.",
       parameters: {
         type: "object",
         properties: {
           deptId: { type: "string", description: "ID отдела" },
           role:   { type: "string", description: "Роль агента (по-русски: 'Ресерчер', 'Лид-квалификатор', 'Аккаунт-менеджер')" },
           color:  { type: "string", description: "Цвет аватара hex (#3F95FF, #FF8B3D, #7A86FF, #FF6FB3, #34C759)" },
-          tasks:  { type: "string", description: "Что агент делает (1-2 предложения)" },
+          tasks:  { type: "string", description: "Что агент делает (1-2 предложения) — короткое summary для карточки" },
+          model:  { type: "string", description: "Модель: 'claude-sonnet-4-6' (дефолт для текстовых задач), 'gpt-4.1' (для генерации изображений/мультимодальных), 'z-ai/glm-5.1' (быстрая и дешёвая для классификации/фильтрации)" },
+          systemPrompt: { type: "string", description: "ПОЛНАЯ должностная инструкция (5-15 предложений): кто агент, что делает шаг за шагом, на каких данных, в каком стиле/формате на выходе. Это его 'роль' в pipeline." },
+          tools: { type: "array", items: { type: "string" }, description: "Список инструментов: 'web-search', 'knowledge-base', 'telegram-parser', 'image-generation', 'crm', 'email', 'google-sheets', 'calendar', etc." },
+          memory: { type: "string", enum: ["none", "short", "long"], description: "Тип памяти: none (без памяти, чистый prompt), short (контекст текущей сессии), long (хранит контекст между сессиями в KB)" },
+          responseFormat: { type: "string", enum: ["text", "json"], description: "Формат ответа: text (свободный) или json (структурированный)" },
         },
-        required: ["deptId", "role"],
+        required: ["deptId", "role", "systemPrompt"],
       },
     },
   },
@@ -1473,9 +1540,11 @@ const MARY_SYSTEM_AGENT = `Ты — Mary, AI-оркестратор отдела
 Примеры:
 ✅ «Подключаю 1С.» → add_channel(1C, type=other)
 ✅ «Telegram для алертов.» → add_channel(Telegram, type=telegram)
-✅ «Reconcile-агент — матчит банк с 1С.» → add_agent(role=Reconcile, tasks="ежедневный матчинг банк-выписки с 1С, подсветка расхождений")
-✅ «Отчётный — месячный отчёт по бюджету.» → add_agent(role=Отчётный, tasks="ежемесячный отчёт: бюджет, налоги, cash flow")
+✅ «Reconcile-агент — матчит банк с 1С.» → add_agent(role=Reconcile, tasks="ежедневный матчинг банк-выписки с 1С", systemPrompt="Ты — Reconcile-агент. Каждое утро забираешь банковскую выписку и оборотку из 1С, матчишь по сумме+дате+контрагенту. Расхождения >100₽ или без пары — флагуешь в Telegram-канал. На выходе — JSON: {matched: N, mismatched: [...], suspicious: [...]}.", model="claude-sonnet-4-6", tools=["google-sheets","knowledge-base"], memory="long", responseFormat="json")
+✅ «Отчётный — месячный отчёт по бюджету.» → add_agent(role=Отчётный, tasks="ежемесячный отчёт: бюджет, налоги, cash flow", systemPrompt="Ты — финансовый отчётный агент. 1-го числа месяца собираешь данные из Google Sheets и 1С, считаешь дельты к плану по статьям, формируешь PDF-сводку с графиками. Ключевые метрики: revenue/burn/runway/MRR. Если burn вырос >15% к прошлому месяцу — отдельным абзацем причины.", model="claude-sonnet-4-6", tools=["google-sheets","knowledge-base"], memory="short", responseFormat="text")
 ✅ «Добавила интеграции — нужно подключить кнопкой ниже.» → set_department_integrations(...)
+
+⚠️ systemPrompt — ОБЯЗАТЕЛЕН и подробен (5-15 предложений). Он становится «должностной инструкцией» агента, которую видит клиент на drill-down странице. Стиль: «Ты — [роль]. Твоя задача: [шаг 1]. Затем: [шаг 2]. На выходе: [формат]. Особые правила: [важные нюансы].» НЕ пиши «помогает с задачами» или «обрабатывает данные» — это пустые слова. Пиши конкретно: что забирает, что делает, что отдаёт.
 
 ⚠️ ВАЖНО про интеграции: НЕ говори «подключила AmoCRM», «AmoCRM подключена», «готово, всё работает». Это ЛОЖЬ — реального OAuth/подключения нет, ты только записала названия в БД. Юзер должен сам нажать кнопку «Подключить» на каждой интеграции в карточке. Правильная формулировка: «Добавила интеграции в шаблон отдела — каждую нужно подключить отдельно через кнопку рядом» или «Готово. Интеграции — каждую подключи кнопкой ниже, нужны OAuth/API ключи.»
 
@@ -1656,7 +1725,16 @@ const TOOL_HANDLERS = {
   },
   async add_agent(args = {}) {
     try {
-      const agent = deptAddAgent(args.deptId, { role: args.role, color: args.color || "#7A86FF", tasks: args.tasks || "" });
+      const agent = deptAddAgent(args.deptId, {
+        role: args.role,
+        color: args.color || "#7A86FF",
+        tasks: args.tasks || "",
+        model: args.model,
+        systemPrompt: args.systemPrompt,
+        tools: args.tools,
+        memory: args.memory,
+        responseFormat: args.responseFormat,
+      });
       const data = loadDepartments();
       const department = data.departments.find(d => d.id === args.deptId);
       return { ok: true, agent, department };
@@ -2985,6 +3063,32 @@ ${obs ? `Observations:\n${obs}\n` : ""}
     res.status(500).json({ error: e.message });
   }
 });
+
+// Миграция: заполняем должностные инструкции у существующих агентов где пусто
+function migrateAgentProfiles() {
+  try {
+    const data = loadDepartments();
+    let touched = 0;
+    for (const d of (data.departments || [])) {
+      for (const a of (d.agents || [])) {
+        if (!a.systemPrompt || !a.model || !a.tools) {
+          const profile = defaultProfileFor(a.role || a.id);
+          if (!a.model)          a.model = profile.model;
+          if (!a.systemPrompt)   a.systemPrompt = profile.systemPrompt;
+          if (!a.tools)          a.tools = profile.tools;
+          if (!a.memory)         a.memory = profile.memory;
+          if (!a.responseFormat) a.responseFormat = profile.responseFormat;
+          touched++;
+        }
+      }
+    }
+    if (touched > 0) {
+      saveDepartments(data);
+      console.log(`📋 Migrated ${touched} agent profiles (default systemPrompt/model/tools)`);
+    }
+  } catch (e) { console.log("⚠️  migrateAgentProfiles failed:", e.message); }
+}
+migrateAgentProfiles();
 
 app.listen(PORT, () => {
   console.log(`🐶 Mary backend on http://localhost:${PORT}`);
