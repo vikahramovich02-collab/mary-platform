@@ -469,13 +469,11 @@ function PipelineItem({ p, onOpenKb, blocked }) {
   );
 }
 
-function AgentCard({ a, expanded, selected, active, dragging, approvals, onApprove, onMouseDown, onToggle, onOpenKb, onOpenChat, onOpenSettings, onOpenFlow }) {
+function AgentCard({ a, expanded, selected, active, dragging, onMouseDown, onToggle, onOpenKb, onOpenChat, onOpenSettings, onOpenFlow }) {
   const [h, setH] = useState(false);
   const [running, setRunning] = useState(true);
   const hasPipeline = (a.pipeline?.length || 0) > 0;
   const showToolbar = h || expanded || selected;
-  // Зависимости агентов: Copywriter и Designer ждут апрува идей маркетолога
-  const blockedByMarketer = (a.id === "copywriter" || a.id === "designer") && !approvals?.marketerIdeas;
   const dot = {
     position: "absolute", top: 32, transform: "translateY(-50%)",
     width: 9, height: 9, borderRadius: "50%",
@@ -555,17 +553,8 @@ function AgentCard({ a, expanded, selected, active, dragging, approvals, onAppro
               key={i}
               p={p}
               onOpenKb={onOpenKb}
-              blocked={blockedByMarketer}
             />
           ))}
-          {blockedByMarketer && (
-            <div style={{
-              fontSize: 11.5, color: "rgba(38,38,51,0.55)",
-              padding: "8px 10px", lineHeight: 1.4,
-            }}>
-              Ждёт апрува идей от Маркетолога
-            </div>
-          )}
           {a.flow && onOpenFlow && (
             <button
               onClick={(e) => { e.stopPropagation(); onOpenFlow(); }}
@@ -4282,7 +4271,7 @@ function SandboxPanel({ agent, status, outputs, running, onRun }) {
   );
 }
 
-function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, approvals, onApprove, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks }) {
+function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks }) {
   const [positions, setPositions] = useState(() =>
     Object.fromEntries(AGENTS.map(a => [a.id, { x: a.x, y: a.y }]))
   );
@@ -4722,8 +4711,6 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
                 selected={selectedAgentId === a.id}
                 active={activeAgentIds.has(a.id)}
                 dragging={draggingId === a.id}
-                approvals={approvals}
-                onApprove={onApprove}
                 onMouseDown={(e) => handleAgentMouseDown(a.id, e)}
                 onToggle={() => handleAgentToggle(a.id)}
                 onOpenKb={(title) => handleOpenKb(title, a)}
@@ -13779,7 +13766,6 @@ export default function TgKanalPage() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [activeRail, setActiveRail] = useState(null);
   const [agentsSelected, setAgentsSelected] = useState(null);
-  const [approvals, setApprovals] = useState({ marketerIdeas: false });
   const [kbUserItems, setKbUserItems] = useState(() => {
     try {
       const raw = localStorage.getItem("mary_kb_user_items");
@@ -14033,8 +14019,6 @@ export default function TgKanalPage() {
               setAgentsSelected(agentId);
             }}
             selectedAgentId={activeRail === "agents" ? agentsSelected : null}
-            approvals={approvals}
-            onApprove={(key) => setApprovals(prev => ({ ...prev, [key]: true }))}
           />
         ) : currentPage === "kb" ? (
           <KbPage
