@@ -1996,7 +1996,7 @@ const TOOL_HANDLERS = {
           "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
           "HTTP-Referer": "http://77.237.241.242",
-          "X-Title": `Mary · ${agent.role}`,
+          "X-Title": `Mary-agent-${agentId}`,
         },
         body: JSON.stringify({
           model,
