@@ -2198,7 +2198,13 @@ async function runAgent({ message, history, maxSteps = 15 }) {
         const traceEntry = { step, name: fnName, args, result, durationMs: Date.now() - tStart, ok: !result.error, duplicate: isDuplicate };
         trace.push(traceEntry);
         console.log(`[agent tool] ${fnName}(${JSON.stringify(args).slice(0, 80)}) → ${traceEntry.durationMs}ms ok=${traceEntry.ok}${isDuplicate ? " DUPLICATE" : ""}`);
-        return { tool_call_id: tc.id, role: "tool", name: fnName, content: JSON.stringify(result) };
+        // ask_agent: LLM не видит output (он уже доставлен юзеру отдельным сообщением),
+        // чтобы Mary НЕ повторяла его в финальном тексте
+        const resultForLLM = (fnName === "ask_agent" && result.output)
+          ? { ok: true, agentId: result.agentId, agentRole: result.agentRole, delivered_to_user: true,
+              hint: "Текст агента уже показан юзеру отдельным сообщением. В финале — только одна строка-подводка типа «Передала [роль], готово.», не цитируй текст." }
+          : result;
+        return { tool_call_id: tc.id, role: "tool", name: fnName, content: JSON.stringify(resultForLLM) };
       }));
       messages.push(...toolResults);
       // Антипетля: если последние 6 trace entries это повторение пары (A,B,A,B,A,B) — стоп
@@ -2335,7 +2341,12 @@ async function runAgentStream({ message, history, maxSteps = 15, emit }) {
         trace.push(traceEntry);
         emit("tool_end", { name: fnName, durationMs: dur, ok, result, duplicate: isDuplicate });
         console.log(`[stream tool] ${fnName} → ${dur}ms ok=${ok}${isDuplicate ? " DUPLICATE" : ""}`);
-        return { tool_call_id: tc.id, role: "tool", name: fnName, content: JSON.stringify(result) };
+        // ask_agent: LLM не видит output (он уже доставлен юзеру отдельным сообщением)
+        const resultForLLM = (fnName === "ask_agent" && result.output)
+          ? { ok: true, agentId: result.agentId, agentRole: result.agentRole, delivered_to_user: true,
+              hint: "Текст агента уже показан юзеру отдельным сообщением. В финале — только одна строка-подводка типа «Передала [роль], готово.», не цитируй текст." }
+          : result;
+        return { tool_call_id: tc.id, role: "tool", name: fnName, content: JSON.stringify(resultForLLM) };
       }));
       messages.push(...toolResults);
       if (detectsLoop(trace)) {
