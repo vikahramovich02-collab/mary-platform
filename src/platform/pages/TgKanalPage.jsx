@@ -380,53 +380,6 @@ const AGENTS = [
   },
 ];
 
-// Мок-сообщения чата
-const MOCK_MESSAGES = [
-  {
-    id: "m1", agentId: "researcher", time: "09:14",
-    type: "research",
-    text: "Спарсил 51 пост за неделю с 31 канала. Топ по охвату:",
-    items: [
-      { ch: "neural_prosecco",          postId: 4821, title: "OpenAI Realtime API — latency 320 мс" },
-      { ch: "zheleznyak_gi",            postId: 905,  title: "Как набрать 50k подписчиков в ТГ за год без рекламы" },
-      { ch: "ai_product",               postId: 991,  title: "Anthropic Computer Use — Claude кликает сам" },
-      { ch: "machinelearning_interview", postId: 2103, title: "Как готовиться к ML-собесам в 2026" },
-    ],
-  },
-  {
-    id: "m1b", agentId: "researcher", time: "09:18",
-    type: "insights",
-    text: "Из этих 51 поста выделил темы и форматы, которые сейчас работают:",
-    trends: [
-      { label: "AI-агенты и автономные workflow", direction: "up",   note: "5 постов · ср. охват 12k" },
-      { label: "Telegram-рост без рекламы",        direction: "up",   note: "3 поста · высокий ER 6–8%" },
-      { label: "Indie hackers / micro-MRR",        direction: "up",   note: "4 поста · много комментов" },
-      { label: "Ребрендинг «AI-стартапов»",        direction: "down", note: "тема надоела, низкая вовлечённость" },
-    ],
-    formats: [
-      "Хук с конкретной цифрой в первой строке → +30% охват",
-      "Кейсы с цифрами заходят в 2.4× лучше теории",
-      "Длина 300–600 знаков работает лучше лонгридов",
-      "Личные истории «я попробовал» > expertise-постов на ту же тему",
-    ],
-    notes: [
-      "У 60% топ-постов первая строка — метрика или цифра",
-      "Скрины с цифрами повышают reach на ≈22%",
-      "Опросы в комментах поднимают ER на 1.5 п.п.",
-    ],
-  },
-  {
-    id: "m4", agentId: "marketer", time: "09:22",
-    type: "ideas",
-    text: "На основе ресёрча и инсайтов от Ресерчера — вот 4 идеи постов на след. неделю. Отметь галочками те, что берём в работу — Копирайтер и Дизайнер запустятся по ним параллельно.",
-    items: [
-      { id: "i1", angle: "AI-агенты · кейс с цифрой", title: "Как 5 AI-агентов делают за меня недельный контент-план — кейс Mary", hook: "До Mary я тратила 14 часов в неделю на контент. Сейчас — 40 минут.", angleNote: "Хук с конкретной цифрой → +30% охват по ресёрчу" },
-      { id: "i2", angle: "Indie · личная история",     title: "Год назад я закрыла агентство и пошла в SaaS. Вот что узнала", hook: "Год назад мне пришла мысль: «Если бы у меня был помощник, который ведёт весь SMM — я бы вернула себе вечера».", angleNote: "Личные истории > expertise-постов в 2.4× по ER" },
-      { id: "i3", angle: "B2B · разбор-объяснялка",    title: "Почему GPT не справляется с SMM (и как помогает оркестратор агентов)", hook: "Если ChatGPT пишет тебе посты — ты в ловушке промпт-инжиниринга. Объясняю почему.", angleNote: "Контр-нарратив против общего хайпа на GPT" },
-      { id: "i4", angle: "TG-рост · мини-чек-лист",    title: "Чек-лист: как настроить SMM-отдел из AI-агентов за выходные", hook: "Чек-лист из 7 шагов — от парсинга конкурентов до автопостинга.", angleNote: "Чек-листы по ресёрчу: длина 300-600 знаков работает лучше всего" },
-    ],
-  },
-];
 const EDGES = [
   ["researcher", "marketer"],
   ["marketer", "copywriter"],
@@ -2027,7 +1980,7 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
   const [text, setText] = useState("");
   const [attached, setAttached] = useState([]);
   const [kbOpen, setKbOpen] = useState(false);
-  const [allMessages, setAllMessages] = useState(MOCK_MESSAGES);
+  const [allMessages, setAllMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
 
   // Привязка к persistent conversation для отдела (scope=smm/tg-kanal)
@@ -2067,8 +2020,10 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
   const [typingIds, setTypingIds] = useState(["mary", "copywriter"]);
   const fileRef = useRef(null);
 
-  // Мок-симуляция печати: меняем набор «печатающих» каждые 5-7 сек
+  // Мок-симуляция «печатающих» агентов — отключена для пустого чата.
+  // При наличии истории — лёгкая визуальная активность (можно убрать целиком в M7-следующем).
   useEffect(() => {
+    if (allMessages.length === 0) { setTypingIds([]); return; }
     const cycles = [
       ["mary", "copywriter"],
       ["researcher"],
@@ -2084,7 +2039,7 @@ function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChan
       setTypingIds(cycles[idx]);
     }, 5500);
     return () => clearInterval(t);
-  }, []);
+  }, [allMessages.length === 0]);
 
   const typingAgents = typingIds.map(id => {
     if (id === "mary") return { id: "mary", label: "Mary", color: "#262633" };
