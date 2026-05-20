@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.N8N_PORT || process.env.PORT || 5678);
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || "";
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "anthropic/claude-sonnet-4.5";
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY || ""; // опционально — для Whisper STT
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const TELEGRAM_OWNER_CHAT_ID = process.env.TELEGRAM_OWNER_CHAT_ID || ""; // legacy, единичный получатель
 const TELEGRAM_ALLOWLIST_CHAT_IDS = (process.env.TELEGRAM_ALLOWLIST_CHAT_IDS || "")
@@ -2543,17 +2544,49 @@ const MOCK_TRANSCRIPT = `[00:00] Виктория: Окей, начинаем с
 [03:15] Александр: Завтра соберу.
 [03:20] Виктория: Спасибо всем. Идём.`;
 
-// Заглушка STT — возвращает mock пока нет ключа. Когда появится — заменить на Whisper API call.
+// Заглушка STT — возвращает mock пока нет ключа.
 async function transcribeAudioMock(audioBase64, fileName) {
   // Имитируем задержку как у настоящего Whisper (4-7 сек)
   await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
   const sizeBytes = Buffer.from(audioBase64 || "", "base64").length;
-  const estimatedSec = Math.max(60, Math.floor(sizeBytes / 16000)); // ~16kbps opus
   return {
     transcript: MOCK_TRANSCRIPT,
     durationSec: 200,  // мок 3:20
     fileSize: sizeBytes,
     mock: true,
+  };
+}
+
+// Реальный OpenAI Whisper — если OPENAI_API_KEY задан.
+async function transcribeWhisper(audioBase64, fileName) {
+  const buffer = Buffer.from(audioBase64 || "", "base64");
+  if (!buffer.length) throw new Error("empty audio");
+  // FormData для OpenAI API
+  const form = new FormData();
+  const mime = fileName.endsWith(".mp3") ? "audio/mpeg"
+             : fileName.endsWith(".m4a") ? "audio/mp4"
+             : fileName.endsWith(".wav") ? "audio/wav"
+             : "audio/webm";
+  form.append("file", new Blob([buffer], { type: mime }), fileName);
+  form.append("model", "whisper-1");
+  form.append("response_format", "verbose_json");
+  form.append("language", "ru");
+  const r = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+    body: form,
+  });
+  if (!r.ok) {
+    const errText = (await r.text()).slice(0, 300);
+    throw new Error(`Whisper ${r.status}: ${errText}`);
+  }
+  const data = await r.json();
+  // verbose_json возвращает {text, language, duration, segments}
+  return {
+    transcript: data.text || "",
+    durationSec: Math.round(data.duration || 0),
+    fileSize: buffer.length,
+    mock: false,
   };
 }
 
@@ -2568,7 +2601,17 @@ app.post("/webhook/mary/transcripts", async (req, res) => {
       const ext = fileName.split(".").pop() || "webm";
       fs.writeFileSync(path.join(TRANSCRIPTS_DIR, `${id}.${ext}`), Buffer.from(audio, "base64"));
     }
-    const stt = await transcribeAudioMock(audio, fileName);
+    // Если есть OPENAI_API_KEY и реальное аудио → реальный Whisper; иначе fallback на mock
+    let stt;
+    if (OPENAI_API_KEY && audio) {
+      try { stt = await transcribeWhisper(audio, fileName); }
+      catch (e) {
+        console.log("[whisper] failed, fallback to mock:", e.message);
+        stt = await transcribeAudioMock(audio, fileName);
+      }
+    } else {
+      stt = await transcribeAudioMock(audio, fileName);
+    }
     const item = {
       id, fileName, deptId, conversationId,
       createdAt: new Date().toISOString(),
