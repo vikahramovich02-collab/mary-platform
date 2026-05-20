@@ -852,7 +852,51 @@ app.post("/webhook/mary/team/seed", (req, res) => {
 });
 
 // Отправка сообщения от текущего юзера (Виктории) в team-чат
-// Helper: отправить сообщение в team/tg conversation + mock-reply
+// Persona-промпт для AI-«коллег» в team/tg чатах
+function personaPromptFor(person, chatTitle) {
+  const ROLES = {
+    alex:   "Ты Александр Орлов, backend-разработчик. Прямолинейный, технарь, любишь конкретику. Часто пишешь сокращённо.",
+    maria:  "Ты Мария Дудник, PM продукта. Структурно мыслишь, всё связываешь с метриками и дедлайнами. Дружелюбна.",
+    ivan:   "Ты Иван Соколов, sales lead. Энергичный, всегда про цифры выручки и сделки. Часто шутишь.",
+    katya:  "Ты Катя Сафина, дизайнер. Мягкая, визуально мыслишь, любишь референсы. Иногда отвечаешь стикерами.",
+    andrey: "Ты Андрей Шумилов, CEO. Краткий, делегирующий. Просишь варианты или подтверждаешь решения.",
+  };
+  const base = ROLES[person.id] || `Ты ${person.name}, член команды.`;
+  return `${base}
+
+Ты в Telegram-чате «${chatTitle}» с коллегой Викторией (head of SMM). Отвечай как живой человек: 1–3 коротких сообщения подряд (через двойной перенос строки разделяй), без markdown, без эмодзи злоупотреблений, в обычном TG-стиле. Не представляйся (вы уже знакомы). Реагируй на её последнее сообщение по существу.`;
+}
+
+// Сгенерить AI-ответ в TG-моке (вместо случайной заглушки)
+async function generateTeamReply(conversation, persona) {
+  if (!OPENROUTER_API_KEY) return null;
+  const sys = personaPromptFor(persona, conversation.title || "чат");
+  const recent = (conversation.messages || []).slice(-8).map(m => ({
+    role: m.agentId === persona.id ? "assistant" : "user",
+    content: `${m.agentId === "vika" ? "Виктория" : (m.agentId || "?")}: ${m.text}`,
+  }));
+  try {
+    const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "http://77.237.241.242",
+        "X-Title": `Mary-team-${persona.id}`,
+      },
+      body: JSON.stringify({
+        model: "anthropic/claude-haiku-4-5",
+        messages: [{ role: "system", content: sys }, ...recent],
+        temperature: 0.9, max_tokens: 200,
+      }),
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.choices?.[0]?.message?.content?.trim() || null;
+  } catch (e) { return null; }
+}
+
+// Helper: отправить сообщение в team/tg conversation + AI-reply
 function sendTeamMessage(conversationId, text) {
   if (!text?.trim()) return { error: "text required" };
   const data = loadConversations();
@@ -861,19 +905,26 @@ function sendTeamMessage(conversationId, text) {
   c.messages.push({ role: "user", agentId: "vika", text: text.trim(), ts: new Date().toISOString() });
   c.updatedAt = new Date().toISOString();
   saveConversations(data);
-  // Mock: для TG-чатов через 2-4 сек кто-то «отвечает» (просто демо)
-  if (c.scope?.startsWith("tg/") && Math.random() > 0.5) {
-    setTimeout(() => {
+  // AI-reply: для TG-чатов через 2-4 сек отвечает кто-то из команды
+  if (c.scope?.startsWith("tg/") && Math.random() > 0.3) {
+    setTimeout(async () => {
       const data2 = loadConversations();
       const c2 = data2.conversations.find(x => x.id === conversationId);
       if (!c2) return;
-      const replies = ["Окей, понял", "👍", "Принято", "Сделаю до конца дня", "Согласен"];
-      const otherPeople = MOCK_PEOPLE_LIST.filter(p => p.id !== "vika");
-      const p = otherPeople[Math.floor(Math.random() * otherPeople.length)];
-      c2.messages.push({ role: "user", agentId: p.id, text: replies[Math.floor(Math.random() * replies.length)], ts: new Date().toISOString() });
-      c2.updatedAt = new Date().toISOString();
-      saveConversations(data2);
-    }, 2000 + Math.random() * 3000);
+      // Выбираем участника чата (если есть peopleIds в meta) или любого
+      const candidates = (c2.meta?.peopleIds || MOCK_PEOPLE_LIST.map(p => p.id)).filter(id => id !== "vika");
+      const persona = MOCK_PEOPLE_LIST.find(p => p.id === candidates[Math.floor(Math.random() * candidates.length)]);
+      if (!persona) return;
+      const reply = await generateTeamReply(c2, persona);
+      const text = reply || ["Окей, понял", "Принято", "Сделаю", "Гляну, отпишу"][Math.floor(Math.random() * 4)];
+      // Перечитываем БД (могла измениться за время LLM-запроса)
+      const data3 = loadConversations();
+      const c3 = data3.conversations.find(x => x.id === conversationId);
+      if (!c3) return;
+      c3.messages.push({ role: "user", agentId: persona.id, text, ts: new Date().toISOString() });
+      c3.updatedAt = new Date().toISOString();
+      saveConversations(data3);
+    }, 1500 + Math.random() * 2000);
   }
   return { ok: true };
 }
@@ -1527,6 +1578,7 @@ const MARY_SYSTEM_AGENT = `Ты — Mary, AI-оркестратор отдела
 2. Если юзер хочет «написать пост в канал» — вызывай СНАЧАЛА ask_agent(copywriter), это даст готовый текст. Если юзер потом отдельно скажет «опубликуй» — тогда publish_post с этим текстом. Не публикуй сразу.
 3. В финальном текстовом ответе НЕ ПЕРЕСКАЗЫВАЙ что написал агент. Просто одна строка-подводка: «Передала Копирайтеру, вот его текст:» — и всё. Сам текст агента появится отдельным сообщением (фронт его сам рендерит из tool result — ты НЕ должна вставлять его в свой ответ).
 4. Не вызывай ask_agent дважды для одной задачи. Один вызов — один результат.
+5. ⚠️ ПОЛНЫЙ ЗАПРЕТ на generate_ideas / get_research_insights / write_post / publish_post как ПЕРВЫЙ tool. Эти tool'ы — для случаев когда отдел НЕ настроен (legacy). У тебя есть отделы — иди через ask_agent. Триггер ← маппинг ←: «идеи постов / темы / контент-план» → ask_agent(deptId="smm", agentId="marketer"); «ресёрч / анализ / тренды» → ask_agent(researcher); «напиши пост / текст» → ask_agent(copywriter); «обложка / визуал» → ask_agent(designer).
 - list_departments — посмотри какие отделы уже есть прежде чем создавать новый
 - create_department — ТОЛЬКО когда юзер прямо просит создать отдел («создай отдел продаж»). Не создавай по своей инициативе.
 - add_channel / add_agent / set_department_integrations — для разворачивания отдела (см. ONBOARDING ниже)
