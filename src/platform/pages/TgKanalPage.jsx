@@ -11127,7 +11127,7 @@ function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
                 key={idx}
                 onClick={() => onPickOption(opt)}
                 style={{
-                  display: "flex", alignItems: "center", gap: 12,
+                  display: "flex", alignItems: "center", gap: 10,
                   width: "100%",
                   padding: "10px 4px",
                   background: "transparent",
@@ -11141,6 +11141,11 @@ function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
               >
+                <span style={{
+                  flexShrink: 0, width: 18, textAlign: "right",
+                  color: "rgba(38,38,51,0.45)", fontWeight: 500,
+                  fontVariantNumeric: "tabular-nums",
+                }}>{idx + 1}.</span>
                 <span style={{ flex: 1 }}>{opt}</span>
                 <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
                      stroke="rgba(38,38,51,0.45)" strokeWidth={1.6}
