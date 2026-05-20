@@ -7107,6 +7107,70 @@ function AgentDetail({ a, onBack }) {
   const [continueOnError, setContinueOnError] = useState(false);
   const [writeHistory, setWriteHistory] = useState(true);
 
+  // ── Реальный профиль агента с бэка + autosave (заменяет FakeSelect) ──
+  const [profile, setProfile] = useState({
+    model: a.model || "claude-sonnet-4-6",
+    systemPrompt: "",
+    tools: a.tools || [],
+    responseFormat: "text",
+    memory: "short",
+  });
+  const [savedAt, setSavedAt] = useState(null);
+  // UI-only поля (нет в backend) — сохраняем в localStorage
+  const [reasoning, setReasoning] = useState(() => localStorage.getItem(`agent-${a.id}-reasoning`) || "medium");
+  const [verbosity, setVerbosity] = useState(() => localStorage.getItem(`agent-${a.id}-verbosity`) || "medium");
+  const [summary, setSummary] = useState(() => localStorage.getItem(`agent-${a.id}-summary`) || "auto");
+
+  // Загрузить актуальный профиль с бэка
+  useEffect(() => {
+    fetch("/api/mary/departments").then(r => r.json()).then(d => {
+      const smm = (d.departments || []).find(x => x.id === "smm");
+      const found = smm?.agents?.find(x => x.id === a.id);
+      if (!found) return;
+      setProfile({
+        model: found.model || "claude-sonnet-4-6",
+        systemPrompt: found.systemPrompt || "",
+        tools: found.tools || [],
+        responseFormat: found.responseFormat || "text",
+        memory: found.memory || "short",
+      });
+    }).catch(() => {});
+  }, [a.id]);
+
+  // Debounced PATCH при изменениях profile (кроме первого монтирования)
+  const saveTimer = useRef(null);
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await fetch(`/api/mary/agents/smm/${a.id}/profile`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(profile),
+        });
+        setSavedAt(Date.now());
+      } catch {}
+    }, 400);
+    return () => clearTimeout(saveTimer.current);
+  }, [profile, a.id]);
+
+  // Сохраняем reasoning/verbosity/summary в localStorage
+  useEffect(() => { localStorage.setItem(`agent-${a.id}-reasoning`, reasoning); }, [reasoning, a.id]);
+  useEffect(() => { localStorage.setItem(`agent-${a.id}-verbosity`, verbosity); }, [verbosity, a.id]);
+  useEffect(() => { localStorage.setItem(`agent-${a.id}-summary`, summary); }, [summary, a.id]);
+
+  const MODELS = ["claude-sonnet-4-6", "claude-haiku-4-5", "gpt-4.1", "gpt-4.1-mini", "z-ai/glm-5.1"];
+  const ALL_TOOLS = ["web-search", "knowledge-base", "telegram-parser", "image-generation", "crm", "email", "google-sheets", "calendar"];
+  const TOOL_LABELS = {
+    "web-search": "Web Search", "knowledge-base": "База знаний", "telegram-parser": "TG-парсер",
+    "image-generation": "Image Gen", "crm": "CRM", "email": "Email", "google-sheets": "Sheets", "calendar": "Calendar",
+  };
+  const toggleTool = (t) => setProfile(p => ({
+    ...p, tools: p.tools.includes(t) ? p.tools.filter(x => x !== t) : [...p.tools, t],
+  }));
+
   return (
     <div style={{ margin: -16 }}>
       {/* Header */}
@@ -7183,41 +7247,73 @@ function AgentDetail({ a, onBack }) {
 
         {/* Модель */}
         <FormRow label="Модель">
-          <FakeSelect value={a.model} />
+          <RealSelect value={profile.model} onChange={v => setProfile(p => ({ ...p, model: v }))} options={MODELS} />
         </FormRow>
 
-        {/* Уровень рассуждений */}
+        {/* Уровень рассуждений (UI-only, localStorage) */}
         <FormRow label="Уровень рассуждений">
-          <FakeSelect value={a.reasoning} />
+          <RealSelect value={reasoning} onChange={setReasoning}
+            options={["low", "medium", "high"]} labels={{ low: "Низкий", medium: "Средний", high: "Высокий" }} />
         </FormRow>
 
-        {/* Инструменты */}
-        <FormField
-          label="Инструменты"
-          actions={[<button key="p" style={iconSquareBtn}>{ic.plus}</button>]}
-        >
+        {/* Системный промпт */}
+        <FormField label="Системный промпт">
+          <textarea
+            value={profile.systemPrompt}
+            onChange={e => setProfile(p => ({ ...p, systemPrompt: e.target.value }))}
+            placeholder="Кто агент, что делает, в каком формате на выходе…"
+            style={{
+              width: "100%", minHeight: 80, maxHeight: 240,
+              padding: "10px 12px",
+              background: color.white, border: "1px solid rgba(38,38,51,0.12)", borderRadius: 10,
+              fontSize: 12.5, color: "#262633", lineHeight: 1.5,
+              resize: "vertical", outline: "none", fontFamily: "inherit",
+            }}
+          />
+        </FormField>
+
+        {/* Инструменты — реальный multi-toggle */}
+        <FormField label="Инструменты">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {a.tools.map((t, i) => (
-              <span key={i} style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "6px 12px",
-                borderRadius: 999,
-                border: "1px solid rgba(38,38,51,0.1)",
-                background: color.white,
-                fontSize: 13, color: "#262633",
-              }}>{t}</span>
-            ))}
+            {ALL_TOOLS.map(t => {
+              const on = profile.tools.includes(t);
+              return (
+                <button key={t} onClick={() => toggleTool(t)}
+                  style={{
+                    display: "inline-flex", alignItems: "center", gap: 6,
+                    padding: "6px 12px",
+                    borderRadius: 999,
+                    border: on ? "none" : "1px solid rgba(38,38,51,0.1)",
+                    background: on ? "#262633" : color.white,
+                    color: on ? color.white : "#262633",
+                    fontSize: 13, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+                  }}>{TOOL_LABELS[t]}</button>
+              );
+            })}
           </div>
         </FormField>
 
         {/* Формат ответа */}
         <FormRow label="Формат ответа">
-          <FakeSelect value="Text" />
+          <RealSelect value={profile.responseFormat} onChange={v => setProfile(p => ({ ...p, responseFormat: v }))}
+            options={["text", "json"]} labels={{ text: "Текст", json: "JSON" }} />
+        </FormRow>
+
+        {/* Память (реальное поле) */}
+        <FormRow label="Память">
+          <RealSelect value={profile.memory} onChange={v => setProfile(p => ({ ...p, memory: v }))}
+            options={["none", "short", "long"]} labels={{ none: "Без памяти", short: "Сессия", long: "Долгосрочная" }} />
         </FormRow>
 
         <SectionDivider label="Параметры модели" />
-        <FormRow label="Подробность"><FakeSelect value="medium" /></FormRow>
-        <FormRow label="Резюме"><FakeSelect value="auto" /></FormRow>
+        <FormRow label="Подробность">
+          <RealSelect value={verbosity} onChange={setVerbosity}
+            options={["short", "medium", "detailed"]} labels={{ short: "Кратко", medium: "Средне", detailed: "Подробно" }} />
+        </FormRow>
+        <FormRow label="Резюме">
+          <RealSelect value={summary} onChange={setSummary}
+            options={["off", "auto", "always"]} labels={{ off: "Выкл", auto: "Авто", always: "Всегда" }} />
+        </FormRow>
 
         <SectionDivider label="Чат" />
         <FormRow label="Показывать ответ в чате">
@@ -7257,6 +7353,18 @@ function AgentDetail({ a, onBack }) {
         display: "flex", alignItems: "center", gap: 8,
         boxShadow: "0 -4px 12px rgba(38,38,51,0.04)",
       }}>
+        {/* Save status */}
+        {savedAt && (Date.now() - savedAt < 3000) && (
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 4,
+            fontSize: 11, color: "#34C759", fontWeight: 500,
+          }}>
+            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12l5 5L20 7" />
+            </svg>
+            Сохранено
+          </span>
+        )}
         <button style={{
           flex: 1, height: 36,
           background: "#262633", color: color.white,
@@ -7521,20 +7629,24 @@ function FormInput({ value }) {
     />
   );
 }
-function FakeSelect({ value }) {
+function RealSelect({ value, onChange, options, labels }) {
   return (
-    <button style={{
-      display: "inline-flex", alignItems: "center", gap: 6,
-      height: 28, padding: "0 8px 0 10px",
-      background: color.white,
-      border: "1px solid rgba(38,38,51,0.1)",
-      borderRadius: 7,
-      fontSize: 12, color: "#262633",
-      fontFamily: "inherit", cursor: "pointer",
-    }}>
-      <span>{value}</span>
-      <span style={{ display: "flex", color: "rgba(38,38,51,0.5)" }}>{ic.chevron}</span>
-    </button>
+    <select value={value} onChange={e => onChange?.(e.target.value)}
+      style={{
+        height: 28, padding: "0 24px 0 10px",
+        background: color.white,
+        border: "1px solid rgba(38,38,51,0.1)",
+        borderRadius: 7,
+        fontSize: 12, color: "#262633",
+        fontFamily: "inherit", cursor: "pointer",
+        outline: "none",
+        appearance: "none",
+        backgroundImage: "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(38,38,51,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>\")",
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: "right 8px center",
+      }}>
+      {(options || []).map(o => <option key={o} value={o}>{labels?.[o] || o}</option>)}
+    </select>
   );
 }
 function Toggle({ on, onClick }) {
