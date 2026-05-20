@@ -478,6 +478,49 @@ function kbWrite(name, content) {
   fs.writeFileSync(p, String(content || ""), "utf8");
   return { path: cleanName, size: Buffer.byteLength(content || "", "utf8"), existed: exists };
 }
+// Простой full-text поиск по KB: term-frequency + бонусы за совпадение в имени/заголовке
+function kbSearch(query, limit = 5) {
+  const q = String(query || "").trim().toLowerCase();
+  if (!q) return [];
+  const terms = q.split(/\s+/).filter(t => t.length >= 2);
+  if (terms.length === 0) return [];
+  const files = kbList();
+  const scored = [];
+  for (const f of files) {
+    const content = kbRead(f.name) || "";
+    const lowerContent = content.toLowerCase();
+    const lowerName = f.name.toLowerCase();
+    const firstLine = (content.split("\n", 1)[0] || "").toLowerCase();
+    let score = 0;
+    let firstMatchIdx = -1;
+    for (const t of terms) {
+      // tf в контенте
+      let idx = 0, count = 0;
+      while ((idx = lowerContent.indexOf(t, idx)) !== -1) {
+        count++;
+        if (firstMatchIdx === -1 || idx < firstMatchIdx) firstMatchIdx = idx;
+        idx += t.length;
+      }
+      score += count;
+      // бонусы
+      if (lowerName.includes(t)) score += 10;
+      if (firstLine.includes(t)) score += 5;
+    }
+    if (score === 0) continue;
+    // snippet вокруг первого совпадения
+    let snippet = "";
+    if (firstMatchIdx >= 0) {
+      const start = Math.max(0, firstMatchIdx - 60);
+      const end = Math.min(content.length, firstMatchIdx + 120);
+      snippet = (start > 0 ? "…" : "") + content.slice(start, end).replace(/\n+/g, " ") + (end < content.length ? "…" : "");
+    } else {
+      snippet = content.slice(0, 160).replace(/\n+/g, " ");
+    }
+    scored.push({ name: f.name, score, snippet, size: f.size, modified: f.modified });
+  }
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, limit);
+}
 function kbDelete(name) {
   const p = safeKbPath(name);
   if (!fs.existsSync(p)) return false;
@@ -1802,8 +1845,10 @@ const TOOL_HANDLERS = {
     return { body: d.body, length: d.length };
   },
   async search_kb(args = {}) {
-    // TODO: настоящий RAG (Этап 3 спринта). Пока mock.
-    return { found: 0, results: [], note: "KB search будет на этапе 3 (RAG)" };
+    const query = String(args.query || "").trim();
+    if (!query) return { error: "query required" };
+    const results = kbSearch(query, args.limit || 5);
+    return { found: results.length, query, results };
   },
   async create_task(args = {}) {
     try {
