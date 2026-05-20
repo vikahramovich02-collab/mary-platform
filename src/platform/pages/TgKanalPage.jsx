@@ -5024,33 +5024,6 @@ const MOCK_PEOPLE = [
   { id: "katya", name: "Катя Сафина",        handle: "@k.safina", role: "member",   title: "Контент",      color: "#7A86FF" },
 ];
 
-const MOCK_TASKS = [
-  { id: 1, title: "Ресёрч ТГ-каналов конкурентов", agent: "Ресерчер",   status: "Готово",      color: "#34C759" },
-  { id: 2, title: "3 идеи постов на след. неделю", agent: "Маркетолог", status: "На апруве",   color: "#FF8B3D" },
-  { id: 3, title: "Текст к идее #1 «Чек-лист»",    agent: "Копирайтер", status: "На апруве",   color: "#FF8B3D" },
-  { id: 4, title: "Визуал к идее #1",              agent: "Дизайнер",   status: "На апруве",   color: "#FF8B3D" },
-  { id: 5, title: "Текст к идее #2 «Кейс»",        agent: "Копирайтер", status: "В работе",    color: "#3F95FF" },
-  { id: 6, title: "Аналитика поста от 5 мая",      agent: "Аналитик",   status: "Запланирована", color: "rgba(38,38,51,0.4)" },
-];
-const MOCK_FILES = {
-  in: [
-    { name: "brief_smm_q2.pdf",      size: "1.2 MB", time: "2 дня назад" },
-    { name: "tone_of_voice.md",      size: "8 KB",   time: "5 дней назад" },
-    { name: "competitor_audit.xlsx", size: "320 KB", time: "1 неделя" },
-  ],
-  out: [
-    { name: "post_checklist_v1.md",  size: "4 KB",   time: "сегодня" },
-    { name: "cover_v1.png",          size: "180 KB", time: "сегодня" },
-    { name: "cover_v2.png",          size: "175 KB", time: "сегодня" },
-    { name: "research_topweek.json", size: "12 KB",  time: "вчера" },
-  ],
-};
-const MOCK_INTEGRATIONS = [
-  { name: "Telegram",          desc: "Канал @mary_smm",       on: true  },
-  { name: "Notion",            desc: "База контента",         on: true  },
-  { name: "Google Analytics",  desc: "post analytics",        on: false },
-  { name: "Slack",             desc: "Уведомления апрувов",   on: false },
-];
 
 function RailDrawer({ kind, onClose, agentsSelected, setAgentsSelected, kbUserItems, setKbUserItems, onCreateTask, pendingTasks }) {
   const [addOpen, setAddOpen] = useState(false);
