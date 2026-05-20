@@ -270,28 +270,56 @@ function pipelineAddNode(deptId, agentId, node, after) {
     if (after) p.edges.push([after, node.id]);
   });
 }
+// Fuzzy: точное по id; если нет — case-insensitive по title (substring)
+function findNode(pipeline, key) {
+  if (!key) return null;
+  const exact = pipeline.nodes.find(n => n.id === key);
+  if (exact) return exact;
+  const k = String(key).toLowerCase().trim();
+  const byTitle = pipeline.nodes.find(n => (n.title || "").toLowerCase().includes(k));
+  return byTitle || null;
+}
 function pipelineRemoveNode(deptId, agentId, nodeId) {
   return withAgent(deptId, agentId, (p) => {
-    p.nodes = p.nodes.filter(n => n.id !== nodeId);
-    p.edges = p.edges.filter(([from, to]) => from !== nodeId && to !== nodeId);
+    const node = findNode(p, nodeId);
+    if (!node) {
+      const e = new Error(`узел '${nodeId}' не найден. Доступные: ${p.nodes.map(n => `${n.id} (${n.title})`).join(", ")}`);
+      e.code = "NODE_NOT_FOUND";
+      throw e;
+    }
+    p.nodes = p.nodes.filter(n => n.id !== node.id);
+    p.edges = p.edges.filter(([from, to]) => from !== node.id && to !== node.id);
+    p._lastRemoved = { id: node.id, title: node.title };
   });
 }
 function pipelineUpdateNode(deptId, agentId, nodeId, patch) {
   return withAgent(deptId, agentId, (p) => {
-    const n = p.nodes.find(x => x.id === nodeId);
-    if (!n) throw new Error(`узел '${nodeId}' не найден`);
+    const n = findNode(p, nodeId);
+    if (!n) {
+      const e = new Error(`узел '${nodeId}' не найден. Доступные: ${p.nodes.map(x => `${x.id} (${x.title})`).join(", ")}`);
+      e.code = "NODE_NOT_FOUND";
+      throw e;
+    }
     Object.assign(n, patch);
     if (patch.settings) n.settings = { ...(n.settings || {}), ...patch.settings };
   });
 }
 function pipelineConnect(deptId, agentId, from, to) {
   return withAgent(deptId, agentId, (p) => {
-    if (!p.edges.some(([f, t]) => f === from && t === to)) p.edges.push([from, to]);
+    const a = findNode(p, from), b = findNode(p, to);
+    if (!a || !b) {
+      const e = new Error(`не нашёл узел ${a ? to : from}`);
+      e.code = "NODE_NOT_FOUND";
+      throw e;
+    }
+    if (!p.edges.some(([f, t]) => f === a.id && t === b.id)) p.edges.push([a.id, b.id]);
   });
 }
 function pipelineDisconnect(deptId, agentId, from, to) {
   return withAgent(deptId, agentId, (p) => {
-    p.edges = p.edges.filter(([f, t]) => !(f === from && t === to));
+    const a = findNode(p, from), b = findNode(p, to);
+    if (!a || !b) return; // нечего disconnect — ок
+    p.edges = p.edges.filter(([f, t]) => !(f === a.id && t === b.id));
   });
 }
 function deptSetIntegrations(deptId, integrations) {
@@ -824,12 +852,12 @@ app.post("/webhook/mary/team/seed", (req, res) => {
 });
 
 // Отправка сообщения от текущего юзера (Виктории) в team-чат
-app.post("/webhook/mary/team/:id/send", (req, res) => {
-  const { text } = req.body || {};
-  if (!text?.trim()) return res.status(400).json({ error: "text required" });
+// Helper: отправить сообщение в team/tg conversation + mock-reply
+function sendTeamMessage(conversationId, text) {
+  if (!text?.trim()) return { error: "text required" };
   const data = loadConversations();
-  const c = data.conversations.find(x => x.id === req.params.id);
-  if (!c) return res.status(404).json({ error: "not found" });
+  const c = data.conversations.find(x => x.id === conversationId);
+  if (!c) return { error: "not found" };
   c.messages.push({ role: "user", agentId: "vika", text: text.trim(), ts: new Date().toISOString() });
   c.updatedAt = new Date().toISOString();
   saveConversations(data);
@@ -837,7 +865,7 @@ app.post("/webhook/mary/team/:id/send", (req, res) => {
   if (c.scope?.startsWith("tg/") && Math.random() > 0.5) {
     setTimeout(() => {
       const data2 = loadConversations();
-      const c2 = data2.conversations.find(x => x.id === req.params.id);
+      const c2 = data2.conversations.find(x => x.id === conversationId);
       if (!c2) return;
       const replies = ["Окей, понял", "👍", "Принято", "Сделаю до конца дня", "Согласен"];
       const otherPeople = MOCK_PEOPLE_LIST.filter(p => p.id !== "vika");
@@ -847,7 +875,25 @@ app.post("/webhook/mary/team/:id/send", (req, res) => {
       saveConversations(data2);
     }, 2000 + Math.random() * 3000);
   }
-  res.json({ ok: true });
+  return { ok: true };
+}
+
+// Новый endpoint — body-based (для conversationId со слэшами типа team/alex)
+app.post("/webhook/mary/team/send", (req, res) => {
+  const { conversationId, text } = req.body || {};
+  if (!conversationId) return res.status(400).json({ error: "conversationId required" });
+  const r = sendTeamMessage(conversationId, text);
+  if (r.error === "not found") return res.status(404).json(r);
+  if (r.error) return res.status(400).json(r);
+  res.json(r);
+});
+
+// Старый endpoint — для обратной совместимости
+app.post("/webhook/mary/team/:id/send", (req, res) => {
+  const r = sendTeamMessage(req.params.id, req.body?.text);
+  if (r.error === "not found") return res.status(404).json(r);
+  if (r.error) return res.status(400).json(r);
+  res.json(r);
 });
 
 app.post("/webhook/mary/conversations/:id/messages", (req, res) => {
@@ -1474,7 +1520,13 @@ const MARY_SYSTEM_AGENT = `Ты — Mary, AI-оркестратор отдела
 - search_kb — когда нужен реальный материал юзера (документы/файлы/посты)
 - create_task — только когда юзер ясно просит поставить задачу кому-то
 - read_chat — когда юзер ссылается на другой чат: «что я писала в СММ», «какие задачи у маркетолога», «глянь чат отдела». scope='smm' для СММ-отдела, 'general' для общих, 'free' для свободных.
-- ask_agent — ⚡️ ДЕЛЕГИРУЙ задачу конкретному агенту отдела вместо того чтобы делать её сама. Это ключевая команда. Юзер собрал отдел чтобы агенты работали — не Mary. Триггеры делегации: «напиши контент-план / пост / текст» → Копирайтер (copywriter); «придумай идеи / темы» → Маркетолог (marketer); «сделай ресёрч / проанализируй канал X / какие сейчас тренды» → Ресерчер (researcher); «сделай обложку / нарисуй» → Дизайнер (designer); «отчёт за месяц» → Аналитик/Отчётный; «оквалифицируй лид» → Лид-квалификатор. Если отдел ещё не создан — сначала собери его (create_department + add_agent), потом делегируй. После tool ask_agent в финальном текстовом ответе передай результат от агента юзеру с короткой подводкой: «Передала Копирайтеру, вот что получилось:» + сам текст агента. НЕ ПЕРЕПИСЫВАЙ ответ агента — он отвечает СВОИМ голосом, со своей экспертизой.
+- ask_agent — ⚡️ ДЕЛЕГИРУЙ задачу конкретному агенту отдела вместо того чтобы делать её сама. Это ключевая команда. Юзер собрал отдел чтобы агенты работали — не Mary. Триггеры делегации: «напиши контент-план / пост / текст» → Копирайтер (copywriter); «придумай идеи / темы» → Маркетолог (marketer); «сделай ресёрч / проанализируй канал X / какие сейчас тренды» → Ресерчер (researcher); «сделай обложку / нарисуй» → Дизайнер (designer); «отчёт за месяц» → Аналитик/Отчётный; «оквалифицируй лид» → Лид-квалификатор. Если отдел ещё не создан — сначала собери его (create_department + add_agent), потом делегируй.
+
+⚠️ КРИТИЧНО ПО ask_agent:
+1. Если ты вызвала ask_agent в этом тёрне → ОСТАНОВИСЬ. НЕ вызывай больше никаких tools (особенно write_post, publish_post, generate_ideas, get_research_insights — это работа Копирайтера/Маркетолога/Ресерчера, у тебя уже есть их результат через ask_agent).
+2. Если юзер хочет «написать пост в канал» — вызывай СНАЧАЛА ask_agent(copywriter), это даст готовый текст. Если юзер потом отдельно скажет «опубликуй» — тогда publish_post с этим текстом. Не публикуй сразу.
+3. В финальном текстовом ответе НЕ ПЕРЕСКАЗЫВАЙ что написал агент. Просто одна строка-подводка: «Передала Копирайтеру, вот его текст:» — и всё. Сам текст агента появится отдельным сообщением (фронт его сам рендерит из tool result — ты НЕ должна вставлять его в свой ответ).
+4. Не вызывай ask_agent дважды для одной задачи. Один вызов — один результат.
 - list_departments — посмотри какие отделы уже есть прежде чем создавать новый
 - create_department — ТОЛЬКО когда юзер прямо просит создать отдел («создай отдел продаж»). Не создавай по своей инициативе.
 - add_channel / add_agent / set_department_integrations — для разворачивания отдела (см. ONBOARDING ниже)

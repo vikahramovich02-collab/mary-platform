@@ -3117,12 +3117,9 @@ function AgentFlowCanvas({ agent, onClose }) {
     <div style={{
       position: "absolute", inset: 0,
       background: color.white,
-      backgroundImage: "radial-gradient(rgba(38,38,51,0.12) 1px, transparent 1px)",
-      backgroundSize: "20px 20px",
-      backgroundPosition: "10px 10px",
       borderRadius: 18,
-      overflow: "auto",
       zIndex: 6,
+      display: "flex", flexDirection: "column",
     }}>
       {/* Шапка drill-in */}
       <div style={{
@@ -3176,12 +3173,13 @@ function AgentFlowCanvas({ agent, onClose }) {
         </div>
       </div>
 
-      {/* Должностная инструкция */}
-      {agent.profile && (
-        <AgentJobDescription agent={agent} profile={agent.profile} />
-      )}
-
-      {/* Канвас workflow */}
+      {/* Канвас workflow — растянут на оставшуюся высоту со scroll */}
+      <div style={{
+        flex: 1, minHeight: 0, overflow: "auto",
+        backgroundImage: "radial-gradient(rgba(38,38,51,0.12) 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
+        backgroundPosition: "10px 10px",
+      }}>
       <div style={{
         position: "relative",
         width: maxX,
@@ -3271,6 +3269,11 @@ function AgentFlowCanvas({ agent, onClose }) {
           );
         })}
       </div>
+      </div>
+      {/* Bottom panel: Settings / Logs / Output */}
+      {agent.profile && (
+        <AgentBottomPanel agent={agent} profile={agent.profile} />
+      )}
     </div>
   );
 }
@@ -3547,6 +3550,271 @@ function DepartmentSandbox({ deptId, onClose }) {
         )}
       </div>
     </div>
+  );
+}
+
+// Bottom panel в drill-down: Settings / Logs / Output (Sim-style)
+function AgentBottomPanel({ agent, profile }) {
+  const [tab, setTab] = useState("settings");
+  const [selectedNodeId, setSelectedNodeId] = useState(null);
+  // Demo runs — обычно прокидывается извне; пока mock на месте, потом подключим к реальному sandbox state
+  const runs = []; // [{ nodeId, label, durationMs, status, output }]
+  const selectedRun = runs.find(r => r.nodeId === selectedNodeId);
+
+  const tabBtn = (id, label) => (
+    <button onClick={() => setTab(id)} style={{
+      padding: "8px 16px",
+      background: tab === id ? color.white : "transparent",
+      color: tab === id ? "#262633" : "rgba(38,38,51,0.55)",
+      border: "none", borderBottom: tab === id ? "2px solid #262633" : "2px solid transparent",
+      fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+      transition: "all 0.15s",
+    }}>{label}</button>
+  );
+
+  return (
+    <div style={{
+      flexShrink: 0,
+      height: 320,
+      borderTop: "1px solid rgba(38,38,51,0.1)",
+      background: "rgba(247,247,247,0.6)",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Tab bar */}
+      <div style={{
+        display: "flex", gap: 0, padding: "0 16px",
+        borderBottom: "1px solid rgba(38,38,51,0.06)",
+        background: color.white,
+      }}>
+        {tabBtn("settings", "⚙️ Settings")}
+        {tabBtn("logs", "📋 Logs")}
+        {tabBtn("output", "📤 Output")}
+      </div>
+
+      {/* Tab content */}
+      <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+        {tab === "settings" && <AgentSettingsView profile={profile} agent={agent} />}
+        {tab === "logs" && <AgentLogsView runs={runs} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />}
+        {tab === "output" && <AgentOutputView run={selectedRun} />}
+      </div>
+    </div>
+  );
+}
+
+function AgentSettingsView({ profile, agent }) {
+  const TOOL_LABELS = {
+    "web-search": "Web Search", "knowledge-base": "База знаний", "telegram-parser": "TG-парсер",
+    "image-generation": "Image Generation", "crm": "CRM", "email": "Email", "google-sheets": "Google Sheets", "calendar": "Calendar",
+  };
+  const MEMORY_LABELS = { none: "Без памяти", short: "Сессия", long: "Долгосрочная (KB)" };
+  const FORMAT_LABELS = { text: "Текст", json: "JSON" };
+  return (
+    <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 24px" }}>
+      {/* Левая колонка */}
+      <div>
+        {profile.tasks && (
+          <div style={{
+            padding: "10px 12px", marginBottom: 12,
+            background: color.white, border: "1px solid rgba(38,38,51,0.06)", borderRadius: 8,
+            fontSize: 12.5, color: "rgba(38,38,51,0.85)", lineHeight: 1.5,
+          }}>{profile.tasks}</div>
+        )}
+        <SettingRow label="Model">
+          <span style={{
+            padding: "2px 8px", borderRadius: 6,
+            background: "rgba(122,134,255,0.12)", color: "#5B68E0",
+            fontSize: 11.5, fontWeight: 500, fontFamily: "ui-monospace, SF Mono, monospace",
+          }}>{profile.model || "—"}</span>
+        </SettingRow>
+        <SettingRow label="Memory">
+          <span style={{
+            padding: "2px 8px", borderRadius: 6,
+            background: "rgba(38,38,51,0.05)", color: "rgba(38,38,51,0.75)",
+            fontSize: 11.5,
+          }}>{MEMORY_LABELS[profile.memory] || profile.memory}</span>
+        </SettingRow>
+        <SettingRow label="Response">
+          <span style={{
+            padding: "2px 8px", borderRadius: 6,
+            background: profile.responseFormat === "json" ? "rgba(255,139,61,0.12)" : "rgba(38,38,51,0.05)",
+            color: profile.responseFormat === "json" ? "#D97500" : "rgba(38,38,51,0.75)",
+            fontSize: 11.5, fontWeight: 500,
+          }}>{FORMAT_LABELS[profile.responseFormat] || profile.responseFormat}</span>
+        </SettingRow>
+        <SettingRow label="Tools">
+          {(profile.tools && profile.tools.length > 0) ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {profile.tools.map(t => (
+                <span key={t} style={{
+                  padding: "2px 8px", borderRadius: 999,
+                  background: "rgba(38,38,51,0.06)", color: "#262633",
+                  fontSize: 11, fontWeight: 500,
+                }}>{TOOL_LABELS[t] || t}</span>
+              ))}
+            </div>
+          ) : <span style={{ color: "rgba(38,38,51,0.4)", fontSize: 11.5 }}>—</span>}
+        </SettingRow>
+      </div>
+      {/* Правая колонка — system prompt */}
+      <div>
+        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 600, marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em" }}>
+          System Prompt
+        </div>
+        <div style={{
+          padding: "10px 12px",
+          background: color.white, border: "1px solid rgba(38,38,51,0.06)", borderRadius: 8,
+          fontSize: 12.5, color: "#262633", lineHeight: 1.55,
+          maxHeight: 220, overflowY: "auto", whiteSpace: "pre-wrap",
+        }}>
+          {profile.systemPrompt || <span style={{ color: "rgba(38,38,51,0.4)" }}>не указан</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SettingRow({ label, children }) {
+  return (
+    <div style={{ display: "flex", gap: 14, alignItems: "baseline", padding: "6px 0", borderTop: "1px solid rgba(38,38,51,0.04)" }}>
+      <div style={{ width: 80, flexShrink: 0, fontSize: 11.5, color: "rgba(38,38,51,0.5)", fontWeight: 500 }}>{label}</div>
+      <div style={{ flex: 1, minWidth: 0, fontSize: 12.5, color: "#262633" }}>{children}</div>
+    </div>
+  );
+}
+
+function AgentLogsView({ runs, selectedNodeId, onSelect }) {
+  if (!runs || runs.length === 0) {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: "rgba(38,38,51,0.5)", fontSize: 12.5 }}>
+        Логи появятся после первого запуска. Запусти агента из канваса выше.
+      </div>
+    );
+  }
+  return (
+    <div style={{ padding: "10px 16px" }}>
+      {runs.map(r => (
+        <button key={r.nodeId} onClick={() => onSelect(r.nodeId)}
+          style={{
+            width: "100%", display: "flex", alignItems: "center", gap: 10,
+            padding: "8px 12px",
+            background: selectedNodeId === r.nodeId ? "rgba(38,38,51,0.06)" : "transparent",
+            border: "none", borderRadius: 6,
+            fontSize: 12.5, color: "#262633", fontFamily: "inherit",
+            cursor: "pointer", textAlign: "left",
+          }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%",
+            background: r.status === "error" ? "#FF3B30" : r.status === "running" ? "#FF8B3D" : "#34C759" }} />
+          <span style={{ flex: 1 }}>{r.label}</span>
+          <span style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontVariantNumeric: "tabular-nums" }}>
+            {r.durationMs >= 1000 ? `${(r.durationMs / 1000).toFixed(2)}s` : `${r.durationMs}ms`}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function AgentOutputView({ run }) {
+  if (!run) {
+    return (
+      <div style={{ padding: 24, textAlign: "center", color: "rgba(38,38,51,0.5)", fontSize: 12.5 }}>
+        Выбери строку в Logs чтобы увидеть Output.
+      </div>
+    );
+  }
+  return (
+    <div style={{ padding: "12px 16px" }}>
+      <JsonTreeOrText value={run.output} />
+    </div>
+  );
+}
+
+function JsonTreeOrText({ value }) {
+  // Если строка — пробуем парсить как JSON
+  let parsed = value;
+  if (typeof value === "string") {
+    try {
+      const t = value.trim();
+      if (t.startsWith("{") || t.startsWith("[")) parsed = JSON.parse(t);
+    } catch {}
+  }
+  if (typeof parsed === "object" && parsed !== null) {
+    return <JsonTree value={parsed} />;
+  }
+  return (
+    <pre style={{
+      margin: 0, padding: "10px 12px",
+      background: color.white, border: "1px solid rgba(38,38,51,0.06)", borderRadius: 8,
+      fontSize: 12.5, color: "#262633", lineHeight: 1.5,
+      whiteSpace: "pre-wrap", fontFamily: "ui-monospace, SF Mono, Menlo, monospace",
+    }}>{String(value || "")}</pre>
+  );
+}
+
+function JsonTree({ value, name, level = 0 }) {
+  const [open, setOpen] = useState(level < 2);
+  if (value === null) return <TypedSpan type="null">null</TypedSpan>;
+  if (value === undefined) return <TypedSpan type="null">undefined</TypedSpan>;
+  if (typeof value === "string") return <TypedSpan type="string">"{value}"</TypedSpan>;
+  if (typeof value === "number") return <TypedSpan type="number">{value}</TypedSpan>;
+  if (typeof value === "boolean") return <TypedSpan type="boolean">{String(value)}</TypedSpan>;
+  if (Array.isArray(value)) {
+    return (
+      <div style={{ marginLeft: level === 0 ? 0 : 12 }}>
+        <button onClick={() => setOpen(!open)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "#262633" }}>
+          <span style={{ fontSize: 10, color: "rgba(38,38,51,0.5)" }}>{open ? "▾" : "▸"}</span>
+          {name && <span style={{ fontWeight: 500 }}>{name}</span>}
+          <span style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(122,134,255,0.15)", color: "#5B68E0", fontSize: 10, fontWeight: 500 }}>array</span>
+          <span style={{ fontSize: 11, color: "rgba(38,38,51,0.5)" }}>{value.length}</span>
+        </button>
+        {open && (
+          <div>
+            {value.map((v, i) => (
+              <div key={i} style={{ marginTop: 4, display: "flex", gap: 8, marginLeft: 14 }}>
+                <span style={{ color: "rgba(38,38,51,0.4)", fontSize: 11.5, fontVariantNumeric: "tabular-nums" }}>{i}</span>
+                <div style={{ flex: 1, minWidth: 0 }}><JsonTree value={v} level={level + 1} /></div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  // object
+  const keys = Object.keys(value);
+  return (
+    <div style={{ marginLeft: level === 0 ? 0 : 12 }}>
+      <button onClick={() => setOpen(!open)} style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit", display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12.5, color: "#262633" }}>
+        <span style={{ fontSize: 10, color: "rgba(38,38,51,0.5)" }}>{open ? "▾" : "▸"}</span>
+        {name && <span style={{ fontWeight: 500 }}>{name}</span>}
+        <span style={{ padding: "1px 6px", borderRadius: 4, background: "rgba(255,139,61,0.15)", color: "#D97500", fontSize: 10, fontWeight: 500 }}>object</span>
+        <span style={{ fontSize: 11, color: "rgba(38,38,51,0.5)" }}>{keys.length} keys</span>
+      </button>
+      {open && (
+        <div>
+          {keys.map(k => (
+            <div key={k} style={{ marginTop: 4, marginLeft: 14 }}>
+              <JsonTree value={value[k]} name={k} level={level + 1} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TypedSpan({ type, children }) {
+  const colors = {
+    string: "#1B883B",
+    number: "#1E5EBE",
+    boolean: "#9A3DC2",
+    null: "#999",
+  };
+  return (
+    <span style={{
+      fontSize: 12.5, color: colors[type] || "#262633",
+      fontFamily: "ui-monospace, SF Mono, Menlo, monospace",
+    }}>{children}</span>
   );
 }
 
@@ -12129,9 +12397,9 @@ function InboxTeamThread({ conversationId, isTg, onGoSource, onArchive, archived
     const msg = text.trim();
     setText("");
     setChat(c => c ? { ...c, messages: [...(c.messages||[]), { role: "user", agentId: "vika", text: msg, ts: new Date().toISOString() }] } : c);
-    await fetch(`/api/mary/team/${conversationId}/send`, {
+    await fetch(`/api/mary/team/send`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: msg }),
+      body: JSON.stringify({ conversationId, text: msg }),
     });
     reload();
   };
@@ -12460,9 +12728,9 @@ function TeamPage() {
     setText("");
     // Оптимистично
     setActiveChat(c => c ? { ...c, messages: [...(c.messages||[]), { role: "user", agentId: "vika", text: msg, ts: new Date().toISOString() }] } : c);
-    await fetch(`/api/mary/team/${activeId}/send`, {
+    await fetch(`/api/mary/team/send`, {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text: msg }),
+      body: JSON.stringify({ conversationId: activeId, text: msg }),
     });
     reloadChats();
   };
