@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { color, transition, font } from "../../ui/tokens.js";
+import { I, P } from "../icons.jsx";
 
 // Реплика экрана Figma node 5522:2547 (file: o1syNp93H3v2dyA3JHp4em — Mary)
 // Сабпейдж "Тг-канал" в отделе "СММ".
@@ -8,18 +9,6 @@ const SIDEBAR_W = 220;
 const RIGHT_W = 64;
 
 // ── Иконки (14px по умолчанию для меню) ─────────────────────
-function I({ d, size = 14, stroke = 1.75, fill = "none" }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor"
-         strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
-      {d}
-    </svg>
-  );
-}
-// PNG-иконка из брендбука
-function P({ src, size = 14 }) {
-  return <img src={src} alt="" style={{ width: size, height: size, objectFit: "contain", display: "block" }} />;
-}
 const ic = {
   home: <I d={<path d="M3.5 10.8 12 3.5l8.5 7.3V20a1 1 0 0 1-1 1h-4v-6h-7v6h-4a1 1 0 0 1-1-1v-9.2z" />} />,
   chat:         <P src="/icons/icon_main-2.png" />,
