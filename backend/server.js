@@ -555,6 +555,124 @@ function defaultPipelineFor(roleOrId) {
       edges: [["post_in","fetch"], ["fetch","analyze"], ["analyze","out_report"]],
     };
   }
+  if (/(editor|редактор|qa)/.test(key)) {
+    return {
+      nodes: [
+        { id: "draft_in",   type: "trigger", title: "Черновик поста",    sub: "от Копирайтера" },
+        { id: "visuals_in", type: "trigger", title: "Варианты визуала",  sub: "от Дизайнера" },
+        { id: "fact_check", type: "llm",     title: "Фактчек",           sub: "точность и источники · LLM" },
+        { id: "hook_score", type: "llm",     title: "Оценка хука",       sub: "сила 1-5 · LLM" },
+        { id: "readability",type: "llm",     title: "Читабельность",     sub: "ритм, стоп-слова, CTA · LLM" },
+        { id: "verdict",    type: "llm",     title: "Вердикт",           sub: "ready / needs-work / redo · LLM" },
+        { id: "out_ready",  type: "output",  title: "Готово к публикации",sub: "→ Публикация",              settings: { target: "publish" } },
+        { id: "out_rework", type: "output",  title: "На доработку",      sub: "→ Копирайтер с правками",   settings: { target: "agent:copywriter" } },
+      ],
+      edges: [
+        ["draft_in","fact_check"], ["draft_in","hook_score"], ["draft_in","readability"],
+        ["visuals_in","verdict"],
+        ["fact_check","verdict"], ["hook_score","verdict"], ["readability","verdict"],
+        ["verdict","out_ready"], ["verdict","out_rework"],
+      ],
+    };
+  }
+  if (/(triage|триаж|тикет|support|поддерж)/.test(key)) {
+    return {
+      nodes: [
+        { id: "incoming",    type: "trigger", title: "Входящее обращение",sub: "webhook / email / TG" },
+        { id: "classify",    type: "llm",     title: "Классификация",    sub: "баг / вопрос / фича / billing · LLM" },
+        { id: "priority",    type: "llm",     title: "Приоритет",        sub: "critical / high / medium / low · LLM" },
+        { id: "kb_lookup",   type: "step",    title: "Поиск в БЗ",       sub: "готовый ответ или черновик" },
+        { id: "draft_reply", type: "llm",     title: "Черновик ответа",  sub: "по шаблону из БЗ · LLM" },
+        { id: "crm_ticket",  type: "step",    title: "Тикет в CRM",      sub: "{type, priority, draft, account_id}" },
+        { id: "out_normal",  type: "output",  title: "Тикет создан",     sub: "→ CRM",                     settings: { target: "crm" } },
+        { id: "out_escalate",type: "output",  title: "Эскалация",        sub: "→ Slack-алерт специалисту", settings: { target: "slack" } },
+      ],
+      edges: [
+        ["incoming","classify"], ["classify","priority"],
+        ["priority","kb_lookup"], ["kb_lookup","draft_reply"],
+        ["draft_reply","crm_ticket"],
+        ["crm_ticket","out_normal"], ["crm_ticket","out_escalate"],
+      ],
+    };
+  }
+  if (/(lead|лид|qualif|квалиф)/.test(key)) {
+    return {
+      nodes: [
+        { id: "lead_in",    type: "trigger", title: "Новая заявка",      sub: "форма / email / чат → {name, email, company}" },
+        { id: "enrich",     type: "step",    title: "Обогащение",        sub: "web-search · компания · новости" },
+        { id: "bant",       type: "llm",     title: "BANT-скоринг",      sub: "Budget+Authority+Need+Timeline · LLM", settings: { max_score: 100 } },
+        { id: "categorize", type: "step",    title: "Категория",         sub: "hot ≥80 / warm 50-79 / cold <50" },
+        { id: "crm_write",  type: "step",    title: "Запись в CRM",      sub: "тег категории + enriched data" },
+        { id: "out_hot",    type: "output",  title: "Hot-лид",           sub: "→ Slack-алерт + задача сейлзу", settings: { target: "slack" } },
+        { id: "out_warm",   type: "output",  title: "Warm-лид",          sub: "→ фоллоу-ап через 2 дня",       settings: { target: "agent:follow-up" } },
+        { id: "out_cold",   type: "output",  title: "Cold-лид",          sub: "→ автоответ из БЗ",             settings: { target: "kb:cold-response" } },
+      ],
+      edges: [
+        ["lead_in","enrich"], ["enrich","bant"], ["bant","categorize"],
+        ["categorize","crm_write"],
+        ["crm_write","out_hot"], ["crm_write","out_warm"], ["crm_write","out_cold"],
+      ],
+    };
+  }
+  if (/(account|аккаунт|менеджер|crm)/.test(key)) {
+    return {
+      nodes: [
+        { id: "schedule",    type: "trigger", title: "Ежедневно 9:30",   sub: "cron пн-пт",                settings: { cron: "0 9 * * 1-5" } },
+        { id: "webhook",     type: "trigger", title: "CRM-событие",      sub: "смена стадии / новая задача" },
+        { id: "crm_review",  type: "step",    title: "Обзор сделок",     sub: "открытые · last_activity · дедлайны" },
+        { id: "router",      type: "llm",     title: "Роутер действий",  sub: "что нужно по каждой сделке · LLM" },
+        { id: "out_followup",type: "output",  title: "Фоллоу-ап",        sub: "→ Follow-up агент",         settings: { target: "agent:follow-up" } },
+        { id: "out_proposal",type: "output",  title: "Запрос КП",        sub: "→ Proposal Writer",         settings: { target: "agent:proposal-writer" } },
+        { id: "out_remind",  type: "output",  title: "Напоминание",      sub: "→ сейлзу (email)",          settings: { target: "email" } },
+        { id: "out_escalate",type: "output",  title: "Эскалация",        sub: "→ руководителю (>30 дней)", settings: { target: "slack" } },
+      ],
+      edges: [
+        ["schedule","crm_review"], ["webhook","crm_review"],
+        ["crm_review","router"],
+        ["router","out_followup"], ["router","out_proposal"],
+        ["router","out_remind"],   ["router","out_escalate"],
+      ],
+    };
+  }
+  if (/(report|отчёт|финанс|бухгалт)/.test(key)) {
+    return {
+      nodes: [
+        { id: "schedule",    type: "trigger", title: "1-е число · 10:00",sub: "cron ежемесячно",            settings: { cron: "0 10 1 * *" } },
+        { id: "budget_plan", type: "trigger", title: "Плановые показатели",sub: "budget-plan.md · БЗ" },
+        { id: "fetch_sheets",type: "step",    title: "Данные из Sheets", sub: "расходы · поступления · налоги" },
+        { id: "delta_calc",  type: "step",    title: "Расчёт дельт",    sub: "факт vs план по статьям" },
+        { id: "cashflow",    type: "step",    title: "Cash flow",        sub: "остаток_нач + поступления − расходы" },
+        { id: "analyze",     type: "llm",     title: "Анализ",           sub: "топ-3 перерасхода + экономии · LLM" },
+        { id: "out_kb",      type: "output",  title: "Отчёт в БЗ",      sub: "→ knowledge-base",            settings: { target: "kb" } },
+        { id: "out_pdf",     type: "output",  title: "PDF-экспорт",     sub: "→ по запросу",                settings: { target: "export:pdf" } },
+      ],
+      edges: [
+        ["schedule","fetch_sheets"], ["budget_plan","delta_calc"],
+        ["fetch_sheets","delta_calc"], ["delta_calc","cashflow"],
+        ["cashflow","analyze"], ["analyze","out_kb"], ["analyze","out_pdf"],
+      ],
+    };
+  }
+  if (/(hr|recru|рекру|подбор|найм)/.test(key)) {
+    return {
+      nodes: [
+        { id: "resume_in",   type: "trigger", title: "Новое резюме",     sub: "email / webhook" },
+        { id: "job_desc",    type: "trigger", title: "Описание вакансии",sub: "job-descriptions/ · БЗ" },
+        { id: "screen",      type: "llm",     title: "Скрининг",         sub: "must-have / nice-to-have · LLM" },
+        { id: "fit_score",   type: "step",    title: "Fit-score",        sub: "must-have 70% + nice-to-have 30%" },
+        { id: "interview_q", type: "llm",     title: "Вопросы интервью", sub: "5 вопросов под кандидата · LLM" },
+        { id: "pipeline_upd",type: "step",    title: "Обновление воронки",sub: "hr/pipeline.md · БЗ" },
+        { id: "out_invite",  type: "output",  title: "Приглашение",      sub: "→ email (fit ≥70)",           settings: { target: "email" } },
+        { id: "out_reject",  type: "output",  title: "Отказ",            sub: "→ email по шаблону (fit <70)",settings: { target: "email" } },
+      ],
+      edges: [
+        ["resume_in","screen"], ["job_desc","screen"],
+        ["screen","fit_score"],
+        ["fit_score","interview_q"], ["fit_score","pipeline_upd"],
+        ["interview_q","out_invite"], ["pipeline_upd","out_reject"],
+      ],
+    };
+  }
   if (/(content.strat|контент.стратег)/.test(key)) {
     return {
       nodes: [
