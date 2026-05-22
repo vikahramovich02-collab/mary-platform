@@ -555,6 +555,130 @@ function defaultPipelineFor(roleOrId) {
       edges: [["post_in","fetch"], ["fetch","analyze"], ["analyze","out_report"]],
     };
   }
+  if (/(content.strat|контент.стратег)/.test(key)) {
+    return {
+      nodes: [
+        { id: "schedule",     type: "trigger", title: "Четверг 11:00",        sub: "cron еженедельно",       settings: { cron: "0 11 * * 4" } },
+        { id: "brief",        type: "trigger", title: "Бренд-бриф",           sub: "brief.md из БЗ" },
+        { id: "analytics_in", type: "trigger", title: "Отчёт Аналитика",      sub: "показатели прошлой нед." },
+        { id: "trends_in",    type: "trigger", title: "Тренды",               sub: "от Тренд-скаута" },
+        { id: "load_archive", type: "step",    title: "Архив контента",       sub: "последние 4 недели · БЗ" },
+        { id: "balance",      type: "llm",     title: "Баланс пилларсов",     sub: "40/30/20/10 · LLM" },
+        { id: "plan_builder", type: "llm",     title: "Сборка плана",         sub: "7-дневный план · LLM" },
+        { id: "validate",     type: "step",    title: "Валидация",            sub: "разнообразие тем и форматов" },
+        { id: "out_plan",     type: "output",  title: "Контент-план",         sub: "→ БЗ + Маркетолог",       settings: { target: "kb" } },
+        { id: "out_sheets",   type: "output",  title: "Google Sheets",        sub: "→ обновление таблицы",    settings: { target: "google-sheets" } },
+      ],
+      edges: [
+        ["schedule","load_archive"], ["brief","balance"], ["analytics_in","balance"], ["trends_in","balance"],
+        ["load_archive","balance"], ["balance","plan_builder"], ["plan_builder","validate"],
+        ["validate","out_plan"], ["validate","out_sheets"],
+      ],
+    };
+  }
+  if (/(trend.scout|trend_scout|trend-scout|тренд.скаут|тренд.охот)/.test(key)) {
+    return {
+      nodes: [
+        { id: "schedule",      type: "trigger", title: "Среда 8:00",           sub: "cron еженедельно",        settings: { cron: "0 8 * * 3" } },
+        { id: "keywords",      type: "trigger", title: "Ключевые слова",       sub: "trend-keywords.md · БЗ" },
+        { id: "web_fetch",     type: "step",    title: "Web-сёрф",             sub: "5-7 запросов · web-search" },
+        { id: "tg_fetch",      type: "step",    title: "TG-парсинг",           sub: "топ-200 постов недели" },
+        { id: "signal_filter", type: "llm",     title: "Фильтр сигналов",      sub: "≥3 источника = сигнал · LLM" },
+        { id: "stage_assess",  type: "llm",     title: "Оценка стадии",        sub: "emerging / growing / peak · LLM" },
+        { id: "potential",     type: "llm",     title: "Потенциал",            sub: "контент + продукт · LLM" },
+        { id: "out_archive",   type: "output",  title: "Архив трендов",        sub: "→ trends-archive.md в БЗ", settings: { target: "kb" } },
+        { id: "out_marketer",  type: "output",  title: "Дайджест трендов",     sub: "→ Маркетолог",             settings: { target: "agent:marketer" } },
+      ],
+      edges: [
+        ["schedule","web_fetch"], ["keywords","web_fetch"],
+        ["schedule","tg_fetch"],  ["keywords","tg_fetch"],
+        ["web_fetch","signal_filter"], ["tg_fetch","signal_filter"],
+        ["signal_filter","stage_assess"], ["stage_assess","potential"],
+        ["potential","out_archive"], ["potential","out_marketer"],
+      ],
+    };
+  }
+  if (/(proposal|proposal.writer|коммерч.предлож|кп-агент)/.test(key)) {
+    return {
+      nodes: [
+        { id: "crm_event",  type: "trigger", title: "Сделка 'Просит КП'", sub: "webhook из CRM" },
+        { id: "direct_req", type: "trigger", title: "Прямой запрос",      sub: "задача от сейлза" },
+        { id: "load_crm",   type: "step",    title: "Данные из CRM",      sub: "компания, боли, переписка" },
+        { id: "load_kb",    type: "step",    title: "Шаблон + кейсы",     sub: "proposal-template.md · БЗ" },
+        { id: "adapt",      type: "llm",     title: "Адаптация КП",       sub: "под боли клиента · LLM" },
+        { id: "budget",     type: "step",    title: "Расчёт бюджета",     sub: "по прайсу из БЗ" },
+        { id: "compose",    type: "llm",     title: "Финальный документ", sub: "markdown + email · LLM" },
+        { id: "out_review", type: "output",  title: "КП на ревью",        sub: "→ сейлзу (email)",           settings: { target: "email" } },
+      ],
+      edges: [
+        ["crm_event","load_crm"], ["direct_req","load_crm"],
+        ["load_crm","adapt"], ["load_kb","adapt"],
+        ["adapt","budget"], ["budget","compose"],
+        ["compose","out_review"],
+      ],
+    };
+  }
+  if (/(follow.?up|фоллоу.?ап|followup)/.test(key)) {
+    return {
+      nodes: [
+        { id: "schedule",     type: "trigger", title: "Ежедневно 10:00",   sub: "пн-пт · cron",               settings: { cron: "0 10 * * 1-5" } },
+        { id: "staleness_cfg",type: "trigger", title: "Порог N дней",      sub: "настройка паузы (дефолт 3)",  settings: { days: 3 } },
+        { id: "crm_scan",     type: "step",    title: "Сканирование CRM",  sub: "открытые сделки без активности" },
+        { id: "context",      type: "llm",     title: "Контекст сделки",   sub: "стадия + история · LLM" },
+        { id: "compose",      type: "llm",     title: "Фоллоу-ап текст",   sub: "персонализированный · LLM" },
+        { id: "send",         type: "step",    title: "Отправка",          sub: "email или TG" },
+        { id: "log",          type: "step",    title: "Логирование",       sub: "activity в CRM" },
+        { id: "out_digest",   type: "output",  title: "Digest отправленных",sub: "→ CRM activity log",         settings: { target: "crm" } },
+      ],
+      edges: [
+        ["schedule","crm_scan"], ["staleness_cfg","crm_scan"],
+        ["crm_scan","context"], ["context","compose"],
+        ["compose","send"], ["send","log"],
+        ["log","out_digest"],
+      ],
+    };
+  }
+  if (/vip/.test(key)) {
+    return {
+      nodes: [
+        { id: "schedule",     type: "trigger", title: "Ежедневно 8:00",    sub: "cron + webhook",              settings: { cron: "0 8 * * *" } },
+        { id: "webhook",      type: "trigger", title: "VIP-событие",       sub: "webhook по аккаунту" },
+        { id: "vip_list",     type: "step",    title: "Список VIP",        sub: "vip-accounts.md · БЗ или CRM-тег" },
+        { id: "crm_check",    type: "step",    title: "Проверка CRM",      sub: "last_contact · статус · задачи" },
+        { id: "news_search",  type: "step",    title: "Новости клиента",   sub: "web-search за 7 дней" },
+        { id: "flag_analyzer",type: "llm",     title: "Анализ флагов",     sub: "риск vs возможность · LLM" },
+        { id: "alert_gen",    type: "llm",     title: "Генерация алерта",  sub: "action item + urgency · LLM" },
+        { id: "out_slack",    type: "output",  title: "Slack-алерт",       sub: "→ аккаунт-менеджеру",         settings: { target: "slack" } },
+      ],
+      edges: [
+        ["schedule","vip_list"], ["webhook","vip_list"],
+        ["vip_list","crm_check"], ["vip_list","news_search"],
+        ["crm_check","flag_analyzer"], ["news_search","flag_analyzer"],
+        ["flag_analyzer","alert_gen"], ["alert_gen","out_slack"],
+      ],
+    };
+  }
+  if (/(weekly.report|weekly_report|еженедел.*отчёт)/.test(key)) {
+    return {
+      nodes: [
+        { id: "schedule",     type: "trigger", title: "Понедельник 9:00",  sub: "cron еженедельно",            settings: { cron: "0 9 * * 1" } },
+        { id: "targets",      type: "trigger", title: "Плановые показатели",sub: "targets.md · БЗ" },
+        { id: "fetch_sheets", type: "step",    title: "Метрики из Sheets", sub: "лиды · конверсии · выручка · расходы" },
+        { id: "fetch_crm",    type: "step",    title: "Данные CRM",        sub: "сделки · лиды · закрытия за неделю" },
+        { id: "delta_calc",   type: "step",    title: "Расчёт дельт",      sub: "(факт−план)/план×100 по каждой метрике" },
+        { id: "analyze",      type: "llm",     title: "Анализ недели",     sub: "топ-3 достижения + проблемы · LLM" },
+        { id: "recommend",    type: "llm",     title: "Приоритеты",        sub: "2-3 на следующую неделю · LLM" },
+        { id: "out_kb",       type: "output",  title: "Отчёт в БЗ",        sub: "→ knowledge-base",             settings: { target: "kb" } },
+        { id: "out_slack",    type: "output",  title: "Slack-дайджест",    sub: "→ команде",                    settings: { target: "slack" } },
+      ],
+      edges: [
+        ["schedule","fetch_sheets"], ["schedule","fetch_crm"], ["targets","delta_calc"],
+        ["fetch_sheets","delta_calc"], ["fetch_crm","delta_calc"],
+        ["delta_calc","analyze"], ["analyze","recommend"],
+        ["recommend","out_kb"], ["recommend","out_slack"],
+      ],
+    };
+  }
   // Дефолтный простой pipeline для незнакомой роли
   return {
     nodes: [
