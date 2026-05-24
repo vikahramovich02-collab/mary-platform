@@ -4,7 +4,7 @@ import { ic } from "./icons.jsx";
 import { renderMarkdown, parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
 import { BuildNode, AgentNodeExpanded } from "./build-nodes.jsx";
 import { MaryInputBox, useTypewriterPlaceholder } from "./chat-input.jsx";
-import { ToolsTrail } from "./chat-panel.jsx";
+import { ToolsTrail, zoomBtn } from "./chat-panel.jsx";
 
 export function ChatMaryPage() {
   const [conversations, setConversations] = useState([]);

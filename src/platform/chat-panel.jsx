@@ -30,7 +30,7 @@ const chatBtn = (variant) => ({
   background: variant === "secondary" ? color.white : "transparent",
   color: "#262633",
 });
-const zoomBtn = {
+export const zoomBtn = {
   display: "inline-flex", alignItems: "center", justifyContent: "center",
   padding: 0,
   background: "transparent", border: "none",
