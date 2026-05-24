@@ -125,6 +125,41 @@ export const AGENTS = [
       { title: "Идеи постов",        status: "ready",   unread: true,  kb: "Идеи постов"      },
       { title: "Концепты постов",    status: "pending", unread: false, kb: "Концепты"         },
     ],
+    flow: {
+      nodes: [
+        // ── ВХОД ──
+        { id: "in-insights",  kind: "input",    title: "Инсайт-карточки",   sub: "от Ресерчера",          ox: -520, oy: -120 },
+        { id: "in-brand",     kind: "input",    title: "Контекст бренда",   sub: "ToV, ниша, аудитория",  ox: -520, oy:   40 },
+        { id: "in-history",   kind: "input",    title: "История постов",    sub: "что уже публиковали",   ox: -520, oy:  200 },
+
+        // ── АНАЛИЗ ──
+        { id: "s1-cluster",   kind: "llm-step", title: "Кластеризатор",     sub: "темы недели · LLM",     ox: -240, oy:  -40 },
+        { id: "s2-relevance", kind: "llm-step", title: "Фильтр релевантности", sub: "ниша Mary · LLM",   ox: -240, oy:  120 },
+
+        // ── ГЕНЕРАЦИЯ ──
+        { id: "s3-ideas",     kind: "llm-step", title: "Генератор идей",    sub: "3 идеи с обоснованием", ox:   40, oy:  -40 },
+        { id: "s4-angle",     kind: "llm-step", title: "Поиск угла подачи", sub: "что своего · LLM",      ox:   40, oy:  120 },
+
+        // ── УПАКОВКА ──
+        { id: "s5-concepts",  kind: "llm-step", title: "Упаковщик концептов", sub: "идея + угол + формат", ox:  280, oy:   40 },
+
+        // ── ВЫХОД ──
+        { id: "out-ideas",    kind: "next-agent",  title: "Идеи постов",    sub: "→ Копирайтер",          ox:  520, oy: -80 },
+        { id: "out-concepts", kind: "output-kb",   title: "Концепты",       sub: "→ База знаний",         ox:  520, oy:  80 },
+      ],
+      edges: [
+        ["in-insights",  "s1-cluster"],
+        ["in-history",   "s2-relevance"],
+        ["in-brand",     "s2-relevance"],
+        ["s1-cluster",   "s3-ideas"],
+        ["s2-relevance", "s3-ideas"],
+        ["s3-ideas",     "s4-angle"],
+        ["s3-ideas",     "s5-concepts"],
+        ["s4-angle",     "s5-concepts"],
+        ["s5-concepts",  "out-ideas"],
+        ["s5-concepts",  "out-concepts"],
+      ],
+    },
     tasks: [
       { title: "Идеи на неделю",         desc: "по инсайт-карточкам ресерчера", cron: "cron weekly mon 10:00", tool: "Маркетолог Mary",  out: "Идеи",     status: "На апруве" },
       { title: "Оценить релевантность",  desc: "по нишам Mary",                 cron: null,                    tool: "Маркетолог Mary",  out: "Идеи",     status: "Готово" },
@@ -163,6 +198,37 @@ export const AGENTS = [
       { title: "Черновики текстов", status: "ready",   unread: true,  kb: "Готовые тексты" },
       { title: "A/B варианты",      status: "pending", unread: false, kb: "A/B варианты"   },
     ],
+    flow: {
+      nodes: [
+        // ── ВХОД ──
+        { id: "in-idea",    kind: "input",    title: "Идея поста",       sub: "от Маркетолога",          ox: -520, oy: -120 },
+        { id: "in-tov",     kind: "input",    title: "ToV бриф",         sub: "тон, длина, стиль Mary",  ox: -520, oy:   40 },
+        { id: "in-archive", kind: "input",    title: "Архив постов",     sub: "что уже выходило",        ox: -520, oy:  200 },
+
+        // ── НАПИСАНИЕ ──
+        { id: "s1-hook",    kind: "llm-step", title: "Хук",              sub: "первое предложение · LLM", ox: -220, oy: -80 },
+        { id: "s2-body",    kind: "llm-step", title: "Тело поста",       sub: "суть + аргументы · LLM",  ox: -220, oy:  80 },
+
+        // ── ДОРАБОТКА ──
+        { id: "s3-cta",     kind: "llm-step", title: "CTA + концовка",   sub: "призыв к действию · LLM", ox:   60, oy:  -40 },
+        { id: "s4-ab",      kind: "llm-step", title: "A/B вариант",      sub: "альтернативный хук · LLM", ox:   60, oy:  120 },
+
+        // ── ВЫХОД ──
+        { id: "out-text",   kind: "next-agent",  title: "Готовый текст", sub: "→ Дизайнер",              ox:  520, oy:  -80 },
+        { id: "out-ab",     kind: "output-kb",   title: "A/B варианты",  sub: "→ База знаний",           ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-idea",    "s1-hook"],
+        ["in-tov",     "s1-hook"],
+        ["in-archive", "s2-body"],
+        ["in-tov",     "s2-body"],
+        ["s1-hook",    "s3-cta"],
+        ["s2-body",    "s3-cta"],
+        ["s1-hook",    "s4-ab"],
+        ["s3-cta",     "out-text"],
+        ["s4-ab",      "out-ab"],
+      ],
+    },
     tasks: [
       { title: "Написать текст по идее",  desc: "хук + тело + призыв", cron: null, tool: "Копирайтер Mary", out: "Тексты", status: "В работе" },
       { title: "Сделать A/B варианты",    desc: "2 версии на идею",    cron: null, tool: "Копирайтер Mary", out: "Тексты", status: "В работе" },
@@ -201,6 +267,33 @@ export const AGENTS = [
       { title: "Метрики и охваты",       status: "ready",   unread: false, kb: "Аналитика поста"       },
       { title: "Рекомендации Маркетологу", status: "pending", unread: false, kb: "Рекомендации на след." },
     ],
+    flow: {
+      nodes: [
+        // ── ВХОД ──
+        { id: "in-post",    kind: "input",    title: "Опубликованный пост", sub: "ссылка + текст",          ox: -520, oy:  -80 },
+        { id: "in-history", kind: "input",    title: "История постов",      sub: "архив метрик из БЗ",      ox: -520, oy:   80 },
+
+        // ── СБОР ДАННЫХ ──
+        { id: "s1-fetch",   kind: "subagent", title: "Сбор метрик",         sub: "охват · ER · репосты · CTR", ox: -240, oy:  -80 },
+        { id: "s2-compare", kind: "llm-step", title: "Сравнение",           sub: "vs. предыдущие 10 · LLM", ox: -240, oy:   80 },
+
+        // ── АНАЛИЗ ──
+        { id: "s3-why",     kind: "llm-step", title: "Гипотезы",            sub: "почему зашло / не зашло", ox:   40, oy:    0 },
+
+        // ── ВЫХОД ──
+        { id: "out-report", kind: "output-kb",  title: "Отчёт по посту",    sub: "→ База знаний",           ox:  520, oy:  -80 },
+        { id: "out-rec",    kind: "next-agent",  title: "Рекомендации",      sub: "→ Маркетолог",            ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-post",    "s1-fetch"],
+        ["in-history", "s2-compare"],
+        ["s1-fetch",   "s2-compare"],
+        ["s1-fetch",   "s3-why"],
+        ["s2-compare", "s3-why"],
+        ["s3-why",     "out-report"],
+        ["s3-why",     "out-rec"],
+      ],
+    },
     tasks: [
       { title: "Снять метрики поста",         desc: "через 24ч после публикации", cron: "cron +24h after publish", tool: "TG Stat",       out: "Аналитика"    },
       { title: "Сравнить с прошлыми",         desc: "тренд по каналу",            cron: null,                       tool: "Аналитик Mary", out: "Аналитика"    },
@@ -240,6 +333,38 @@ export const AGENTS = [
       { title: "3 варианта обложки",      status: "ready",   unread: true,  kb: "Обложки постов"  },
       { title: "Финальный визуал",        status: "pending", unread: false, kb: "Финал"           },
     ],
+    flow: {
+      nodes: [
+        // ── ВХОД ──
+        { id: "in-concept",  kind: "input",    title: "Концепт поста",      sub: "текст + идея · Маркетолог",  ox: -520, oy: -120 },
+        { id: "in-brand",    kind: "input",    title: "Брендбук",           sub: "цвета, шрифты, стиль",       ox: -520, oy:   40 },
+        { id: "in-text",     kind: "input",    title: "Готовый текст",      sub: "от Копирайтера",             ox: -520, oy:  200 },
+
+        // ── ПРОМПТЫ ──
+        { id: "s1-prompts",  kind: "llm-step", title: "Генератор промптов", sub: "3 стиля: minimal, bold, editorial", ox: -220, oy:   40 },
+
+        // ── ГЕНЕРАЦИЯ ──
+        { id: "s2-v1",       kind: "subagent", title: "Вариант 1",          sub: "minimalist · image-gen",     ox:   60, oy: -160 },
+        { id: "s2-v2",       kind: "subagent", title: "Вариант 2",          sub: "editorial · image-gen",      ox:   60, oy:  -20 },
+        { id: "s2-v3",       kind: "subagent", title: "Вариант 3",          sub: "bold · image-gen",           ox:   60, oy:  120 },
+
+        // ── ВЫХОД ──
+        { id: "out-covers",  kind: "next-agent",  title: "3 варианта обложки", sub: "→ на апрув",              ox:  520, oy:  -80 },
+        { id: "out-final",   kind: "output-kb",   title: "Финальный визуал",   sub: "→ База знаний",           ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-concept",  "s1-prompts"],
+        ["in-brand",    "s1-prompts"],
+        ["in-text",     "s1-prompts"],
+        ["s1-prompts",  "s2-v1"],
+        ["s1-prompts",  "s2-v2"],
+        ["s1-prompts",  "s2-v3"],
+        ["s2-v1",       "out-covers"],
+        ["s2-v2",       "out-covers"],
+        ["s2-v3",       "out-covers"],
+        ["out-covers",  "out-final"],
+      ],
+    },
     tasks: [
       { title: "Сгенерить 3 обложки",        desc: "разные палитры и композиции", cron: null, tool: "flux-pro",      out: "Обложки" },
       { title: "Адаптировать под mobile",    desc: "превью в ленте ТГ",           cron: null, tool: "Дизайнер Mary", out: "Обложки" },
