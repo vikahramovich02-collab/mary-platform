@@ -250,6 +250,28 @@ function defaultProfileFor(roleOrId) {
 - Начало не с «В современном мире» и аналогов — сразу в суть.` };
   }
 
+  if (/(analyst|аналитик)/.test(key)) {
+    return { ...base, tools: ["telegram-api", "knowledge-base"], memory: "long",
+      systemPrompt: `Ты — Аналитик: снимаешь метрики опубликованных постов и формируешь инсайты.
+
+Триггер: пост опубликован (от publish_post или напрямую от пользователя).
+
+Шаги:
+1. Подожди 24–48ч после публикации — пусть метрики устоятся.
+2. Через telegram-api получи охват, реакции, комменты, шеры, CTR (если есть ссылка).
+3. Сравни с предыдущими 10 постами из БЗ — найди аномалии (вверх/вниз).
+4. Сформулируй 2–3 инсайта: что зашло, что нет, почему (гипотеза).
+5. Дай 1 конкретную рекомендацию для следующего поста.
+6. Сохрани отчёт в БЗ: analytics/{post_id}.md.
+
+Выход: {охват, ER, инсайты[], рекомендация} → Маркетологу и в БЗ.
+
+Правила:
+- Не делай выводы раньше 24ч — слишком мало данных.
+- Сравнивай только с постами того же типа (текст vs картинка vs видео).
+- Один инсайт = одна идея, не список списков.` };
+  }
+
   if (/(designer|дизайн)/.test(key)) {
     return { ...base, model: "gpt-4.1", tools: ["image-generation", "knowledge-base"], memory: "short",
       systemPrompt: `Ты — Дизайнер: создаёшь визуальный контент в брендстиле.
@@ -3852,8 +3874,14 @@ app.patch("/webhook/mary/agents/:deptId/:agentId/profile", (req, res) => {
     const data = loadDepartments();
     const dept = data.departments.find(d => d.id === deptId);
     if (!dept) return res.status(404).json({ error: "department not found" });
-    const agent = (dept.agents || []).find(a => a.id === agentId);
-    if (!agent) return res.status(404).json({ error: "agent not found" });
+    if (!dept.agents) dept.agents = [];
+    let agent = dept.agents.find(a => a.id === agentId);
+    if (!agent) {
+      // Upsert: создаём агента с дефолтным профилем
+      const profile = defaultProfileFor(agentId);
+      agent = { id: agentId, role: agentId, ...profile, createdAt: new Date().toISOString() };
+      dept.agents.push(agent);
+    }
     for (const k of allowed) {
       if (patch[k] !== undefined) agent[k] = patch[k];
     }
@@ -4075,6 +4103,49 @@ ${obs ? `Observations:\n${obs}\n` : ""}
     res.status(500).json({ error: e.message });
   }
 });
+
+// Сидируем 5 стандартных агентов СММ-отдела если их ещё нет
+function seedSmmAgents() {
+  try {
+    const SMM_AGENTS = [
+      { id: "researcher",  role: "researcher",  label: "Ресерчер",   color: "#3F95FF" },
+      { id: "marketer",    role: "marketer",    label: "Маркетолог", color: "#FF8B3D" },
+      { id: "copywriter",  role: "copywriter",  label: "Копирайтер", color: "#7A86FF" },
+      { id: "analyst",     role: "analyst",     label: "Аналитик",   color: "#FF6FB3" },
+      { id: "designer",    role: "designer",    label: "Дизайнер",   color: "#7A86FF" },
+    ];
+    const data = loadDepartments();
+    const smm = data.departments.find(d => d.id === "smm");
+    if (!smm) return;
+    if (!smm.agents) smm.agents = [];
+    const existingIds = new Set(smm.agents.map(a => a.id));
+    let added = 0;
+    for (const agent of SMM_AGENTS) {
+      if (existingIds.has(agent.id)) continue;
+      const profile = defaultProfileFor(agent.role);
+      const pipeline = defaultPipelineFor(agent.role);
+      smm.agents.push({
+        id:             agent.id,
+        label:          agent.label,
+        role:           agent.role,
+        color:          agent.color,
+        model:          profile.model,
+        systemPrompt:   profile.systemPrompt,
+        tools:          profile.tools,
+        memory:         profile.memory,
+        responseFormat: profile.responseFormat,
+        pipeline,
+        createdAt:      new Date().toISOString(),
+      });
+      added++;
+    }
+    if (added > 0) {
+      saveDepartments(data);
+      console.log(`🤖 Seeded ${added} SMM agents (researcher, marketer, copywriter, analyst, designer)`);
+    }
+  } catch (e) { console.log("⚠️  seedSmmAgents failed:", e.message); }
+}
+seedSmmAgents();
 
 // Миграция: заполняем должностные инструкции у существующих агентов где пусто
 function migrateAgentProfiles() {
