@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mary AI</title>
   <style>* { margin: 0; padding: 0; box-sizing: border-box; }</style>
+  <script>
+    window.onerror = function(msg, src, line, col, err) {
+      document.body.innerHTML = '<div style="padding:30px;font-family:monospace;white-space:pre-wrap;background:#fff;color:#c00"><b>JS Error:</b>\n' + msg + '\n\nSource: ' + src + ':' + line + ':' + col + '\n\n' + (err && err.stack ? err.stack : '') + '</div>';
+    };
+    window.onunhandledrejection = function(e) {
+      document.body.innerHTML = '<div style="padding:30px;font-family:monospace;white-space:pre-wrap;background:#fff;color:#c00"><b>Unhandled Promise Rejection:</b>\n' + (e.reason ? (e.reason.stack || String(e.reason)) : String(e)) + '</div>';
+    };
+  </script>
 </head>
 <body>
   <div id="root"></div>
