@@ -9,6 +9,7 @@ import { BuildNode, AgentNodeExpanded } from "../build-nodes.jsx";
 import { DeptChatWelcome } from "../dept-chat-welcome.jsx";
 import { MaryInputBox, useTypewriterPlaceholder } from "../chat-input.jsx";
 import { ChatPanel, ChatHeader, FilterBar, ChatMessage, TypingIndicator, BuildCard, ToolsTrail, ToolStatusChip, FileActionRow, PublishedRow, TextCard, VisualCard, FinalPostCard, ToolTrace, ApproveActions, ResearchCard, InsightsCard, IdeasCard, toolLabel } from "../chat-panel.jsx";
+import { ChatMaryPage, ActivityPanel, ArtifactView, ActivityLog, BuildCanvas, ChatWelcome, ChatItem, OptionsBlock, AgentChatBubble, ChatBubble, ActionBar } from "../chat-mary-page.jsx";
 
 // Реплика экрана Figma node 5522:2547 (file: o1syNp93H3v2dyA3JHp4em — Mary)
 // Сабпейдж "Тг-канал" в отделе "СММ".
