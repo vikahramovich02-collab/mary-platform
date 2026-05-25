@@ -393,8 +393,24 @@ export const INSTAGRAM_AGENTS = [
     id: "researcher", label: "Ресерчер", color: "#3F95FF", x: 60, y: 290, hasUpdate: true, unread: 1,
     role: "Исследует тренды и конкурентов в Instagram",
     skills: ["Анализ конкурентов", "Тренды Reels", "Анализ хэштегов", "Бенчмарки ER"],
-    tools: ["База знаний", "Web browser"],
+    tools: ["База знаний", "Web browser", "Instagram API"],
     stats: { week: 8, label: "ресёрчей" },
+    flow: {
+      nodes: [
+        { id: "in-comps",   kind: "input",    title: "Конкуренты",        sub: "список аккаунтов из БЗ",     ox: -520, oy: -120 },
+        { id: "in-trends",  kind: "input",    title: "Триггеры трендов",  sub: "Reels, хэштеги, аудио",      ox: -520, oy:   40 },
+        { id: "s1-parser",  kind: "subagent", title: "Парсер аккаунтов",  sub: "охват · ER · формат",        ox: -220, oy: -80 },
+        { id: "s2-hashtag", kind: "subagent", title: "Хэштег-сканер",     sub: "топ по нише",                ox: -220, oy:  80 },
+        { id: "s3-cluster", kind: "llm-step", title: "Кластер трендов",   sub: "тренды + форматы · LLM",     ox:   60, oy:  -40 },
+        { id: "out-ins",    kind: "next-agent",  title: "Инсайты недели", sub: "→ Маркетолог",               ox:  520, oy:  -80 },
+        { id: "out-kb",     kind: "output-kb",   title: "Топ-посты",      sub: "→ База знаний",              ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-comps","s1-parser"],["in-trends","s2-hashtag"],
+        ["s1-parser","s3-cluster"],["s2-hashtag","s3-cluster"],
+        ["s3-cluster","out-ins"],["s3-cluster","out-kb"],
+      ],
+    },
   },
   {
     id: "marketer", label: "Маркетолог", color: "#FF8B3D", x: 330, y: 290, hasUpdate: false, unread: 0,
@@ -402,6 +418,22 @@ export const INSTAGRAM_AGENTS = [
     skills: ["Контент-стратегия Instagram", "Планирование Reels", "Stories-воронки"],
     tools: ["База знаний"],
     stats: { week: 6, label: "планов" },
+    flow: {
+      nodes: [
+        { id: "in-research", kind: "input",    title: "Инсайты Ресерчера", sub: "тренды недели",             ox: -520, oy: -120 },
+        { id: "in-brief",    kind: "input",    title: "Бренд-бриф",        sub: "ToV, цели, аудитория",      ox: -520, oy:   40 },
+        { id: "s1-ideas",    kind: "llm-step", title: "Генерация идей",    sub: "посты / Reels / Stories",   ox: -220, oy:  -40 },
+        { id: "s2-rank",     kind: "llm-step", title: "Приоритизация",     sub: "охват × бренд × новизна",   ox:   60, oy:  -40 },
+        { id: "out-posts",   kind: "next-agent", title: "Идеи постов",     sub: "→ Копирайтер",              ox:  520, oy: -160 },
+        { id: "out-video",   kind: "next-agent", title: "Концепты Reels",  sub: "→ Видеограф",               ox:  520, oy:  -40 },
+        { id: "out-stories", kind: "next-agent", title: "Темы Stories",    sub: "→ Stories-мейкер",          ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-research","s1-ideas"],["in-brief","s1-ideas"],
+        ["s1-ideas","s2-rank"],
+        ["s2-rank","out-posts"],["s2-rank","out-video"],["s2-rank","out-stories"],
+      ],
+    },
   },
   {
     id: "copywriter", label: "Копирайтер", color: "#7A86FF", x: 600, y: 60, hasUpdate: false, unread: 0,
@@ -409,6 +441,23 @@ export const INSTAGRAM_AGENTS = [
     skills: ["Посты с хуком", "Подписи к Reels", "Хэштег-наборы"],
     tools: ["База знаний"],
     stats: { week: 12, label: "постов" },
+    flow: {
+      nodes: [
+        { id: "in-idea",    kind: "input",    title: "Идея поста",        sub: "от Маркетолога",             ox: -520, oy: -120 },
+        { id: "in-tov",     kind: "input",    title: "ToV бриф",          sub: "тон и стиль аккаунта",       ox: -520, oy:   40 },
+        { id: "s1-hook",    kind: "llm-step", title: "Хук (первая строка)", sub: "цепляет за 2 сек · LLM",  ox: -200, oy: -80 },
+        { id: "s2-caption", kind: "llm-step", title: "Подпись поста",     sub: "история + CTA · LLM",        ox: -200, oy:  80 },
+        { id: "s3-hashtags",kind: "subagent", title: "Хэштег-подборщик", sub: "30 тегов по нише",           ox:   80, oy:  -40 },
+        { id: "out-text",   kind: "next-agent", title: "Готовый текст",   sub: "→ Дизайнер",                 ox:  520, oy:  -80 },
+        { id: "out-kb",     kind: "output-kb",  title: "Архив текстов",   sub: "→ База знаний",              ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-idea","s1-hook"],["in-tov","s1-hook"],
+        ["in-idea","s2-caption"],["in-tov","s2-caption"],
+        ["s1-hook","s3-hashtags"],["s2-caption","s3-hashtags"],
+        ["s3-hashtags","out-text"],["s3-hashtags","out-kb"],
+      ],
+    },
   },
   {
     id: "videographer", label: "Видеограф", color: "#34C759", x: 600, y: 190, hasUpdate: false, unread: 0,
@@ -416,6 +465,26 @@ export const INSTAGRAM_AGENTS = [
     skills: ["Сценарии Reels", "Монтаж вертикального видео", "Саунддизайн"],
     tools: ["Видео-генератор", "База знаний"],
     stats: { week: 4, label: "видео" },
+    flow: {
+      nodes: [
+        { id: "in-concept", kind: "input",    title: "Концепт Reels",     sub: "от Маркетолога",             ox: -520, oy: -120 },
+        { id: "in-tov",     kind: "input",    title: "Стиль бренда",      sub: "цвета, темп, tone",          ox: -520, oy:   40 },
+        { id: "s1-script",  kind: "subagent", title: "Сценарист",         sub: "структура + текст · LLM",    ox: -200, oy: -120 },
+        { id: "s2-shot",    kind: "subagent", title: "Оператор",          sub: "раскадровка + съёмка",       ox: -200, oy:    0 },
+        { id: "s3-sound",   kind: "subagent", title: "Саунд-дизайнер",   sub: "трек + синхрон",             ox: -200, oy:  120 },
+        { id: "s4-edit",    kind: "subagent", title: "Монтажёр",          sub: "нарезка + эффекты",          ox:   80, oy:  -40 },
+        { id: "s5-cover",   kind: "llm-step", title: "Обложка Reels",    sub: "превью с хуком",             ox:   80, oy:  100 },
+        { id: "out-video",  kind: "next-agent", title: "Готовый Reels",   sub: "→ Дизайнер",                 ox:  520, oy:  -80 },
+        { id: "out-kb",     kind: "output-kb",  title: "Видео-архив",     sub: "→ База знаний",              ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-concept","s1-script"],["in-tov","s1-script"],
+        ["in-concept","s2-shot"],["in-tov","s3-sound"],
+        ["s1-script","s2-shot"],["s2-shot","s4-edit"],
+        ["s3-sound","s4-edit"],["s4-edit","s5-cover"],
+        ["s4-edit","out-video"],["s5-cover","out-kb"],
+      ],
+    },
   },
   {
     id: "stories", label: "Stories-мейкер", color: "#FF6FB3", x: 600, y: 320, hasUpdate: false, unread: 0,
@@ -423,6 +492,23 @@ export const INSTAGRAM_AGENTS = [
     skills: ["Stories с вовлечением", "Опросы и квизы", "Хайлайты"],
     tools: ["Шаблоны Stories", "База знаний"],
     stats: { week: 10, label: "stories" },
+    flow: {
+      nodes: [
+        { id: "in-theme",  kind: "input",    title: "Тема Stories",       sub: "от Маркетолога",             ox: -520, oy: -120 },
+        { id: "in-brand",  kind: "input",    title: "Бренд-кит",          sub: "цвета, шрифты, стикеры",     ox: -520, oy:   40 },
+        { id: "s1-script", kind: "subagent", title: "Сценарист Stories", sub: "серия из 5–10 экранов",      ox: -200, oy: -80 },
+        { id: "s2-design", kind: "subagent", title: "Дизайнер шаблонов", sub: "макеты по бренду",           ox: -200, oy:  80 },
+        { id: "s3-inter",  kind: "subagent", title: "UX-взаимодействие", sub: "опросы, квизы, слайдеры",    ox:   80, oy:  -40 },
+        { id: "s4-anim",   kind: "subagent", title: "Аниматор",          sub: "переходы + анимации",        ox:   80, oy:  100 },
+        { id: "out-pack",  kind: "next-agent", title: "Пакет Stories",    sub: "→ Дизайнер",                 ox:  520, oy:  -80 },
+        { id: "out-hl",    kind: "output-kb",  title: "Хайлайты",         sub: "→ База знаний",              ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-theme","s1-script"],["in-brand","s2-design"],
+        ["s1-script","s3-inter"],["s2-design","s3-inter"],
+        ["s3-inter","s4-anim"],["s4-anim","out-pack"],["s4-anim","out-hl"],
+      ],
+    },
   },
   {
     id: "designer", label: "Дизайнер", color: "#7A86FF", x: 600, y: 450, hasUpdate: false, unread: 0,
@@ -430,6 +516,24 @@ export const INSTAGRAM_AGENTS = [
     skills: ["Карточки постов", "Обложки Reels", "Визуалы Stories"],
     tools: ["Imagen", "База знаний"],
     stats: { week: 8, label: "дизайнов" },
+    flow: {
+      nodes: [
+        { id: "in-text",    kind: "input",    title: "Текст поста",        sub: "от Копирайтера",             ox: -520, oy: -160 },
+        { id: "in-video",   kind: "input",    title: "Reels-файл",         sub: "от Видеографа",              ox: -520, oy:  -40 },
+        { id: "in-stories", kind: "input",    title: "Пакет Stories",      sub: "от Stories-мейкера",         ox: -520, oy:   80 },
+        { id: "s1-concept", kind: "llm-step", title: "Концепт визуала",   sub: "цвет + компоновка · LLM",    ox: -180, oy: -80 },
+        { id: "s2-render",  kind: "subagent", title: "Генератор изображений", sub: "Higgsfield / SDXL",      ox:   80, oy: -120 },
+        { id: "s3-cover",   kind: "subagent", title: "Обложка Reels",     sub: "превью · 9:16",              ox:   80, oy:    0 },
+        { id: "s4-kit",     kind: "subagent", title: "Дизайн-кит Stories", sub: "5–10 экранов",              ox:   80, oy:  120 },
+        { id: "out-post",   kind: "next-agent", title: "Готовый пост",     sub: "→ Аналитик",                 ox:  520, oy:  -80 },
+        { id: "out-kb",     kind: "output-kb",  title: "Медиа-библиотека", sub: "→ База знаний",              ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-text","s1-concept"],["in-video","s1-concept"],["in-stories","s1-concept"],
+        ["s1-concept","s2-render"],["s1-concept","s3-cover"],["s1-concept","s4-kit"],
+        ["s2-render","out-post"],["s3-cover","out-kb"],["s4-kit","out-kb"],
+      ],
+    },
   },
   {
     id: "analyst", label: "Аналитик", color: "#FF6FB3", x: 600, y: 560, hasUpdate: false, unread: 0,
@@ -437,6 +541,22 @@ export const INSTAGRAM_AGENTS = [
     skills: ["Метрики Instagram", "Анализ Reels", "Отчёты Stories"],
     tools: ["Instagram Insights", "База знаний"],
     stats: { week: 4, label: "отчётов" },
+    flow: {
+      nodes: [
+        { id: "in-post",   kind: "input",    title: "Опубликованный пост", sub: "пост / Reels / Story",       ox: -520, oy: -80 },
+        { id: "in-hist",   kind: "input",    title: "Исторические данные", sub: "архив метрик из БЗ",         ox: -520, oy:  80 },
+        { id: "s1-reach",  kind: "subagent", title: "Парсер охватов",     sub: "Instagram Insights API",      ox: -200, oy: -80 },
+        { id: "s2-er",     kind: "subagent", title: "ER-калькулятор",     sub: "лайки + комменты + сохр.",    ox: -200, oy:  80 },
+        { id: "s3-insight",kind: "llm-step", title: "Синтез инсайтов",    sub: "что сработало · LLM",         ox:   80, oy:  -40 },
+        { id: "out-report",kind: "output-kb",  title: "Отчёт по посту",   sub: "→ База знаний",               ox:  520, oy:  -80 },
+        { id: "out-recs",  kind: "next-agent", title: "Рекомендации",     sub: "→ Маркетолог",                ox:  520, oy:   80 },
+      ],
+      edges: [
+        ["in-post","s1-reach"],["in-hist","s2-er"],
+        ["s1-reach","s3-insight"],["s2-er","s3-insight"],
+        ["s3-insight","out-report"],["s3-insight","out-recs"],
+      ],
+    },
   },
 ];
 
