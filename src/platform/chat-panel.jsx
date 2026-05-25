@@ -5,6 +5,7 @@ import { AGENTS } from "./agents-config.js";
 import { usePeople, MOCK_PEOPLE } from "./people.js";
 import { DeptChatWelcome } from "./dept-chat-welcome.jsx";
 import { ChatMessage } from "./chat-cards.jsx";
+import { AgentsLog, RunResultPanel, JudgeCard } from "./pages/sandbox-page.jsx";
 
 // ── Shared style constants ───────────────────────────────────
 const cardWrap = {
@@ -480,6 +481,68 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
       return { ...a, relevance: rel, load };
     }).sort((a, b) => (b.relevance - b.load) - (a.relevance - a.load));
   }
+  async function runPipeline(topic, deptId = "smm") {
+    const runId = "pipeline-" + Date.now();
+    setAllMessages(prev => [...prev, {
+      id: runId, agentId: "mary", type: "pipeline_run",
+      time: nowTime(), topic, deptId, agents: [], running: true, judge: null,
+    }]);
+    try {
+      const res = await fetch(`/api/mary/departments/${deptId}/sandbox/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: topic, dryRun: false, judge: false }),
+      });
+      if (!res.body) throw new Error("no stream");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() || "";
+        for (const block of blocks) {
+          let event = "message", dataStr = "";
+          for (const line of block.split("\n")) {
+            if (line.startsWith("event:")) event = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
+          }
+          if (!dataStr) continue;
+          let data; try { data = JSON.parse(dataStr); } catch { continue; }
+          if (event === "agent_start") {
+            setAllMessages(prev => prev.map(m => m.id === runId
+              ? { ...m, agents: [...m.agents, { id: data.agentId, role: data.role, status: "running" }] }
+              : m));
+          } else if (event === "agent_end") {
+            setAllMessages(prev => prev.map(m => m.id === runId
+              ? { ...m, agents: m.agents.map(a => a.id === data.agentId
+                  ? { ...a, status: data.error ? "error" : "done", output: data.output, error: data.error, durationMs: data.durationMs, tokens: data.tokens, costUsd: data.costUsd }
+                  : a) }
+              : m));
+          } else if (event === "judge_end") {
+            setAllMessages(prev => prev.map(m => m.id === runId ? { ...m, judge: data } : m));
+          } else if (event === "done") {
+            setAllMessages(prev => prev.map(m => m.id === runId ? { ...m, running: false } : m));
+          }
+        }
+      }
+    } catch {
+      setAllMessages(prev => prev.map(m => m.id === runId ? { ...m, running: false } : m));
+    }
+  }
+
+  function handleWelcomePick(action) {
+    const content = typeof action === "string" ? action : (action?.content || "");
+    if (/прогон|запусти|пайплайн/i.test(content)) {
+      appendUser(content);
+      runPipeline(content.slice(0, 80));
+    } else {
+      appendUser(content);
+    }
+  }
+
   function appendUser(content) {
     setAllMessages(prev => [...prev, { id: "u" + Date.now() + Math.random(), agentId: "user", time: nowTime(), text: content }]);
     if (conversationId) {
@@ -849,9 +912,17 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
     const parts = [];
     attached.forEach(a => parts.push(a.kind === "kb" ? `[КБ: ${a.name}]` : a.name));
     if (text.trim()) parts.push(text.trim());
-    if (parts.length) appendUser(parts.join(" "));
+    const content = parts.join(" ");
     setText("");
     setAttached([]);
+    if (!content) return;
+    const pipelineMatch = content.match(/^запусти(?:ть)?\s+(?:агентов|пайплайн)(?:\s+(.+))?$/i);
+    if (pipelineMatch) {
+      appendUser(content);
+      runPipeline(pipelineMatch[1]?.trim() || "без темы");
+      return;
+    }
+    appendUser(content);
   }
 
   useEffect(() => {
@@ -975,9 +1046,35 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
         flex: 1, minHeight: 0, overflowY: "auto",
         padding: "16px 18px",
       }}>
-        {messages.map(m => <ChatMessage key={m.id} msg={m} onPick={appendUser} onAction={handleAction} onOpenKb={onOpenKb} />)}
+        {messages.map(m => {
+          if (m.type === "pipeline_run") {
+            return (
+              <div key={m.id} style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8, display: "flex", alignItems: "center", gap: 7 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, background: m.running ? "#FF8B3D" : "#34C759", animation: m.running ? "marypulse 1.2s ease-in-out infinite" : "none" }} />
+                  Пайплайн{m.topic ? ` · ${m.topic.slice(0, 40)}` : ""}
+                </div>
+                {m.agents?.length > 0
+                  ? <AgentsLog agents={m.agents} running={m.running} />
+                  : m.running
+                    ? <div style={{ display: "inline-flex", gap: 4, padding: "4px 0" }}>{[0,1,2].map(i => <span key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(38,38,51,0.4)", animation: `marypulse 1.4s ease-in-out infinite ${i * 0.2}s` }} />)}</div>
+                    : null
+                }
+                {m.judge && <JudgeCard judge={m.judge} />}
+                {!m.running && m.agents?.length > 0 && (
+                  <RunResultPanel
+                    postText={m.agents.find(a => a.id === "copywriter" || a.role?.match(/копи/i))?.output || m.agents.at(-1)?.output}
+                    insights={m.agents.find(a => a.id === "researcher" || a.role?.match(/ресёрч|исслед/i))?.output}
+                    topic={m.topic} deptId={m.deptId || "smm"}
+                  />
+                )}
+              </div>
+            );
+          }
+          return <ChatMessage key={m.id} msg={m} onPick={appendUser} onAction={handleAction} onOpenKb={onOpenKb} />;
+        })}
         {messages.length === 0 && (
-          <DeptChatWelcome onPick={appendUser} />
+          <DeptChatWelcome onPick={handleWelcomePick} />
         )}
       </div>
       <div style={{ padding: "0 14px 14px", position: "relative" }}>

@@ -4,10 +4,10 @@ import { color } from "../ui/tokens.js";
 
 export function DeptChatWelcome({ onPick }) {
   const quickActions = [
-    "Сделай ресёрч по нише за неделю",
-    "Придумай 5 идей постов для канала",
-    "Напиши пост по горячей теме",
-    "Прогон всего отдела: ресёрч → идеи → текст",
+    { label: "Сделай ресёрч по нише за неделю" },
+    { label: "Придумай 5 идей постов для канала" },
+    { label: "Напиши пост по горячей теме" },
+    { label: "Прогон всего отдела: ресёрч → идеи → текст", isPipeline: true },
   ];
   return (
     <div style={{
@@ -42,24 +42,31 @@ export function DeptChatWelcome({ onPick }) {
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {quickActions.map((a, i) => (
-          <button key={i} onClick={() => onPick?.({ kind: "free-text", content: a })}
+          <button key={i} onClick={() => onPick?.({ kind: "free-text", content: a.label })}
             style={{
               display: "flex", alignItems: "center", gap: 10,
               padding: "10px 12px",
-              background: "rgba(38,38,51,0.03)",
-              border: "1px solid transparent", borderRadius: 9,
+              background: a.isPipeline ? "rgba(63,149,255,0.05)" : "rgba(38,38,51,0.03)",
+              border: a.isPipeline ? "1px solid rgba(63,149,255,0.18)" : "1px solid transparent",
+              borderRadius: 9,
               fontSize: 13, color: "#262633", textAlign: "left",
               cursor: "pointer", fontFamily: "inherit",
               transition: "background 0.15s, border 0.15s",
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}>
-            <span style={{
-              fontSize: 11, color: "rgba(38,38,51,0.4)", width: 14, textAlign: "right",
-              fontVariantNumeric: "tabular-nums",
-            }}>{i + 1}.</span>
-            <span style={{ flex: 1 }}>{a}</span>
-            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.4)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            onMouseEnter={e => { e.currentTarget.style.background = a.isPipeline ? "rgba(63,149,255,0.1)" : "rgba(38,38,51,0.06)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = a.isPipeline ? "rgba(63,149,255,0.05)" : "rgba(38,38,51,0.03)"; }}>
+            {a.isPipeline ? (
+              <svg width={12} height={12} viewBox="0 0 24 24" fill="#3F95FF" style={{ flexShrink: 0 }}>
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            ) : (
+              <span style={{
+                fontSize: 11, color: "rgba(38,38,51,0.4)", width: 14, textAlign: "right",
+                fontVariantNumeric: "tabular-nums",
+              }}>{i + 1}.</span>
+            )}
+            <span style={{ flex: 1, color: a.isPipeline ? "#3F95FF" : "#262633", fontWeight: a.isPipeline ? 510 : 400 }}>{a.label}</span>
+            <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke={a.isPipeline ? "#3F95FF" : "rgba(38,38,51,0.4)"} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M13 6l6 6-6 6" />
             </svg>
           </button>
