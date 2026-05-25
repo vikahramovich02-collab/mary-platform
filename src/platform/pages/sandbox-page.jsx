@@ -207,6 +207,7 @@ export function SandboxPage() {
               running={running} run={run}
               onStop={() => abortRef.current?.abort()}
               liveAgents={liveAgents} judge={judge} judgeRunning={judgeRunning}
+              deptId={deptId}
             />
           )}
         </div>
@@ -233,7 +234,7 @@ export function SandboxPage() {
   );
 }
 
-export function NewRunForm({ input, setInput, goldenTests, selectedGoldenId, onPickGolden, judgeOn, setJudgeOn, running, run, onStop, liveAgents, judge, judgeRunning }) {
+export function NewRunForm({ input, setInput, goldenTests, selectedGoldenId, onPickGolden, judgeOn, setJudgeOn, running, run, onStop, liveAgents, judge, judgeRunning, deptId }) {
   return (
     <>
       <h2 style={{ fontSize: 22, fontWeight: 600, color: "#262633", margin: "0 0 6px" }}>Новый прогон</h2>
@@ -320,7 +321,7 @@ export function NewRunForm({ input, setInput, goldenTests, selectedGoldenId, onP
       {/* Live агенты */}
       {liveAgents.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <AgentsLog agents={liveAgents} />
+          <AgentsLog agents={liveAgents} running={running} />
           {judgeRunning && (
             <div style={{ fontSize: 12, color: "rgba(38,38,51,0.6)", padding: "8px 12px", background: "rgba(255,139,61,0.04)", borderRadius: 8, display: "inline-flex", gap: 8, alignItems: "center", width: "fit-content" }}>
               <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF8B3D", animation: "marypulse 1.2s ease-in-out infinite" }} />
@@ -328,63 +329,130 @@ export function NewRunForm({ input, setInput, goldenTests, selectedGoldenId, onP
             </div>
           )}
           {judge && <JudgeCard judge={judge} />}
+          {!running && liveAgents.every(a => a.status !== "running") && (
+            <RunResultPanel
+              postText={liveAgents.find(a => a.id === "copywriter" || a.role?.match(/копи/i))?.output || liveAgents.at(-1)?.output}
+              insights={liveAgents.find(a => a.id === "researcher" || a.role?.match(/ресёрч|исслед/i))?.output}
+              topic={input}
+              deptId={deptId}
+            />
+          )}
         </div>
       )}
     </>
   );
 }
 
-export function AgentsLog({ agents }) {
+export function AgentsLog({ agents, running }) {
+  const totalCost = agents.reduce((s, a) => s + (a.costUsd || 0), 0);
+  const totalMs = agents.reduce((s, a) => s + (a.durationMs || 0), 0);
+  const doneCount = agents.filter(a => a.status === "done" || a.status === "error").length;
+
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-        Прогон
-      </div>
-      {agents.map((a, i) => (
-        <div key={a.id} style={{
-          border: "1px solid rgba(38,38,51,0.08)", borderRadius: 10,
-          background: a.status === "running" ? "rgba(255,139,61,0.04)" : color.white,
-          padding: "10px 14px",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{
-              width: 22, height: 22, borderRadius: "50%",
-              background: "rgba(38,38,51,0.06)",
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              fontSize: 11, fontWeight: 600, color: "rgba(38,38,51,0.7)", flexShrink: 0,
-            }}>{i + 1}</span>
-            <span style={{ fontSize: 13, fontWeight: 500, color: "#262633", flex: 1 }}>{a.role}</span>
-            {a.status === "running" && (
-              <span style={{ fontSize: 11, color: "#FF8B3D", fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 5 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF8B3D", animation: "marypulse 1.2s ease-in-out infinite" }} />
-                Работает
-              </span>
-            )}
-            {a.status === "done" && (
-              <span style={{ fontSize: 11, color: "rgba(38,38,51,0.55)", display: "inline-flex", alignItems: "center", gap: 8 }}>
-                {a.durationMs > 0 && <span>{Math.round(a.durationMs / 100) / 10}с</span>}
-                {a.costUsd > 0 && <span>${a.costUsd.toFixed(4)}</span>}
-                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12l5 5L20 7" />
-                </svg>
-              </span>
-            )}
-            {a.status === "error" && <span style={{ fontSize: 11, color: "#FF3B30" }}>Ошибка</span>}
-          </div>
-          {a.output && (
-            <details style={{ marginTop: 8 }}>
-              <summary style={{ cursor: "pointer", fontSize: 11.5, color: "rgba(38,38,51,0.55)" }}>Output</summary>
-              <div style={{
-                marginTop: 6, padding: "8px 10px",
-                background: "rgba(38,38,51,0.04)", borderRadius: 6,
-                fontSize: 12, color: "rgba(38,38,51,0.8)",
-                whiteSpace: "pre-wrap", maxHeight: 200, overflowY: "auto",
-              }}>{a.output}</div>
-            </details>
-          )}
-          {a.error && <div style={{ marginTop: 6, fontSize: 12, color: "#FF3B30" }}>{a.error}</div>}
+    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          Прогон · {doneCount}/{agents.length}
+        </span>
+        <div style={{ flex: 1, height: 3, background: "rgba(38,38,51,0.06)", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{
+            height: "100%", borderRadius: 2,
+            background: agents.some(a => a.status === "error") ? "#FF3B30" : "#34C759",
+            width: `${agents.length ? (doneCount / agents.length) * 100 : 0}%`,
+            transition: "width 0.4s ease",
+          }} />
         </div>
-      ))}
+        {!running && totalMs > 0 && (
+          <span style={{ fontSize: 11, color: "rgba(38,38,51,0.45)" }}>
+            {Math.round(totalMs / 100) / 10}с
+            {totalCost > 0 && ` · $${totalCost.toFixed(4)}`}
+          </span>
+        )}
+      </div>
+
+      {/* Steps */}
+      {agents.map((a, i) => {
+        const isDone = a.status === "done";
+        const isRunning = a.status === "running";
+        const isError = a.status === "error";
+        const isPending = !isDone && !isRunning && !isError;
+        return (
+          <div key={a.id || i} style={{ display: "flex", gap: 12 }}>
+            {/* Timeline column */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 28, flexShrink: 0 }}>
+              <div style={{
+                width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+                background: isDone ? "#34C759" : isError ? "#FF3B30" : isRunning ? "#FF8B3D" : "rgba(38,38,51,0.08)",
+                border: isPending ? "1px solid rgba(38,38,51,0.12)" : "none",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                transition: "background 0.3s",
+              }}>
+                {isDone && (
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12l5 5L20 7" />
+                  </svg>
+                )}
+                {isError && <span style={{ fontSize: 11, color: "white", fontWeight: 700 }}>✗</span>}
+                {isRunning && <span style={{ width: 8, height: 8, borderRadius: "50%", background: "white", animation: "marypulse 1s ease-in-out infinite" }} />}
+                {isPending && <span style={{ fontSize: 10, color: "rgba(38,38,51,0.4)", fontWeight: 600 }}>{i + 1}</span>}
+              </div>
+              {i < agents.length - 1 && (
+                <div style={{
+                  width: 1, flex: 1, minHeight: 12,
+                  background: isDone ? "rgba(52,199,89,0.25)" : "rgba(38,38,51,0.08)",
+                  transition: "background 0.3s",
+                }} />
+              )}
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1, paddingBottom: i < agents.length - 1 ? 10 : 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 26 }}>
+                <span style={{ fontSize: 13, fontWeight: 510, color: isPending ? "rgba(38,38,51,0.4)" : "#262633", flex: 1 }}>
+                  {a.role}
+                </span>
+                {isRunning && (
+                  <span style={{ fontSize: 11, color: "#FF8B3D", fontWeight: 500 }}>работает…</span>
+                )}
+                {isDone && (
+                  <span style={{ fontSize: 11, color: "rgba(38,38,51,0.45)", display: "inline-flex", gap: 6 }}>
+                    {a.durationMs > 0 && <span>{Math.round(a.durationMs / 100) / 10}с</span>}
+                    {a.costUsd > 0 && <span>${a.costUsd.toFixed(4)}</span>}
+                    {a.tokens > 0 && <span>{a.tokens} tok</span>}
+                  </span>
+                )}
+                {isError && <span style={{ fontSize: 11, color: "#FF3B30" }}>ошибка</span>}
+              </div>
+              {/* Output preview — первые 2 строки сразу, остальное по клику */}
+              {(isDone || isError) && a.output && (
+                <details style={{ marginTop: 4, marginBottom: 4 }}>
+                  <summary style={{
+                    cursor: "pointer", fontSize: 11.5, color: "rgba(38,38,51,0.55)",
+                    lineHeight: 1.45, listStyle: "none",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.color = "#262633"}
+                    onMouseLeave={e => e.currentTarget.style.color = "rgba(38,38,51,0.55)"}
+                  >
+                    {a.output.slice(0, 120)}{a.output.length > 120 ? "…" : ""}
+                  </summary>
+                  <div style={{
+                    marginTop: 5, padding: "8px 10px",
+                    background: "rgba(38,38,51,0.03)", borderRadius: 7,
+                    fontSize: 12, color: "rgba(38,38,51,0.8)",
+                    whiteSpace: "pre-wrap", maxHeight: 240, overflowY: "auto",
+                    lineHeight: 1.5,
+                  }}>{a.output}</div>
+                </details>
+              )}
+              {isError && a.error && (
+                <div style={{ marginTop: 4, fontSize: 12, color: "#FF3B30", lineHeight: 1.4 }}>{a.error}</div>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -410,6 +478,171 @@ export function JudgeCard({ judge }) {
       {judge.issues?.length > 0 && (
         <div style={{ fontSize: 12, color: "#FF3B30", marginTop: 4 }}>
           ⚠ {judge.issues.join(" · ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function RunResultPanel({ postText, insights, topic, deptId }) {
+  const [publishState, setPublishState] = useState("idle"); // idle|loading|done|error
+  const [publishUrl, setPublishUrl] = useState(null);
+  const [kbState, setKbState] = useState("idle");
+  const [taskState, setTaskState] = useState("idle");
+  const [expanded, setExpanded] = useState(true);
+
+  if (!postText && !insights) return null;
+
+  const publish = async () => {
+    if (!postText || publishState !== "idle") return;
+    setPublishState("loading");
+    try {
+      const r = await fetch("/api/mary/telegram/publish", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: postText }),
+      });
+      const d = await r.json();
+      if (d.ok) { setPublishState("done"); setPublishUrl(d.url); }
+      else setPublishState("error");
+    } catch { setPublishState("error"); }
+  };
+
+  const saveKb = async () => {
+    const content = insights || postText;
+    if (kbState !== "idle") return;
+    setKbState("loading");
+    try {
+      await fetch("/api/mary/kb/file", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Контент: ${(topic || "").slice(0, 60) || new Date().toLocaleDateString("ru")}`,
+          content,
+        }),
+      });
+      setKbState("done");
+    } catch { setKbState("error"); }
+  };
+
+  const createTask = async () => {
+    if (taskState !== "idle") return;
+    setTaskState("loading");
+    try {
+      await fetch("/api/mary/tasks", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: `Проверить пост: ${(topic || "").slice(0, 60) || "без темы"}`,
+          status: "backlog",
+          deptId: deptId || "smm",
+          source: { type: "mary" },
+          description: postText?.slice(0, 500),
+        }),
+      });
+      setTaskState("done");
+    } catch { setTaskState("error"); }
+  };
+
+  const btnBase = {
+    padding: "8px 16px", borderRadius: 8,
+    fontSize: 13, fontWeight: 500,
+    cursor: "pointer", fontFamily: "inherit",
+    display: "inline-flex", alignItems: "center", gap: 7,
+    transition: "opacity 0.15s",
+  };
+
+  return (
+    <div style={{
+      marginTop: 20,
+      border: "1px solid rgba(52,199,89,0.2)",
+      borderRadius: 14,
+      background: "rgba(52,199,89,0.03)",
+      overflow: "hidden",
+    }}>
+      {/* Header */}
+      <button onClick={() => setExpanded(v => !v)} style={{
+        width: "100%", display: "flex", alignItems: "center", gap: 10,
+        padding: "12px 16px", background: "transparent", border: "none",
+        cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+      }}>
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#34C759", flexShrink: 0 }} />
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#262633" }}>Пайплайн завершён</span>
+        <span style={{ fontSize: 12, color: "rgba(38,38,51,0.45)" }}>
+          {postText ? "· черновик поста готов" : "· результаты готовы"}
+        </span>
+        <div style={{ flex: 1 }} />
+        <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.4)" strokeWidth={2}
+          style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {expanded && (
+        <div style={{ padding: "0 16px 16px" }}>
+          {/* Post preview */}
+          {postText && (
+            <div style={{
+              background: color.white,
+              borderRadius: 10, padding: "14px 16px",
+              border: "1px solid rgba(38,38,51,0.06)",
+              marginBottom: 12,
+            }}>
+              <div style={{ fontSize: 10.5, color: "rgba(38,38,51,0.45)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>
+                Черновик поста · Копирайтер
+              </div>
+              <div style={{ fontSize: 13.5, color: "#262633", lineHeight: 1.65, whiteSpace: "pre-wrap", maxHeight: 280, overflowY: "auto" }}>
+                {postText}
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {postText && (
+              <button onClick={publish} disabled={publishState !== "idle"}
+                style={{
+                  ...btnBase,
+                  background: publishState === "done" ? "rgba(52,199,89,0.1)" : publishState === "error" ? "rgba(255,59,48,0.1)" : "#262633",
+                  color: publishState === "done" ? "#34C759" : publishState === "error" ? "#FF3B30" : color.white,
+                  border: publishState === "idle" ? "none" : `1px solid ${publishState === "done" ? "rgba(52,199,89,0.3)" : "rgba(255,59,48,0.3)"}`,
+                  cursor: publishState !== "idle" ? "default" : "pointer",
+                }}>
+                {publishState === "loading" ? "Публикую…" : publishState === "done" ? "✓ Опубликовано" : publishState === "error" ? "✗ Ошибка TG" : (
+                  <>
+                    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 2L11 13" /><path d="M22 2L15 22 9 13 2 9 22 2Z" />
+                    </svg>
+                    Опубликовать в TG
+                  </>
+                )}
+              </button>
+            )}
+            {publishUrl && (
+              <a href={publishUrl} target="_blank" rel="noopener noreferrer" style={{
+                ...btnBase, textDecoration: "none",
+                background: "rgba(63,149,255,0.08)", color: "#3F95FF",
+                border: "1px solid rgba(63,149,255,0.2)",
+              }}>Открыть пост ↗</a>
+            )}
+            <button onClick={saveKb} disabled={kbState !== "idle"}
+              style={{
+                ...btnBase,
+                background: kbState === "done" ? "rgba(52,199,89,0.08)" : "transparent",
+                color: kbState === "done" ? "#34C759" : kbState === "error" ? "#FF3B30" : "#262633",
+                border: `1px solid ${kbState === "done" ? "rgba(52,199,89,0.3)" : "rgba(38,38,51,0.18)"}`,
+                cursor: kbState !== "idle" ? "default" : "pointer",
+              }}>
+              {kbState === "loading" ? "Сохраняю…" : kbState === "done" ? "✓ В KB" : kbState === "error" ? "✗ Ошибка" : "Сохранить в KB"}
+            </button>
+            <button onClick={createTask} disabled={taskState !== "idle"}
+              style={{
+                ...btnBase,
+                background: taskState === "done" ? "rgba(52,199,89,0.08)" : "transparent",
+                color: taskState === "done" ? "#34C759" : taskState === "error" ? "#FF3B30" : "#262633",
+                border: `1px solid ${taskState === "done" ? "rgba(52,199,89,0.3)" : "rgba(38,38,51,0.18)"}`,
+                cursor: taskState !== "idle" ? "default" : "pointer",
+              }}>
+              {taskState === "loading" ? "Создаю…" : taskState === "done" ? "✓ Задача создана" : taskState === "error" ? "✗ Ошибка" : "Создать задачу"}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -486,6 +719,14 @@ export function RunDetail({ run, prevRun, onDelete }) {
           </div>
         </details>
       )}
+
+      {/* Result panel — publish / KB / task */}
+      <RunResultPanel
+        postText={run.finalOutput || run.agents?.find(a => a.id === "copywriter" || a.role?.match(/копи/i))?.output || run.agents?.at(-1)?.output}
+        insights={run.agents?.find(a => a.id === "researcher" || a.role?.match(/ресёрч|исслед/i))?.output}
+        topic={run.input}
+        deptId={run.deptId || "smm"}
+      />
     </>
   );
 }
