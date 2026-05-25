@@ -386,3 +386,65 @@ export const EDGES = [
 ];
 export const CARD_W = 180;
 export const CARD_H = 64;
+
+// ── Instagram workflow ───────────────────────────────────────────
+export const INSTAGRAM_AGENTS = [
+  {
+    id: "researcher", label: "Ресерчер", color: "#3F95FF", x: 60, y: 290, hasUpdate: true, unread: 1,
+    role: "Исследует тренды и конкурентов в Instagram",
+    skills: ["Анализ конкурентов", "Тренды Reels", "Анализ хэштегов", "Бенчмарки ER"],
+    tools: ["База знаний", "Web browser"],
+    stats: { week: 8, label: "ресёрчей" },
+  },
+  {
+    id: "marketer", label: "Маркетолог", color: "#FF8B3D", x: 330, y: 290, hasUpdate: false, unread: 0,
+    role: "Формирует контент-план: посты, Reels, Stories",
+    skills: ["Контент-стратегия Instagram", "Планирование Reels", "Stories-воронки"],
+    tools: ["База знаний"],
+    stats: { week: 6, label: "планов" },
+  },
+  {
+    id: "copywriter", label: "Копирайтер", color: "#7A86FF", x: 600, y: 60, hasUpdate: false, unread: 0,
+    role: "Пишет подписи к постам и хуки для Reels",
+    skills: ["Посты с хуком", "Подписи к Reels", "Хэштег-наборы"],
+    tools: ["База знаний"],
+    stats: { week: 12, label: "постов" },
+  },
+  {
+    id: "videographer", label: "Видеограф", color: "#34C759", x: 600, y: 190, hasUpdate: false, unread: 0,
+    role: "Снимает и монтирует Reels и видео-посты",
+    skills: ["Сценарии Reels", "Монтаж вертикального видео", "Саунддизайн"],
+    tools: ["Видео-генератор", "База знаний"],
+    stats: { week: 4, label: "видео" },
+  },
+  {
+    id: "stories", label: "Stories-мейкер", color: "#FF6FB3", x: 600, y: 320, hasUpdate: false, unread: 0,
+    role: "Создаёт интерактивные Stories: опросы, реакции, квизы",
+    skills: ["Stories с вовлечением", "Опросы и квизы", "Хайлайты"],
+    tools: ["Шаблоны Stories", "База знаний"],
+    stats: { week: 10, label: "stories" },
+  },
+  {
+    id: "designer", label: "Дизайнер", color: "#7A86FF", x: 600, y: 450, hasUpdate: false, unread: 0,
+    role: "Создаёт визуалы для постов, Reels и Stories",
+    skills: ["Карточки постов", "Обложки Reels", "Визуалы Stories"],
+    tools: ["Imagen", "База знаний"],
+    stats: { week: 8, label: "дизайнов" },
+  },
+  {
+    id: "analyst", label: "Аналитик", color: "#FF6FB3", x: 600, y: 560, hasUpdate: false, unread: 0,
+    role: "Отслеживает охваты, ER, рост подписчиков по каналам",
+    skills: ["Метрики Instagram", "Анализ Reels", "Отчёты Stories"],
+    tools: ["Instagram Insights", "База знаний"],
+    stats: { week: 4, label: "отчётов" },
+  },
+];
+
+export const INSTAGRAM_EDGES = [
+  ["researcher",  "marketer"],
+  ["marketer",    "copywriter"],
+  ["marketer",    "videographer"],
+  ["marketer",    "stories"],
+  ["marketer",    "designer"],
+  ["marketer",    "analyst"],
+];

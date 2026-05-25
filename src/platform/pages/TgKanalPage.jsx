@@ -3,7 +3,7 @@ import { color, transition, font } from "../../ui/tokens.js";
 import { I, P } from "../icons.jsx";
 import { usePeople, MOCK_PEOPLE } from "../people.js";
 import { renderMarkdown, parseNumberedOptions, parseChecklistOptions } from "../markdown.jsx";
-import { AGENTS, EDGES, CARD_W, CARD_H } from "../agents-config.js";
+import { AGENTS, EDGES, CARD_W, CARD_H, INSTAGRAM_AGENTS, INSTAGRAM_EDGES } from "../agents-config.js";
 import { AgentLogsView, AgentOutputView } from "../bottom-panel.jsx";
 import { BuildNode, AgentNodeExpanded } from "../build-nodes.jsx";
 import { DeptChatWelcome } from "../dept-chat-welcome.jsx";
@@ -142,8 +142,10 @@ const ic = {
 };
 
 function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName }) {
+  const activeAgents = channelName === "Instagram" ? INSTAGRAM_AGENTS : AGENTS;
+  const activeEdges  = channelName === "Instagram" ? INSTAGRAM_EDGES  : EDGES;
   const [positions, setPositions] = useState(() =>
-    Object.fromEntries(AGENTS.map(a => [a.id, { x: a.x, y: a.y }]))
+    Object.fromEntries(activeAgents.map(a => [a.id, { x: a.x, y: a.y }]))
   );
   const [expandedId, setExpandedId] = useState(null);
   const [drilledAgentId, setDrilledAgentId] = useState(null);
@@ -227,7 +229,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
   }
 
   // Агент с актуальной позицией
-  const agentsWithPos = AGENTS.map(a => ({ ...a, ...positions[a.id] }));
+  const agentsWithPos = activeAgents.map(a => ({ ...a, ...positions[a.id] }));
   const byId = Object.fromEntries(agentsWithPos.map(a => [a.id, a]));
 
   function pathBetween(from, to) {
@@ -395,7 +397,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
     }
     // Если у агента есть workflow — сразу раскрываем его флоу.
     // Если нет — fallback на старый раскрывающийся pipeline на карточке.
-    const a = AGENTS.find(x => x.id === id);
+    const a = activeAgents.find(x => x.id === id);
     if (a?.flow) {
       setDrilledAgentId(id);
       return;
@@ -521,7 +523,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
             transition: "opacity 0.3s ease",
           }}
         >
-          {EDGES.map(([f, t]) => (
+          {activeEdges.map(([f, t]) => (
             <path
               key={`${f}-${t}`}
               d={pathBetween(byId[f], byId[t])}
