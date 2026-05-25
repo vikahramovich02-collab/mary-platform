@@ -28,6 +28,7 @@ import { KbPopup, AddKbPopup, TextViewerPopup } from "./kb-content.jsx";
 import { PeopleContent, ProfilePopup, SendMessagePopup, IntegrationsContent } from "./people-content.jsx";
 import { AgentsContent, AgentDetail, KbPage, KbTreeRow, KbCard } from "./agents-content.jsx";
 import { RightRail, RailItem, RailDrawer, TasksContent, FilesContent } from "./rail-drawer.jsx";
+import { DepartmentOverviewPage } from "./dept-overview.jsx";
 
 // Реплика экрана Figma node 5522:2547 (file: o1syNp93H3v2dyA3JHp4em — Mary)
 // Сабпейдж "Тг-канал" в отделе "СММ".
@@ -998,10 +999,14 @@ export default function TgKanalPage() {
                     </span>
                   }
                   label={d.name}
+                  active={currentPage === "dept:" + d.id}
                   trailing={hasChannels && (
-                    <span style={{ display: "flex", color: "#262633" }}>{isOpen ? ic.chevronUp : ic.chevron}</span>
+                    <span
+                      style={{ display: "flex", color: "#262633", padding: "4px 2px", borderRadius: 4 }}
+                      onClick={e => { e.stopPropagation(); setOpenDepts(o => ({ ...o, [d.id]: !isOpen })); }}
+                    >{isOpen ? ic.chevronUp : ic.chevron}</span>
                   )}
-                  onClick={() => hasChannels ? setOpenDepts(o => ({ ...o, [d.id]: !isOpen })) : null}
+                  onClick={() => setCurrentPage("dept:" + d.id)}
                 />
                 {isOpen && (d.channels || []).map(ch => (
                   <SideRow
@@ -1092,6 +1097,11 @@ export default function TgKanalPage() {
           <HelpPage />
         ) : currentPage === "support" ? (
           <SupportPage />
+        ) : currentPage.startsWith("dept:") ? (
+          <DepartmentOverviewPage
+            dept={departments.find(d => "dept:" + d.id === currentPage)}
+            onNavigate={setCurrentPage}
+          />
         ) : (() => {
           // Если currentPage — динамический канал отдела (тип "deptId-channelId")
           for (const dept of departments) {
