@@ -635,10 +635,10 @@ export function ChatMaryPage() {
               { id: "earlier",   label: "Раньше",       items: buckets.earlier },
             ].filter(g => g.items.length > 0);
 
-            // Раздел «Отделы» сверху — закрепы СММ, Продажи, HR (статически)
+            // Раздел «Отделы» сверху — закрепы, открывают синхронизированный чат отдела
             const deptPins = [
-              { id: "smm-pin", title: "СММ", scope: "smm", color: "#FF8B3D", deptId: "smm" },
-              { id: "sales-pin", title: "Продажи", scope: "smm", color: "#3F95FF", deptId: "sales" },
+              { id: "smm-pin", title: "СММ", color: "#FF8B3D", convScope: "smm/tg-kanal" },
+              { id: "sales-pin", title: "Продажи", color: "#3F95FF", convScope: "sales/tg-kanal" },
             ];
             const teamChats = []; // Команда живёт во Входящих, не тут
             // Закреплённые юзером чаты — отдельной секцией, удаляем их из date-buckets
@@ -659,24 +659,41 @@ export function ChatMaryPage() {
                       fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 510,
                       padding: "4px 10px 4px",
                     }}>Отделы</div>
-                    {deptPins.map(d => (
-                      <div key={d.id}
-                        onClick={() => window.__maryNavigate?.("dept://" + d.deptId)}
-                        style={{
-                          display: "flex", alignItems: "center", gap: 8,
-                          padding: "5px 10px", fontSize: 12, color: "#262633",
-                          cursor: "pointer", borderRadius: 6,
-                        }}
-                        onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                      >
-                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
-                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.title}</span>
-                        <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.3)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: "auto" }}>
-                          <path d="M5 12h14M13 6l6 6-6 6" />
-                        </svg>
-                      </div>
-                    ))}
+                    {deptPins.map(d => {
+                      const deptConv = conversations.find(c => c.scope === d.convScope);
+                      const isActive = deptConv && deptConv.id === activeId;
+                      return (
+                        <div key={d.id}
+                          onClick={async () => {
+                            if (deptConv) {
+                              setActiveId(deptConv.id);
+                            } else {
+                              // Создаём чат отдела если не существует
+                              const r = await fetch("/api/mary/conversations", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ title: d.title + " · Отдел", scope: d.convScope }),
+                              });
+                              const c = await r.json();
+                              setConversations(prev => [c, ...prev]);
+                              setActiveId(c.id);
+                              setMessages([]);
+                            }
+                          }}
+                          style={{
+                            display: "flex", alignItems: "center", gap: 8,
+                            padding: "5px 10px", fontSize: 12, color: "#262633",
+                            cursor: "pointer", borderRadius: 6,
+                            background: isActive ? "rgba(38,38,51,0.06)" : "transparent",
+                          }}
+                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(38,38,51,0.04)"; }}
+                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                        >
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
+                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{d.title}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 {pinnedItems.length > 0 && (
