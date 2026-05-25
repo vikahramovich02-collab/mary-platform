@@ -239,6 +239,17 @@ export function ChatMaryPage() {
                 agents: d.agents || [],
                 integrations: d.integrations || [],
               });
+              // Немедленный refresh сайдбара после любого dept-mutating tool
+              window.dispatchEvent(new CustomEvent("mary-dept-updated"));
+            }
+            // Автонавигация после создания отдела
+            if (data.name === "create_department" && data.ok && data.result?.department) {
+              const d = data.result.department;
+              setTimeout(() => window.__maryNavigate?.(`dept://${d.id}`), 1800);
+            }
+            // Автонавигация после добавления канала
+            if (data.name === "add_channel" && data.ok && data.result?.channel) {
+              setTimeout(() => window.__maryNavigate?.(`page://${data.result.channel.page}`), 2200);
             }
             // ── Делегация: ask_agent вернул output → отдельное сообщение от агента + артефакт ──
             if (data.name === "ask_agent" && data.ok && data.result?.output) {

@@ -291,7 +291,7 @@ export function FilterBar({ activeFilter, onFilter, agents = AGENTS }) {
   );
 }
 // ── ChatPanel ────────────────────────────────────────────────
-export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChange, dockedHeight = 420, onDockedHeightChange, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, onOpenKb, agents, channelName }) {
+export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChange, dockedHeight = 420, onDockedHeightChange, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, onOpenKb, agents, channelName, deptId }) {
   const peopleList = usePeople();
   const taskDraftRef = useRef({});
   const [localMode, setLocalMode] = useState("docked");
@@ -745,6 +745,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
       body: JSON.stringify({
         message,
         conversationId,
+        deptId: deptId || undefined,
         history: conversationId ? [] : allMessages.slice(-30).map(m => ({ agentId: m.agentId, text: m.text || "" })),
       }),
     });

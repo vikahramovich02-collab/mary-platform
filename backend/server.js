@@ -2611,6 +2611,27 @@ const TOOL_HANDLERS = {
   },
   async add_agent(args = {}) {
     try {
+      // Auto-generate systemPrompt if missing or too short to be useful
+      if (OPENROUTER_API_KEY && (!args.systemPrompt || args.systemPrompt.length < 80)) {
+        const deptData = loadDepartments();
+        const d = deptData.departments.find(x => x.id === args.deptId);
+        if (d) {
+          try {
+            const r = await callLLM({
+              system: `Сгенерируй системный промпт для AI-агента (250-400 слов, русский язык).
+Без markdown-заголовков. Включи:
+- Роль и экспертизу агента (кто он, в чём специалист)
+- Конкретные задачи и шаги работы
+- Формат и стиль вывода (что именно выдаёт на выходе)
+- Правила работы в пайплайне (что получает на вход, что передаёт дальше)
+- Тон и ограничения`,
+              user: `Отдел: ${d.name}\nРоль: ${args.role || "агент"}\nЗадачи: ${args.tasks || "по роли"}`,
+              maxTokens: 600, label: "gen-sysprompt",
+            });
+            if (r.content) args.systemPrompt = r.content;
+          } catch {}
+        }
+      }
       const agent = deptAddAgent(args.deptId, {
         role: args.role,
         color: args.color || "#7A86FF",
@@ -2893,6 +2914,20 @@ function buildLiveContext() {
   } catch { return ""; }
 }
 
+function buildDeptFocus(deptId) {
+  try {
+    const data = loadDepartments();
+    const dept = data.departments.find(d => d.id === deptId);
+    if (!dept) return "";
+    const agentList = (dept.agents || [])
+      .map(a => `  • ${a.id} (${a.role})`)
+      .join("\n");
+    return `⚡️ АКТИВНЫЙ КОНТЕКСТ: пользователь сейчас в отделе "${dept.name}" (id="${dept.id}").
+Агенты этого отдела:\n${agentList || "  (пока нет агентов)"}
+При ask_agent используй deptId="${dept.id}". Задачи направляй агентам именно из этого отдела.`;
+  } catch { return ""; }
+}
+
 async function runAgent({ message, history, maxSteps = 15 }) {
   const liveCtx = buildLiveContext();
   const sys = liveCtx ? `${MARY_SYSTEM_AGENT}\n\n${liveCtx}` : MARY_SYSTEM_AGENT;
@@ -2995,9 +3030,10 @@ async function runAgent({ message, history, maxSteps = 15 }) {
 }
 
 // ── Streaming agent: SSE ─────────────────────────────────
-async function runAgentStream({ message, history, maxSteps = 15, emit }) {
+async function runAgentStream({ message, history, maxSteps = 15, emit, deptId }) {
   const liveCtx = buildLiveContext();
-  const sys = liveCtx ? `${MARY_SYSTEM_AGENT}\n\n${liveCtx}` : MARY_SYSTEM_AGENT;
+  const deptFocus = deptId ? buildDeptFocus(deptId) : "";
+  const sys = [MARY_SYSTEM_AGENT, liveCtx, deptFocus].filter(Boolean).join("\n\n");
   const messages = [
     { role: "system", content: sys },
     ...history.slice(-30).map(h => ({
@@ -3134,7 +3170,7 @@ async function runAgentStream({ message, history, maxSteps = 15, emit }) {
 }
 
 app.post("/webhook/mary/agent/stream", async (req, res) => {
-  const { message = "", history = [], conversationId } = req.body || {};
+  const { message = "", history = [], conversationId, deptId } = req.body || {};
   if (!OPENROUTER_API_KEY) return res.status(503).json({ error: "LLM not configured" });
 
   // Если передан conversationId — берём историю с бэка (а не из request body)
@@ -3165,7 +3201,7 @@ app.post("/webhook/mary/agent/stream", async (req, res) => {
   const start = Date.now();
   emit("connected", { ts: start, conversationId });
   try {
-    const result = await runAgentStream({ message, history: actualHistory, emit });
+    const result = await runAgentStream({ message, history: actualHistory, emit, deptId: deptId || null });
     if (conversationId) {
       convAppend(conversationId, {
         role: "mary",
@@ -3786,24 +3822,30 @@ async function runDepartmentSandbox({ deptId, input = "", dryRun = false, judge 
         output = outputs[finalNode?.id] || prevSummary;
       } else {
         // Реальная прогонка через ask_agent — Mary-style делегация
-        const taskFromPrev = ordered.indexOf(agent) === 0
-          ? (input || "Запустись с дефолтным контекстом")
-          : `Получил вход от предыдущего агента:\n\n${prevSummary}\n\nПродолжи свою часть пайплайна по системному промпту.`;
+        const isFirst = ordered.indexOf(agent) === 0;
+        const taskFromPrev = isFirst
+          ? `Задача: ${input || "Запустись с дефолтным контекстом"}\n\nТы первый агент в пайплайне отдела "${dept.name}". Выполни свою часть согласно системному промпту.`
+          : `Исходная задача пайплайна: ${input}\n\nВывод предыдущего агента:\n${prevSummary}\n\nВыполни свою роль как ${agent.role}. Опирайся на полученный вход и продолжи пайплайн.`;
         const r = await TOOL_HANDLERS.ask_agent({ deptId, agentId: agent.id, task: taskFromPrev });
         if (r.error) throw new Error(r.error);
         output = r.output || "";
-        if (r.usage) {
-          const t = (r.usage.prompt_tokens || 0) + (r.usage.completion_tokens || 0);
-          costAcc.tokens += t;
-          // Грубая оценка стоимости (claude-sonnet): ~$3/M input, ~$15/M output
-          costAcc.usd += ((r.usage.prompt_tokens || 0) * 3 + (r.usage.completion_tokens || 0) * 15) / 1e6;
-        }
+        // Per-agent real token and cost tracking
+        const agentTokens = (r.usage?.prompt_tokens || 0) + (r.usage?.completion_tokens || 0);
+        const agentCostUsd = ((r.usage?.prompt_tokens || 0) * 3 + (r.usage?.completion_tokens || 0) * 15) / 1e6;
+        costAcc.tokens += agentTokens;
+        costAcc.usd += agentCostUsd;
+        const meta = { durationMs: Date.now() - aStart, tokens: agentTokens, costUsd: agentCostUsd };
+        agentMeta[agent.id] = meta;
+        prevSummary = output;
+        results[agent.id] = output;
+        emit("agent_end", { agentId: agent.id, output, ...meta });
+        continue; // skip the common block below for real mode
       }
       prevSummary = output;
       results[agent.id] = output;
       const meta = {
         durationMs: Date.now() - aStart,
-        tokens: 0, costUsd: 0, // per-agent точные значения сложно — собираем глобально
+        tokens: 0, costUsd: 0,
       };
       agentMeta[agent.id] = meta;
       emit("agent_end", { agentId: agent.id, output, ...meta });

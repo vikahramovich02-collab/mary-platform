@@ -141,7 +141,7 @@ const ic = {
   ),
 };
 
-function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName }) {
+function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName, deptId }) {
   const activeAgents = channelName === "Instagram" ? INSTAGRAM_AGENTS : AGENTS;
   const activeEdges  = channelName === "Instagram" ? INSTAGRAM_EDGES  : EDGES;
   const [positions, setPositions] = useState(() =>
@@ -693,6 +693,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
           onOpenKb={(item) => setPipelineKb(item)}
           agents={activeAgents}
           channelName={channelName}
+          deptId={deptId}
         />
       )}
     </div>
@@ -799,6 +800,14 @@ export default function TgKanalPage() {
     return null;
   })();
   const currentAgents = currentChannelName === "Instagram" ? INSTAGRAM_AGENTS : AGENTS;
+  const currentDeptId = (() => {
+    if (currentPage === "tg-kanal") return "smm";
+    for (const d of departments) {
+      if (currentPage === "dept:" + d.id) return d.id;
+      if ((d.channels || []).some(c => c.page === currentPage)) return d.id;
+    }
+    return null;
+  })();
   // Глобальный navigate для dept://X / page://Y ссылок из чата Mary
   useEffect(() => {
     window.__maryNavigate = (target) => {
@@ -820,7 +829,8 @@ export default function TgKanalPage() {
       .catch(() => {});
     load();
     const id = setInterval(load, 5000); // авто-апдейт когда Mary создаёт новый
-    return () => clearInterval(id);
+    window.addEventListener("mary-dept-updated", load); // немедленный refresh после tool call
+    return () => { clearInterval(id); window.removeEventListener("mary-dept-updated", load); };
   }, []);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMode, setChatMode] = useState("docked"); // "docked" | "floating" | "side" | "mini"
@@ -1086,6 +1096,7 @@ export default function TgKanalPage() {
               setAgentsSelected(agentId);
             }}
             selectedAgentId={activeRail === "agents" ? agentsSelected : null}
+            deptId="smm"
           />
         ) : currentPage === "kb" ? (
           <KbPage
@@ -1148,6 +1159,7 @@ export default function TgKanalPage() {
                   selectedAgentId={activeRail === "agents" ? agentsSelected : null}
                   deptName={dept.name + "-Отдел"}
                   channelName={ch.name}
+                  deptId={dept.id}
                 />
               );
             }
@@ -1192,6 +1204,7 @@ export default function TgKanalPage() {
           onOpenKb={(item) => setChatKbItem(item)}
           agents={currentAgents}
           channelName={currentChannelName}
+          deptId={currentDeptId}
         />
       )}
       {chatKbItem && <KbPopup item={chatKbItem} onClose={() => setChatKbItem(null)} />}
