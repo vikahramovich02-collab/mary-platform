@@ -1,0 +1,379 @@
+import { useState } from "react";
+import { color, transition } from "../ui/tokens.js";
+import { renderMarkdown } from "./markdown.jsx";
+import { parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
+import { ToolsTrail } from "./chat-cards.jsx";
+
+export function OptionsBlock({ options, multi, onPick }) {
+  const [selected, setSelected] = useState(() => new Set());
+  const toggle = (idx) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+  const submit = () => {
+    const picked = options.filter((_, i) => selected.has(i));
+    if (picked.length === 0) return;
+    onPick(picked.join(", "));
+  };
+
+  if (!multi) {
+    return (
+      <div style={{
+        marginTop: 14,
+        borderTop: "1px solid rgba(38,38,51,0.08)",
+        borderBottom: "1px solid rgba(38,38,51,0.08)",
+      }}>
+        {options.map((opt, idx) => (
+          <button key={idx} onClick={() => onPick(opt)}
+            style={{
+              display: "flex", alignItems: "center", gap: 10,
+              width: "100%",
+              padding: "10px 4px",
+              background: "transparent",
+              border: "none",
+              borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.08)" : "none",
+              fontSize: 13, fontWeight: 400, color: "#262633",
+              lineHeight: 1.3,
+              textAlign: "left", fontFamily: "inherit",
+              cursor: "pointer", transition: transition.fast,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
+            <span style={{
+              flexShrink: 0, width: 18, textAlign: "right",
+              color: "rgba(38,38,51,0.45)", fontWeight: 500,
+              fontVariantNumeric: "tabular-nums",
+            }}>{idx + 1}.</span>
+            <span style={{ flex: 1 }}>{opt}</span>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+                 stroke="rgba(38,38,51,0.45)" strokeWidth={1.6}
+                 strokeLinecap="round" strokeLinejoin="round"
+                 style={{ transform: "scale(0.85)", flexShrink: 0 }}>
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 14 }}>
+      <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", marginBottom: 6, fontWeight: 500 }}>
+        Можно выбрать несколько
+      </div>
+      <div style={{
+        borderTop: "1px solid rgba(38,38,51,0.08)",
+        borderBottom: "1px solid rgba(38,38,51,0.08)",
+      }}>
+        {options.map((opt, idx) => {
+          const checked = selected.has(idx);
+          return (
+            <button key={idx} onClick={() => toggle(idx)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                width: "100%",
+                padding: "10px 4px",
+                background: checked ? "rgba(38,38,51,0.04)" : "transparent",
+                border: "none",
+                borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.08)" : "none",
+                fontSize: 13, fontWeight: 400, color: "#262633",
+                lineHeight: 1.3,
+                textAlign: "left", fontFamily: "inherit",
+                cursor: "pointer", transition: transition.fast,
+              }}
+              onMouseEnter={e => { if (!checked) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+              onMouseLeave={e => { if (!checked) e.currentTarget.style.background = "transparent"; }}>
+              <span style={{
+                flexShrink: 0,
+                width: 16, height: 16, borderRadius: 4,
+                border: checked ? "1.5px solid #262633" : "1.5px solid rgba(38,38,51,0.25)",
+                background: checked ? "#262633" : "transparent",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                marginLeft: 4,
+              }}>
+                {checked && (
+                  <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke={color.white} strokeWidth={3.2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12l5 5L20 7" />
+                  </svg>
+                )}
+              </span>
+              <span style={{ flex: 1 }}>{opt}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+        <button onClick={submit} disabled={selected.size === 0}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "7px 14px",
+            background: selected.size > 0 ? "#262633" : "rgba(38,38,51,0.15)",
+            color: color.white, border: "none", borderRadius: 8,
+            fontSize: 12.5, fontWeight: 500, fontFamily: "inherit",
+            cursor: selected.size > 0 ? "pointer" : "not-allowed",
+          }}>
+          Отправить{selected.size > 0 && ` · ${selected.size}`}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function AgentChatBubble({ m }) {
+  const initial = (m.agentRole || "?").trim().slice(0, 2).toUpperCase();
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: 7,
+        background: m.agentColor || "#7A86FF", color: color.white,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, fontSize: 11, fontWeight: 600,
+      }}>{initial}</div>
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 640, paddingTop: 2 }}>
+        {m.fromMary && (
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            padding: "3px 10px", marginBottom: 8,
+            background: "rgba(38,38,51,0.05)", borderRadius: 999,
+            fontSize: 11, color: "rgba(38,38,51,0.65)", fontWeight: 500,
+          }}>
+            <svg width={10} height={10} viewBox="0 0 24 24">
+              <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/>
+              <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/>
+              <circle cx="9.3" cy="13" r="1.4" fill="white"/>
+              <circle cx="14.7" cy="13" r="1.4" fill="white"/>
+            </svg>
+            <span>Mary</span>
+            <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: m.agentColor || "#7A86FF" }} />
+            <span style={{ color: "#262633", fontWeight: 600 }}>{m.agentRole}</span>
+          </div>
+        )}
+        <div style={{
+          fontSize: 14, color: "#262633", lineHeight: 1.55,
+        }}>
+          {renderMarkdown(m.text || "")}
+        </div>
+        <ActionBar text={m.text || ""} />
+      </div>
+    </div>
+  );
+}
+
+export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  if (m.agentId && m.agentRole) {
+    return <AgentChatBubble m={m} />;
+  }
+  if (m.role === "user") {
+    if (editing) {
+      return (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18 }}>
+          <div style={{
+            background: color.white,
+            border: "1px solid rgba(38,38,51,0.18)", borderRadius: 14,
+            padding: 10, width: "min(80%, 520px)",
+            display: "flex", flexDirection: "column", gap: 8,
+          }}>
+            <textarea
+              autoFocus
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey && draft.trim()) {
+                  e.preventDefault();
+                  setEditing(false);
+                  onEdit?.(draft.trim(), index);
+                }
+                if (e.key === "Escape") setEditing(false);
+              }}
+              rows={Math.max(2, draft.split("\n").length)}
+              style={{
+                width: "100%", border: "none", outline: "none",
+                resize: "none", fontFamily: "inherit",
+                fontSize: 14, color: "#262633",
+                background: "transparent", padding: 0,
+              }}
+            />
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+              <button
+                onClick={() => setEditing(false)}
+                style={{
+                  background: "transparent",
+                  border: "1px solid rgba(38,38,51,0.18)", borderRadius: 8,
+                  padding: "5px 12px", fontSize: 12.5, color: "#262633",
+                  fontFamily: "inherit", cursor: "pointer",
+                }}
+              >Отмена</button>
+              <button
+                disabled={!draft.trim()}
+                onClick={() => { setEditing(false); onEdit?.(draft.trim(), index); }}
+                style={{
+                  background: draft.trim() ? "#262633" : "rgba(38,38,51,0.3)",
+                  border: "none", borderRadius: 8,
+                  padding: "5px 12px", fontSize: 12.5, color: color.white,
+                  fontFamily: "inherit", cursor: draft.trim() ? "pointer" : "not-allowed",
+                }}
+              >Отправить</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18, gap: 6, alignItems: "flex-start" }}
+           className="user-bubble-row">
+        {onEdit && index !== undefined && (
+          <button
+            onClick={() => { setDraft(m.text); setEditing(true); }}
+            title="Изменить и отправить заново"
+            style={{
+              opacity: 0, transition: "opacity 0.15s",
+              background: "transparent", border: "none",
+              color: "rgba(38,38,51,0.4)", cursor: "pointer",
+              padding: 6, marginTop: 2, fontFamily: "inherit",
+              display: "inline-flex",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.opacity = 1; }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = 0; }}
+          >
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9" />
+              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+            </svg>
+          </button>
+        )}
+        <div
+          style={{
+            background: "rgba(38,38,51,0.06)", color: "#262633",
+            padding: "10px 14px", borderRadius: 16,
+            maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
+          }}
+          onMouseEnter={e => {
+            const btn = e.currentTarget.parentElement.querySelector("button");
+            if (btn) btn.style.opacity = 0.6;
+          }}
+          onMouseLeave={e => {
+            const btn = e.currentTarget.parentElement.querySelector("button");
+            if (btn) btn.style.opacity = 0;
+          }}
+        >{m.text}</div>
+      </div>
+    );
+  }
+  const showOptions = isLast && !m._streaming && !m._toolStatus && onPickOption;
+  const checklist = showOptions ? parseChecklistOptions(m.text) : { body: m.text, options: null };
+  const numbered  = showOptions && !checklist.options ? parseNumberedOptions(m.text) : { body: m.text, options: null };
+  const body = checklist.options ? checklist.body : (numbered.options ? numbered.body : m.text);
+  const options = checklist.options || numbered.options;
+  const multi   = !!checklist.options;
+  return (
+    <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
+      <div style={{
+        width: 28, height: 28, borderRadius: 7,
+        background: "rgba(38,38,51,0.08)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        flexShrink: 0, color: "#262633",
+      }}>
+        <svg width={14} height={14} viewBox="0 0 24 24">
+          <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor" />
+          <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor" />
+          <circle cx="9.3" cy="13" r="1.4" fill="white" />
+          <circle cx="14.7" cy="13" r="1.4" fill="white" />
+        </svg>
+      </div>
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 640, paddingTop: 4 }}>
+        {m._tools && m._tools.length > 0 && (
+          <ToolsTrail tools={m._tools} />
+        )}
+        <div style={{
+          fontSize: 14, color: "#262633", lineHeight: 1.55,
+          marginTop: (m._tools && m._tools.length > 0) ? 10 : 0,
+        }}>
+          {renderMarkdown(body)}
+          {m._streaming && m.text && (
+            <span style={{
+              display: "inline-block", width: 7, height: 14,
+              background: "#262633", marginLeft: 2, verticalAlign: "text-bottom",
+              animation: "maryblink 1s steps(2) infinite",
+            }} />
+          )}
+        </div>
+        {options && options.length >= 2 && (
+          <OptionsBlock options={options} multi={multi} onPick={onPickOption} />
+        )}
+        {m._streaming && !m.text && !m._toolStatus && (
+          <div style={{ display: "inline-flex", gap: 4, padding: "8px 0" }}>
+            {[0,1,2].map(i => (
+              <span key={i} style={{
+                width: 6, height: 6, borderRadius: "50%",
+                background: "rgba(38,38,51,0.4)",
+                animation: `marypulse 1.4s ease-in-out infinite ${i*0.2}s`,
+              }} />
+            ))}
+          </div>
+        )}
+        {!m._streaming && body && body.trim().length > 0 && (
+          <ActionBar text={body} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function ActionBar({ text }) {
+  const [copied, setCopied] = useState(false);
+  const [reaction, setReaction] = useState(null);
+  const onCopy = () => {
+    navigator.clipboard?.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const btn = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    width: 26, height: 26, padding: 0,
+    background: "transparent", border: "none", borderRadius: 6,
+    color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
+    transition: "color 0.15s, background 0.15s",
+  };
+  const hover = (e) => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; };
+  const leave = (e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; };
+  return (
+    <div style={{ display: "flex", gap: 2, marginTop: 8 }}>
+      <button title={copied ? "Скопировано" : "Копировать"} onClick={onCopy}
+              style={{ ...btn, color: copied ? "#34C759" : btn.color }}
+              onMouseEnter={!copied ? hover : undefined}
+              onMouseLeave={!copied ? leave : undefined}>
+        {copied ? (
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
+        ) : (
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        )}
+      </button>
+      <button title="Хороший ответ" onClick={() => setReaction(reaction === "up" ? null : "up")}
+              style={{ ...btn, color: reaction === "up" ? "#34C759" : btn.color }}
+              onMouseEnter={hover} onMouseLeave={leave}>
+        <svg width={13} height={13} viewBox="0 0 24 24" fill={reaction === "up" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+        </svg>
+      </button>
+      <button title="Плохой ответ" onClick={() => setReaction(reaction === "down" ? null : "down")}
+              style={{ ...btn, color: reaction === "down" ? "#FF3B30" : btn.color }}
+              onMouseEnter={hover} onMouseLeave={leave}>
+        <svg width={13} height={13} viewBox="0 0 24 24" fill={reaction === "down" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
+        </svg>
+      </button>
+    </div>
+  );
+}
