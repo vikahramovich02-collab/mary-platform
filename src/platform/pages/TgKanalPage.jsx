@@ -19,7 +19,7 @@ import { TaskCard, TasksListView, TasksWeekView, TaskDrawer, DrawerRow, TasksPag
 import { SandboxPage, NewRunForm, AgentsLog, JudgeCard, RunDetail, SandboxChat } from "./sandbox-page.jsx";
 import { PageShell, StatCard, NavCard, HomePage, InboxPage, InboxTeamThread, InboxDetail } from "./home-inbox-pages.jsx";
 import { TeamPage, BizprocPage, SettingsPage, HelpPage, DepartmentChannelPage, SupportPage } from "./misc-pages.jsx";
-import { FlowNode, AgentFlowCanvas, pipelineToFlow } from "./agent-flow.jsx";
+import { FlowNode, AgentFlowCanvas, FlowNodeDetailPanel, pipelineToFlow } from "./agent-flow.jsx";
 import { AgentSettingsView, SettingRow, AgentJobDescription } from "./agent-settings.jsx";
 import { DepartmentSandbox, AgentBottomPanel, SandboxPanel } from "./agent-view.jsx";
 import { IntegrationsPage, IntegrationCard } from "./integrations-page.jsx";
@@ -149,6 +149,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
   );
   const [expandedId, setExpandedId] = useState(null);
   const [drilledAgentId, setDrilledAgentId] = useState(null);
+  const [selectedFlowNode, setSelectedFlowNode] = useState(null);
   // pipelineByAgentId: { agentId → flow } — приходит с бэка, оверрайдит хардкод AGENTS.flow
   const [pipelineByAgentId, setPipelineByAgentId] = useState({});
   // profileByAgentId: { agentId → { model, systemPrompt, tools, memory, responseFormat, tasks } } — должностная инструкция
@@ -455,7 +456,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         zIndex: 5,
       }}>
         <span style={{ cursor: drilledAgentId ? "pointer" : "default" }}
-          onClick={() => drilledAgentId && setDrilledAgentId(null)}
+          onClick={() => { if (drilledAgentId) { setDrilledAgentId(null); setSelectedFlowNode(null); } }}
         >{deptName || "СММ-Отдел"}</span>
         <span style={{ opacity: 0.6 }}>›</span>
         <span
@@ -463,7 +464,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
             color: drilledAgentId ? "rgba(38,38,51,0.55)" : "#262633",
             cursor: drilledAgentId ? "pointer" : "default",
           }}
-          onClick={() => drilledAgentId && setDrilledAgentId(null)}
+          onClick={() => { if (drilledAgentId) { setDrilledAgentId(null); setSelectedFlowNode(null); } }}
         >{channelName || "Тг-канал"}</span>
         {drilledAgentId && drilledAgent && (
           <>
@@ -611,6 +612,8 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
               h={FLOW_NODE_H}
               accent={drilledAgent.color}
               visible={!!drilledAgentId}
+              selected={selectedFlowNode?.id === n.id}
+              onClick={() => setSelectedFlowNode(prev => prev?.id === n.id ? null : n)}
             />
           );
         })}
@@ -618,6 +621,15 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
 
       {pipelineKb && (
         <KbPopup item={pipelineKb} onClose={() => setPipelineKb(null)} />
+      )}
+
+      {/* Flow node detail panel — appears when a node is clicked in drill-in */}
+      {selectedFlowNode && drilledAgent && (
+        <FlowNodeDetailPanel
+          node={selectedFlowNode}
+          accent={drilledAgent.color}
+          onClose={() => setSelectedFlowNode(null)}
+        />
       )}
 
       {/* Bottom panel: Settings / Logs / Output — Sim-style */}

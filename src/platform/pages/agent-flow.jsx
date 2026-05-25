@@ -1,47 +1,77 @@
 import { color } from "../../ui/tokens.js";
 import { ic } from "../icons.jsx";
 
-// ── Узел внутреннего workflow (drill-in) ───────────────────
-export function FlowNode({ n, pos, w, h, accent = "#7A86FF", visible = true }) {
-  const style = (kind) => {
-    switch (kind) {
-      case "input":      return { iconBg: "#FFF4D1", iconColor: "#FFB800",
+// ── Shared: icon + color per kind ─────────────────────────
+function kindStyle(kind, accent = "#7A86FF") {
+  switch (kind) {
+    case "input":
+    case "trigger-cron":
+    case "trigger-manual":
+      return { iconBg: "#FFF4D1", iconColor: "#FFB800",
         icon: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg> };
-      case "subagent":   return { iconBg: "#EEF0FF", iconColor: "#7A86FF",
+    case "subagent":
+      return { iconBg: "#EEF0FF", iconColor: "#7A86FF",
         icon: <svg width={18} height={18} viewBox="0 0 24 24"><rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/><rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/><circle cx="9.3" cy="13" r="1.4" fill="white"/><circle cx="14.7" cy="13" r="1.4" fill="white"/></svg> };
-      case "llm-step":   return { iconBg: "#FFE7F5", iconColor: "#D946A8",
+    case "llm-step":
+    case "llm":
+      return { iconBg: "#FFE7F5", iconColor: "#D946A8",
         icon: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 L14.5 9 L22 12 L14.5 15 L12 22 L9.5 15 L2 12 L9.5 9 Z"/></svg> };
-      case "output-kb":  return { iconBg: "#E8F8EE", iconColor: "#34C759",
+    case "output-kb":
+    case "output":
+      return { iconBg: "#E8F8EE", iconColor: "#34C759",
         icon: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> };
-      case "next-agent": return { iconBg: accent + "26", iconColor: accent,
+    case "next-agent":
+      return { iconBg: accent + "26", iconColor: accent,
         icon: <svg width={18} height={18} viewBox="0 0 24 24"><rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/><rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/><circle cx="9.3" cy="13" r="1.4" fill="white"/><circle cx="14.7" cy="13" r="1.4" fill="white"/></svg> };
-      default:           return { iconBg: "#EEF0FF", iconColor: "#7A86FF", icon: null };
-    }
-  };
-  const s = style(n.kind);
+    default:
+      return { iconBg: "#EEF0FF", iconColor: "#7A86FF", icon: null };
+  }
+}
+
+const KIND_LABEL = {
+  "input":          "Входные данные",
+  "trigger-cron":   "Триггер · расписание",
+  "trigger-manual": "Триггер · вручную",
+  "integration":    "Источник данных",
+  "subagent":       "Вызов агента",
+  "llm-step":       "LLM-шаг",
+  "llm":            "LLM-шаг",
+  "output-kb":      "Артефакт · КБ",
+  "output":         "Выход",
+  "next-agent":     "Следующий агент",
+  "step":           "Шаг пайплайна",
+};
+
+// ── Узел внутреннего workflow (drill-in) ───────────────────
+export function FlowNode({ n, pos, w, h, accent = "#7A86FF", visible = true, selected = false, onClick }) {
+  const s = kindStyle(n.kind, accent);
   return (
     <div
+      onClick={onClick}
       style={{
         position: "absolute",
         left: pos.x, top: pos.y,
         width: w, height: h,
         background: color.white,
         borderRadius: 24,
-        boxShadow: "0 1px 2px rgba(38,38,51,0.04)",
+        boxShadow: selected
+          ? `0 0 0 2px ${accent}, 0 4px 16px ${accent}22`
+          : "0 1px 2px rgba(38,38,51,0.04)",
         display: "flex", alignItems: "center", gap: 10,
         padding: "0 14px",
         opacity: visible ? 1 : 0,
         transform: visible ? "scale(1)" : "scale(0.92)",
-        transition: "opacity 0.4s ease 0.2s, transform 0.4s ease 0.2s",
+        transition: "opacity 0.4s ease 0.2s, transform 0.4s ease 0.2s, box-shadow 0.15s",
         userSelect: "none",
         pointerEvents: visible ? "auto" : "none",
+        cursor: onClick ? "pointer" : "default",
       }}
     >
       <div style={{
         width: 36, height: 36, borderRadius: 11,
         background: s.iconBg, color: s.iconColor,
         display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
+        flexShrink: 0, transition: "background 0.15s",
       }}>{s.icon}</div>
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{
@@ -64,6 +94,124 @@ export function FlowNode({ n, pos, w, h, accent = "#7A86FF", visible = true }) {
         width: 9, height: 9, borderRadius: "50%",
         background: color.white, border: "1px solid rgba(38,38,51,0.18)",
       }} />
+    </div>
+  );
+}
+
+// ── Detail panel: появляется при клике на FlowNode ──────────
+function DetailRow({ label, value }) {
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 13, color: "#262633", lineHeight: 1.4, wordBreak: "break-word" }}>{value}</div>
+    </div>
+  );
+}
+
+function kindDescription(kind, settings = {}) {
+  switch (kind) {
+    case "input":          return "Принимает входные данные, которые запускают пайплайн этого агента.";
+    case "trigger-cron":   return `Запускается автоматически по расписанию${settings.cron ? `: ${settings.cron}` : "."}.`;
+    case "trigger-manual": return "Запускается вручную — по команде оператора или из другого агента.";
+    case "integration":    return "Получает данные из внешнего источника или сервиса.";
+    case "subagent":       return "Делегирует задачу другому агенту и ждёт его ответа.";
+    case "llm-step":
+    case "llm":            return `Обрабатывает вход через языковую модель${settings.model ? ` (${settings.model})` : ""} и генерирует структурированный вывод.`;
+    case "output-kb":      return `Сохраняет результат в базу знаний${settings.target ? ` → ${settings.target}` : ""}.`;
+    case "output":         return settings.target?.startsWith("agent:") ? `Передаёт результат следующему агенту: ${settings.target.replace("agent:", "")}.` : "Сохраняет финальный результат.";
+    case "next-agent":     return `Передаёт управление следующему агенту в пайплайне${settings.target ? `: ${settings.target}` : ""}.`;
+    default:               return "Шаг пайплайна.";
+  }
+}
+
+export function FlowNodeDetailPanel({ node, accent = "#7A86FF", onClose }) {
+  if (!node) return null;
+  const s = kindStyle(node.kind, accent);
+  const label = KIND_LABEL[node.kind] || node.kind;
+  const settings = node.settings || {};
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        right: 16, top: 56, bottom: 90,
+        width: 268,
+        background: "#fff",
+        borderRadius: 20,
+        boxShadow: "0 8px 32px rgba(38,38,51,0.13), 0 0 0 1px rgba(38,38,51,0.06)",
+        zIndex: 20,
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+        animation: "fadeSlideIn 0.18s ease",
+      }}
+    >
+      <style>{`@keyframes fadeSlideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }`}</style>
+
+      {/* Header */}
+      <div style={{
+        padding: "15px 15px 12px",
+        borderBottom: "1px solid rgba(38,38,51,0.06)",
+        display: "flex", alignItems: "flex-start", gap: 10,
+      }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 12,
+          background: s.iconBg, color: s.iconColor,
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>{s.icon && <span style={{ transform: "scale(1.1)", display: "flex" }}>{s.icon}</span>}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: "#262633", lineHeight: 1.2, wordBreak: "break-word" }}>{node.title}</div>
+          <div style={{
+            display: "inline-flex", alignItems: "center", marginTop: 5,
+            padding: "2px 8px", borderRadius: 999,
+            background: s.iconColor + "14", color: s.iconColor,
+            fontSize: 10.5, fontWeight: 600,
+          }}>{label}</div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            width: 26, height: 26, borderRadius: 7,
+            background: "rgba(38,38,51,0.05)",
+            border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0, color: "rgba(38,38,51,0.45)",
+          }}
+        >
+          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
+            <path d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+
+      {/* Body */}
+      <div style={{ flex: 1, overflow: "auto", padding: "14px 15px" }}>
+        <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.6)", lineHeight: 1.55, marginBottom: 14 }}>
+          {kindDescription(node.kind, settings)}
+        </div>
+
+        {node.sub && node.sub !== kindDescription(node.kind, settings) && (
+          <DetailRow label="Описание" value={node.sub} />
+        )}
+
+        {settings.model && <DetailRow label="Модель" value={settings.model} />}
+        {settings.agentId && node.kind === "subagent" && <DetailRow label="Агент" value={settings.agentId} />}
+        {settings.target && node.kind !== "llm-step" && node.kind !== "llm" && (
+          <DetailRow label="Цель" value={settings.target} />
+        )}
+        {settings.cron && <DetailRow label="Расписание" value={settings.cron} />}
+        {settings.source && <DetailRow label="Источник" value={settings.source} />}
+        {settings.prompt && (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Промпт</div>
+            <div style={{
+              fontSize: 11.5, color: "#262633", lineHeight: 1.5,
+              background: "rgba(38,38,51,0.04)", borderRadius: 8,
+              padding: "8px 10px", fontFamily: "monospace",
+              maxHeight: 120, overflow: "auto",
+            }}>{settings.prompt}</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -357,6 +505,7 @@ export function pipelineToFlow(pipeline, agentColor = "#7A86FF") {
         kind: kindMap(n.type, n.settings),
         title: n.title,
         sub: n.sub || "",
+        settings: n.settings || {},
         ox: (Number(L) - centerLevel) * 280,
         oy: (idx - midRow) * 110,
       });
