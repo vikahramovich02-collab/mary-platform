@@ -103,9 +103,9 @@ function HeaderOpt({ agent, label, active, unread, onClick }) {
   );
 }
 
-export function ChatHeader({ activeFilter, onFilter, onClose, startDrag, mode, onToggleMode, typingAgents, conversations = [], conversationId, convTitle, onSwitchConv }) {
+export function ChatHeader({ activeFilter, onFilter, onClose, startDrag, mode, onToggleMode, typingAgents, conversations = [], conversationId, convTitle, onSwitchConv, agents = AGENTS }) {
   const [open, setOpen] = useState(false);
-  const agent = activeFilter === "all" ? null : AGENTS.find(a => a.id === activeFilter);
+  const agent = activeFilter === "all" ? null : agents.find(a => a.id === activeFilter);
   const label = agent ? agent.label : (convTitle || "Mary (общий)");
   const dot = agent ? agent.color : "#262633";
 
@@ -222,10 +222,10 @@ export function ChatHeader({ activeFilter, onFilter, onClose, startDrag, mode, o
           <HeaderOpt
             label="Mary (общий)"
             active={activeFilter === "all" && !conversations.length}
-            unread={AGENTS.reduce((sum, x) => sum + (x.unread || 0), 0)}
+            unread={agents.reduce((sum, x) => sum + (x.unread || 0), 0)}
             onClick={() => { onFilter("all"); setOpen(false); }}
           />
-          {AGENTS.map(a => (
+          {agents.map(a => (
             <HeaderOpt
               key={a.id}
               agent={a}
@@ -269,7 +269,7 @@ export function FilterChip({ label, dotColor, active, onClick }) {
   );
 }
 
-export function FilterBar({ activeFilter, onFilter }) {
+export function FilterBar({ activeFilter, onFilter, agents = AGENTS }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 6,
@@ -278,7 +278,7 @@ export function FilterBar({ activeFilter, onFilter }) {
       overflowX: "auto",
     }}>
       <FilterChip label="Все" active={activeFilter === "all"} onClick={() => onFilter("all")} />
-      {AGENTS.map(a => (
+      {agents.map(a => (
         <FilterChip
           key={a.id}
           label={a.label}
@@ -291,7 +291,7 @@ export function FilterBar({ activeFilter, onFilter }) {
   );
 }
 // ── ChatPanel ────────────────────────────────────────────────
-export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChange, dockedHeight = 420, onDockedHeightChange, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, onOpenKb }) {
+export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChange, dockedHeight = 420, onDockedHeightChange, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, onOpenKb, agents, channelName }) {
   const peopleList = usePeople();
   const taskDraftRef = useRef({});
   const [localMode, setLocalMode] = useState("docked");
@@ -307,19 +307,24 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
   const [conversations, setConversations] = useState([]);
   const [convTitle, setConvTitle] = useState("Mary (общий)");
 
+  const convScope = channelName
+    ? `smm/${channelName.toLowerCase().replace(/\s+/g, "-")}`
+    : "smm/tg-kanal";
+
   useEffect(() => {
     let cancelled = false;
+    setAllMessages([]);
     async function ensureConv() {
       try {
         const list = await fetch("/api/mary/conversations").then(r => r.json());
         const all = list.conversations || [];
         setConversations(all);
-        let conv = all.find(c => c.scope === "smm/tg-kanal");
+        let conv = all.find(c => c.scope === convScope);
         if (!conv) {
           conv = await fetch("/api/mary/conversations", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: "Чат СММ-отдела · Тг-канал", scope: "smm/tg-kanal" }),
+            body: JSON.stringify({ title: `Чат · ${channelName || "Тг-канал"}`, scope: convScope }),
           }).then(r => r.json());
           if (!cancelled) setConversations(prev => [conv, ...prev]);
         }
@@ -340,7 +345,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
     }
     ensureConv();
     return () => { cancelled = true; };
-  }, []);
+  }, [convScope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function switchConversation(conv) {
     if (conv.id === conversationId) return;
@@ -527,7 +532,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
   }
   function rankAgents(desc) {
     const d = (desc || "").toLowerCase();
-    return AGENTS.map(a => {
+    return (agents || AGENTS).map(a => {
       const role = a.role.toLowerCase();
       let rel = 30;
       if (/(пост|конкурент|ресёрч|посты)/.test(d) && /парсит/.test(role)) rel = 95;
@@ -1103,6 +1108,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
         conversationId={conversationId}
         convTitle={convTitle}
         onSwitchConv={switchConversation}
+        agents={agents || AGENTS}
       />
       <div style={{
         flex: 1, minHeight: 0, overflowY: "auto",
@@ -1136,7 +1142,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
           return <ChatMessage key={m.id} msg={m} onPick={appendUser} onAction={handleAction} onOpenKb={onOpenKb} />;
         })}
         {messages.length === 0 && (
-          <DeptChatWelcome onPick={handleWelcomePick} />
+          <DeptChatWelcome onPick={handleWelcomePick} channelName={channelName} />
         )}
       </div>
       {/* Quick action chips */}

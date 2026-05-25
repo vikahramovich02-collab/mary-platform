@@ -2,7 +2,7 @@
 // Извлечено из TgKanalPage.jsx (Phase 2).
 import { color } from "../ui/tokens.js";
 
-export function DeptChatWelcome({ onPick }) {
+export function DeptChatWelcome({ onPick, channelName }) {
   const quickActions = [
     { label: "Сделай ресёрч по нише за неделю" },
     { label: "Придумай 5 идей постов для канала" },
@@ -29,7 +29,7 @@ export function DeptChatWelcome({ onPick }) {
           </svg>
         </div>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#262633" }}>Чат отдела СММ · Тг-канал</div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#262633" }}>Чат отдела СММ{channelName ? ` · ${channelName}` : ""}</div>
           <div style={{ fontSize: 12, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
             Здесь работают агенты: Ресерчер, Маркетолог, Копирайтер, Дизайнер, Аналитик
           </div>

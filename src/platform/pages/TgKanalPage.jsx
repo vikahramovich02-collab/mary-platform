@@ -227,6 +227,11 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
     const y = (ch - (maxY - minY) * scale) / 2 - minY * scale;
     setView({ x, y, scale });
   }
+  // Auto-fit on first mount
+  useEffect(() => {
+    const t = setTimeout(() => fitToView(), 60);
+    return () => clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Агент с актуальной позицией
   const agentsWithPos = activeAgents.map(a => ({ ...a, ...positions[a.id] }));
@@ -686,6 +691,8 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
           onAddTask={onAddTask}
           onOpenTasks={onOpenTasks}
           onOpenKb={(item) => setPipelineKb(item)}
+          agents={activeAgents}
+          channelName={channelName}
         />
       )}
     </div>
@@ -783,6 +790,15 @@ export default function TgKanalPage() {
   }, [currentPage]);
   const [departments, setDepartments] = useState([]);
   const [openDepts, setOpenDepts] = useState({ smm: true });
+  const currentChannelName = (() => {
+    if (currentPage === "tg-kanal") return "Тг-канал";
+    for (const d of departments) {
+      const ch = (d.channels || []).find(c => c.page === currentPage);
+      if (ch) return ch.name;
+    }
+    return null;
+  })();
+  const currentAgents = currentChannelName === "Instagram" ? INSTAGRAM_AGENTS : AGENTS;
   // Глобальный navigate для dept://X / page://Y ссылок из чата Mary
   useEffect(() => {
     window.__maryNavigate = (target) => {
@@ -1103,6 +1119,7 @@ export default function TgKanalPage() {
           <DepartmentOverviewPage
             dept={departments.find(d => "dept:" + d.id === currentPage)}
             onNavigate={setCurrentPage}
+            onOpenChat={() => { setChatOpen(true); setActiveFilter("all"); }}
           />
         ) : (() => {
           // Динамический канал отдела — рендерим тот же GraphCanvas, меняем только breadcrumb
@@ -1173,6 +1190,8 @@ export default function TgKanalPage() {
           onAddTask={addPendingTask}
           onOpenTasks={openTasksDrawer}
           onOpenKb={(item) => setChatKbItem(item)}
+          agents={currentAgents}
+          channelName={currentChannelName}
         />
       )}
       {chatKbItem && <KbPopup item={chatKbItem} onClose={() => setChatKbItem(null)} />}

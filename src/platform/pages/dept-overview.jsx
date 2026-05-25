@@ -81,7 +81,7 @@ function layoutCards(n) {
 }
 
 // ── Main export ──────────────────────────────────────────────────
-export function DepartmentOverviewPage({ dept, onNavigate }) {
+export function DepartmentOverviewPage({ dept, onNavigate, onOpenChat }) {
   const panRef = useRef(null);
   const [view, setView]     = useState({ x: 0, y: 0 });
 
@@ -216,7 +216,7 @@ export function DepartmentOverviewPage({ dept, onNavigate }) {
 
       {/* "Спросить у Mary" */}
       <button
-        onClick={() => onNavigate?.(channels[0]?.page || "tg-kanal")}
+        onClick={() => onOpenChat ? onOpenChat() : onNavigate?.(channels[0]?.page || "tg-kanal")}
         style={{
           position: "absolute", left: "50%", bottom: 16, transform: "translateX(-50%)",
           display: "flex", alignItems: "center", gap: 10,
