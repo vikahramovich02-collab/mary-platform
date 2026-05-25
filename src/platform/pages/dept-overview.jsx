@@ -4,12 +4,17 @@ import { AGENTS } from "../agents-config.js";
 
 const SHARED_IDS = ["researcher", "marketer"];
 
-function agentInitials(label = "") {
-  return label.trim().slice(0, 2).toUpperCase();
-}
+const ROBOT_ICON = (
+  <svg width={16} height={16} viewBox="0 0 24 24">
+    <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/>
+    <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/>
+    <circle cx="9.3" cy="13" r="1.4" fill="white"/>
+    <circle cx="14.7" cy="13" r="1.4" fill="white"/>
+  </svg>
+);
 
 // ── Metric chip ──────────────────────────────────────────────────
-function MetricChip({ label, value, sub, chipColor }) {
+function MetricChip({ label, value, chipColor }) {
   return (
     <div style={{
       padding: "12px 20px",
@@ -17,68 +22,87 @@ function MetricChip({ label, value, sub, chipColor }) {
       border: "1px solid rgba(38,38,51,0.07)",
       borderRadius: 14,
       display: "flex", flexDirection: "column", gap: 2,
-      minWidth: 90,
+      minWidth: 100,
     }}>
       <span style={{ fontSize: 22, fontWeight: 700, color: chipColor || "#262633", lineHeight: 1 }}>{value}</span>
       <span style={{ fontSize: 11.5, color: "rgba(38,38,51,0.5)", fontWeight: 500 }}>{label}</span>
-      {sub && <span style={{ fontSize: 10.5, color: "rgba(38,38,51,0.35)" }}>{sub}</span>}
     </div>
   );
 }
 
-// ── Agent node (left side) ───────────────────────────────────────
+// ── Agent node — same visual style as BuildNode in TG-kanal ────
 function AgentNode({ agent, nodeRef }) {
-  const bgColor = (agent.color || "#7A86FF") + "22";
-  const fgColor = agent.color || "#7A86FF";
+  const iconBg  = (agent.color || "#7A86FF") + "22";
+  const iconColor = agent.color || "#7A86FF";
   return (
     <div ref={nodeRef} style={{
       display: "flex", alignItems: "center", gap: 10,
-      padding: "10px 14px",
+      padding: "0 14px",
+      height: 56,
       background: color.white,
-      border: "1px solid rgba(38,38,51,0.08)",
-      borderRadius: 14,
-      width: 190,
-      boxShadow: "0 1px 4px rgba(38,38,51,0.04)",
+      borderRadius: 24,
+      boxShadow: "0 1px 4px rgba(38,38,51,0.07), 0 0 0 1px rgba(38,38,51,0.06)",
+      width: 200,
+      position: "relative",
     }}>
+      {/* left port */}
+      <span style={{
+        position: "absolute", left: -4, top: "50%", transform: "translateY(-50%)",
+        width: 8, height: 8, borderRadius: "50%",
+        background: color.white, border: "1px solid rgba(38,38,51,0.18)",
+      }} />
       <div style={{
-        width: 32, height: 32, borderRadius: 9,
-        background: bgColor,
+        width: 36, height: 36, borderRadius: 11,
+        background: iconBg, color: iconColor,
         display: "flex", alignItems: "center", justifyContent: "center",
         flexShrink: 0,
-        fontSize: 12, fontWeight: 700, color: fgColor,
-      }}>{agentInitials(agent.label)}</div>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#262633" }}>{agent.label}</div>
-        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.45)" }}>Агент</div>
+      }}>{ROBOT_ICON}</div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 510, color: "#262633", lineHeight: 1.15, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {agent.label}
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", marginTop: 2 }}>Агент</div>
       </div>
+      {/* right port */}
+      <span style={{
+        position: "absolute", right: -4, top: "50%", transform: "translateY(-50%)",
+        width: 8, height: 8, borderRadius: "50%",
+        background: color.white, border: "1px solid rgba(38,38,51,0.18)",
+      }} />
     </div>
   );
 }
 
 // ── Channel node (right side, clickable) ────────────────────────
+const CHAN_ICONS = {
+  tg: (
+    <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M21.8 2.2a1 1 0 0 0-1-.2L2.3 9.3a1 1 0 0 0 .1 1.9l4.6 1.5 1.8 5.6a1 1 0 0 0 1.7.4l2.6-2.6 4.5 3.3a1 1 0 0 0 1.5-.7l2.7-15a1 1 0 0 0-.3-.8z" />
+    </svg>
+  ),
+  inst: (
+    <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="5" /><circle cx="17.5" cy="6.5" r=".5" fill="currentColor" />
+    </svg>
+  ),
+  vk: (
+    <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M13.5 15.5h1.9c.4 0 .5-.3.5-.5 0 0 0-2 .9-2.3.9-.3 2 1.8 3.2 2.6.9.6 1.6.5 1.6.5l3.2-.1s1.7-.1.9-1.4c-.1-.2-.6-.9-2.2-2.5C21.3 10 20.9 10 21.2 9.5c.7-1 1.8-2.5 2.3-3.4.3-.6.1-.9-.5-.9h-2c-.5 0-.7.3-.9.6 0 0-1 2.3-2.5 3.8-.7.6-1 .3-1 0V6.3c0-.5-.1-.8-.7-.8h-3.2c-.4 0-.7.3-.7.6 0 .7.9.9.9 2.7v4.1c0 .6-.1.7-.4.7-.6 0-2.1-2.3-3-5C9.3 7.7 9 7.5 8.4 7.5H6.5c-.6 0-.7.3-.7.6 0 .7.7 4 3.3 8.3C11 19 13 20 14.9 20c1 0 1.2-.3 1.2-.7v-2.1c0-.6.1-.7.5-.7z"/>
+    </svg>
+  ),
+};
+
+function chanType(ch) {
+  const s = ((ch.id || "") + (ch.name || "")).toLowerCase();
+  if (s.includes("inst") || s.includes("инст")) return "inst";
+  if (s.includes("vk") || s.includes("вк") || s.includes("вконтакте")) return "vk";
+  return "tg";
+}
+
 function ChannelNode({ ch, deptColor, onClick, nodeRef }) {
   const [hover, setHover] = useState(false);
-  const CHAN_ICONS = {
-    tg: (
-      <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M21.8 2.2a1 1 0 0 0-1-.2L2.3 9.3a1 1 0 0 0 .1 1.9l4.6 1.5 1.8 5.6a1 1 0 0 0 1.7.4l2.6-2.6 4.5 3.3a1 1 0 0 0 1.5-.7l2.7-15a1 1 0 0 0-.3-.8z" />
-      </svg>
-    ),
-    inst: (
-      <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-        <rect x="2" y="2" width="20" height="20" rx="5" /><circle cx="12" cy="12" r="5" /><circle cx="17.5" cy="6.5" r=".5" fill="currentColor" />
-      </svg>
-    ),
-    vk: (
-      <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
-        <path d="M13.5 15.5h1.9c.4 0 .5-.3.5-.5 0 0 0-2 .9-2.3.9-.3 2 1.8 3.2 2.6.9.6 1.6.5 1.6.5l3.2-.1s1.7-.1.9-1.4c-.1-.2-.6-.9-2.2-2.5C21.3 10 20.9 10 21.2 9.5c.7-1 1.8-2.5 2.3-3.4.3-.6.1-.9-.5-.9h-2c-.5 0-.7.3-.9.6 0 0-1 2.3-2.5 3.8-.7.6-1 .3-1 0V6.3c0-.5-.1-.8-.7-.8h-3.2c-.4 0-.7.3-.7.6 0 .7.9.9.9 2.7v4.1c0 .6-.1.7-.4.7-.6 0-2.1-2.3-3-5C9.3 7.7 9 7.5 8.4 7.5H6.5c-.6 0-.7.3-.7.6 0 .7.7 4 3.3 8.3C11 19 13 20 14.9 20c1 0 1.2-.3 1.2-.7v-2.1c0-.6.1-.7.5-.7z"/>
-      </svg>
-    ),
-  };
-  const chanType = ch.id?.toLowerCase().includes("inst") || ch.name?.toLowerCase().includes("инст") ? "inst"
-    : ch.id?.toLowerCase().includes("vk") || ch.name?.toLowerCase().includes("вк") ? "vk"
-    : "tg";
-
+  const type = chanType(ch);
+  const col = deptColor || "#FF8B3D";
   return (
     <div ref={nodeRef}
       onClick={onClick}
@@ -86,38 +110,43 @@ function ChannelNode({ ch, deptColor, onClick, nodeRef }) {
       onMouseLeave={() => setHover(false)}
       style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "10px 16px",
-        background: hover ? "rgba(38,38,51,0.02)" : color.white,
-        border: `1.5px solid ${hover ? (deptColor || "#FF8B3D") : "rgba(38,38,51,0.1)"}`,
-        borderRadius: 14,
-        width: 190,
+        padding: "0 14px",
+        height: 56,
+        background: color.white,
+        borderRadius: 24,
+        boxShadow: hover
+          ? `0 4px 14px ${col}30, 0 0 0 1.5px ${col}`
+          : "0 1px 4px rgba(38,38,51,0.07), 0 0 0 1px rgba(38,38,51,0.06)",
+        width: 200,
         cursor: "pointer",
-        boxShadow: hover ? "0 2px 10px rgba(38,38,51,0.06)" : "0 1px 4px rgba(38,38,51,0.04)",
-        transition: "border-color 0.15s, box-shadow 0.15s",
+        transition: "box-shadow 0.15s",
+        position: "relative",
       }}>
+      {/* left port */}
+      <span style={{
+        position: "absolute", left: -4, top: "50%", transform: "translateY(-50%)",
+        width: 8, height: 8, borderRadius: "50%",
+        background: color.white, border: "1px solid rgba(38,38,51,0.18)",
+      }} />
       <div style={{
-        width: 32, height: 32, borderRadius: 9,
-        background: (deptColor || "#FF8B3D") + "18",
+        width: 36, height: 36, borderRadius: 11,
+        background: col + "18",
         display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, color: deptColor || "#FF8B3D",
-      }}>{CHAN_ICONS[chanType]}</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#262633" }}>{ch.name}</div>
-        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.45)" }}>Воркфлоу</div>
+        flexShrink: 0, color: col,
+      }}>{CHAN_ICONS[type]}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 510, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ch.name}</div>
+        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", marginTop: 2 }}>Воркфлоу</div>
       </div>
-      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.35)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.35)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
         <path d="M5 12h14M13 6l6 6-6 6" />
       </svg>
     </div>
   );
 }
 
-// ── Graph canvas with SVG edges ──────────────────────────────────
+// ── Graph canvas with SVG bezier edges ───────────────────────────
 function DeptGraph({ agents, channels, deptColor, onNavigate }) {
-  const sharedAgents = agents.filter(a => SHARED_IDS.includes(a.id) || SHARED_IDS.includes(a.role));
-  const otherAgents  = agents.filter(a => !SHARED_IDS.includes(a.id) && !SHARED_IDS.includes(a.role));
-  const allLeftAgents = [...sharedAgents, ...otherAgents];
-
   const leftRefs  = useRef([]);
   const rightRefs = useRef([]);
   const containerRef = useRef(null);
@@ -128,17 +157,12 @@ function DeptGraph({ agents, channels, deptColor, onNavigate }) {
       if (!containerRef.current) return;
       const box = containerRef.current.getBoundingClientRect();
       const newEdges = [];
-      // Connect last shared agent (marketer) to each channel, or all if no channels
-      const sourceRefs = sharedAgents.length > 0
-        ? leftRefs.current.slice(0, sharedAgents.length)
-        : leftRefs.current;
-      for (const lRef of sourceRefs) {
+      for (const lRef of leftRefs.current) {
         if (!lRef) continue;
         const lr = lRef.getBoundingClientRect();
         const lx = lr.right - box.left;
         const ly = lr.top + lr.height / 2 - box.top;
-        for (let ri = 0; ri < rightRefs.current.length; ri++) {
-          const rRef = rightRefs.current[ri];
+        for (const rRef of rightRefs.current) {
           if (!rRef) continue;
           const rr = rRef.getBoundingClientRect();
           const rx = rr.left - box.left;
@@ -149,50 +173,50 @@ function DeptGraph({ agents, channels, deptColor, onNavigate }) {
       }
       setEdges(newEdges);
     };
-    const t = setTimeout(compute, 60);
+    const t = setTimeout(compute, 80);
     window.addEventListener("resize", compute);
     return () => { clearTimeout(t); window.removeEventListener("resize", compute); };
   }, [agents.length, channels.length]);
 
   if (channels.length === 0) {
     return (
-      <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
-        {allLeftAgents.map((a, i) => (
+      <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+        {agents.map((a, i) => (
           <AgentNode key={a.id || i} agent={a} nodeRef={el => { leftRefs.current[i] = el; }} />
         ))}
-        <div style={{ fontSize: 13, color: "rgba(38,38,51,0.4)", marginTop: 16, alignSelf: "center" }}>
-          Каналов пока нет — добавь в настройках отдела
+        <div style={{ fontSize: 13, color: "rgba(38,38,51,0.4)", alignSelf: "center", marginLeft: 8 }}>
+          Каналов пока нет
         </div>
       </div>
     );
   }
 
   return (
-    <div ref={containerRef} style={{ position: "relative" }}>
+    <div ref={containerRef} style={{ position: "relative", minHeight: Math.max(agents.length, channels.length) * 66 }}>
       {/* SVG edges */}
       <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none", overflow: "visible" }}>
         {edges.map((e, i) => (
           <path key={i}
             d={`M ${e.x1} ${e.y1} C ${e.mx} ${e.y1}, ${e.mx} ${e.y2}, ${e.x2} ${e.y2}`}
-            fill="none" stroke="rgba(38,38,51,0.1)" strokeWidth={1.5}
+            fill="none" stroke="rgba(38,38,51,0.12)" strokeWidth={1.5}
           />
         ))}
       </svg>
 
-      <div style={{ display: "flex", gap: 80, alignItems: "center" }}>
+      <div style={{ display: "flex", gap: 100, alignItems: "center" }}>
         {/* Left — agents */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
             Общие агенты
           </div>
-          {allLeftAgents.map((a, i) => (
+          {agents.map((a, i) => (
             <AgentNode key={a.id || i} agent={a} nodeRef={el => { leftRefs.current[i] = el; }} />
           ))}
         </div>
 
         {/* Right — channels */}
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>
             Воркфлоу / Каналы
           </div>
           {channels.map((ch, i) => (
@@ -213,7 +237,7 @@ function DeptGraph({ agents, channels, deptColor, onNavigate }) {
 // ── Main export ──────────────────────────────────────────────────
 export function DepartmentOverviewPage({ dept, onNavigate }) {
   const [tasks, setTasks] = useState([]);
-  const [runs, setRuns] = useState([]);
+  const [runs,  setRuns]  = useState([]);
 
   useEffect(() => {
     if (!dept?.id) return;
@@ -222,33 +246,38 @@ export function DepartmentOverviewPage({ dept, onNavigate }) {
   }, [dept?.id]);
 
   const channels = dept?.channels || [];
-  const agents   = (dept?.agents?.length > 0 ? dept.agents : AGENTS).map(a => ({
-    id: a.id, label: a.label, color: a.color, role: a.role,
+
+  // Normalize agent shape: API uses `role` instead of `label`
+  const rawAgents = dept?.agents?.length > 0 ? dept.agents : AGENTS;
+  const agents = rawAgents.map(a => ({
+    id:    a.id,
+    label: a.label || a.role || a.name || "Агент",
+    color: a.color,
   }));
 
-  const activeTasks = tasks.filter(t => t.status !== "done").length;
-  const doneTasks   = tasks.filter(t => t.status === "done").length;
-  const runsThisWeek = runs.filter(r => {
+  const activeTasks   = tasks.filter(t => t.status !== "done").length;
+  const doneTasks     = tasks.filter(t => t.status === "done").length;
+  const runsThisWeek  = runs.filter(r => {
     const d = new Date(r.startedAt || r.createdAt || r.ts);
     return Date.now() - d.getTime() < 7 * 86400000;
   }).length;
 
   const metrics = [
-    { label: "Каналов", value: channels.length || "—", chipColor: dept?.color || "#FF8B3D" },
-    { label: "Агентов", value: agents.length || "—", chipColor: "#7A86FF" },
-    { label: "Активных задач", value: activeTasks, chipColor: "#FF8B3D" },
-    { label: "Готово задач", value: doneTasks, chipColor: "#34C759" },
-    { label: "Прогонов за неделю", value: runsThisWeek, chipColor: "#3F95FF" },
-    { label: "Интеграций", value: (dept?.integrations || []).length, chipColor: "#FF6FB3" },
+    { label: "Каналов",          value: channels.length || "—", chipColor: dept?.color || "#FF8B3D" },
+    { label: "Агентов",          value: agents.length || "—",   chipColor: "#7A86FF" },
+    { label: "Активных задач",   value: activeTasks,            chipColor: "#FF8B3D" },
+    { label: "Готово задач",     value: doneTasks,              chipColor: "#34C759" },
+    { label: "Прогонов за неделю", value: runsThisWeek,        chipColor: "#3F95FF" },
+    { label: "Интеграций",       value: (dept?.integrations || []).length, chipColor: "#FF6FB3" },
   ];
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", background: color.white }}>
+    <div style={{ flex: 1, overflowY: "auto", background: "#f7f7f9" }}>
       <div style={{ padding: "32px 40px", maxWidth: 960 }}>
 
         {/* Breadcrumb */}
         <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.45)", marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
-          <span>Отделы</span>
+          <span style={{ cursor: "pointer" }} onClick={() => onNavigate?.("home")}>Отделы</span>
           <span>›</span>
           <span style={{ color: "#262633", fontWeight: 500 }}>{dept?.name}</span>
         </div>
@@ -276,15 +305,21 @@ export function DepartmentOverviewPage({ dept, onNavigate }) {
         </div>
 
         {/* Metric chips */}
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 40 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 36 }}>
           {metrics.map(m => (
             <MetricChip key={m.label} label={m.label} value={m.value} chipColor={m.chipColor} />
           ))}
         </div>
 
-        {/* Graph */}
-        <div style={{ marginBottom: 12 }}>
-          <h2 style={{ fontSize: 15, fontWeight: 600, color: "#262633", margin: "0 0 20px" }}>
+        {/* Graph section */}
+        <div style={{
+          background: color.white,
+          borderRadius: 20,
+          border: "1px solid rgba(38,38,51,0.06)",
+          padding: "24px 28px",
+          marginBottom: 20,
+        }}>
+          <h2 style={{ fontSize: 15, fontWeight: 600, color: "#262633", margin: "0 0 22px" }}>
             Структура отдела
           </h2>
           <DeptGraph
@@ -295,21 +330,14 @@ export function DepartmentOverviewPage({ dept, onNavigate }) {
           />
         </div>
 
-        {/* If no channels — hint */}
-        {channels.length === 0 && (
-          <div style={{
-            marginTop: 32, padding: "18px 22px",
-            background: "rgba(38,38,51,0.03)", borderRadius: 14,
-            border: "1px dashed rgba(38,38,51,0.12)",
-            fontSize: 13, color: "rgba(38,38,51,0.55)",
-          }}>
-            Каналов нет. Попроси Mary добавить воркфлоу — например: <em>«добавь ТГ-канал в отдел СММ»</em>
-          </div>
-        )}
-
         {/* Recent runs */}
         {runs.length > 0 && (
-          <div style={{ marginTop: 40 }}>
+          <div style={{
+            background: color.white,
+            borderRadius: 20,
+            border: "1px solid rgba(38,38,51,0.06)",
+            padding: "24px 28px",
+          }}>
             <h2 style={{ fontSize: 15, fontWeight: 600, color: "#262633", margin: "0 0 14px" }}>Последние прогоны</h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {runs.slice(0, 5).map(r => {
@@ -318,13 +346,12 @@ export function DepartmentOverviewPage({ dept, onNavigate }) {
                   <div key={r.id} style={{
                     display: "flex", alignItems: "center", gap: 10,
                     padding: "10px 14px",
-                    background: color.white,
-                    border: "1px solid rgba(38,38,51,0.07)",
+                    background: "rgba(38,38,51,0.02)",
                     borderRadius: 10,
                   }}>
-                    <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: ok === true ? "#34C759" : ok === false ? "#FF3B30" : "rgba(38,38,51,0.3)" }} />
+                    <span style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: ok === true ? "#34C759" : ok === false ? "#FF3B30" : "rgba(38,38,51,0.25)" }} />
                     <span style={{ fontSize: 12.5, color: "#262633", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {(r.input || "").slice(0, 60) || "—"}
+                      {(r.input || "").slice(0, 70) || "—"}
                     </span>
                     <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", flexShrink: 0 }}>
                       {new Date(r.startedAt || r.createdAt).toLocaleDateString("ru", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
