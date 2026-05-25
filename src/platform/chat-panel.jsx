@@ -207,7 +207,7 @@ export function ChatHeader({ activeFilter, onFilter, onClose, startDrag, mode, o
 }
 
 // ── FilterBar ────────────────────────────────────────────────
-function FilterChip({ label, dotColor, active, onClick }) {
+export function FilterChip({ label, dotColor, active, onClick }) {
   const [h, setH] = useState(false);
   return (
     <button
