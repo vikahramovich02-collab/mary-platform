@@ -141,7 +141,7 @@ const ic = {
   ),
 };
 
-function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks }) {
+function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName }) {
   const [positions, setPositions] = useState(() =>
     Object.fromEntries(AGENTS.map(a => [a.id, { x: a.x, y: a.y }]))
   );
@@ -449,7 +449,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
       }}>
         <span style={{ cursor: drilledAgentId ? "pointer" : "default" }}
           onClick={() => drilledAgentId && setDrilledAgentId(null)}
-        >СММ-Отдел</span>
+        >{deptName || "СММ-Отдел"}</span>
         <span style={{ opacity: 0.6 }}>›</span>
         <span
           style={{
@@ -457,7 +457,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
             cursor: drilledAgentId ? "pointer" : "default",
           }}
           onClick={() => drilledAgentId && setDrilledAgentId(null)}
-        >Тг-канал</span>
+        >{channelName || "Тг-канал"}</span>
         {drilledAgentId && drilledAgent && (
           <>
             <span style={{ opacity: 0.6 }}>›</span>
@@ -1037,7 +1037,7 @@ export default function TgKanalPage() {
         display: "flex",
         flexDirection: "column",
         background: color.white,
-        padding: currentPage === "tg-kanal" ? 16 : 0,
+        padding: (currentPage === "tg-kanal" || (() => { for (const d of departments) { if ((d.channels||[]).some(c=>c.page===currentPage)) return true; } return false; })()) ? 16 : 0,
       }}>
         {currentPage === "tg-kanal" ? (
           <GraphCanvas
@@ -1103,14 +1103,36 @@ export default function TgKanalPage() {
             onNavigate={setCurrentPage}
           />
         ) : (() => {
-          // Если currentPage — динамический канал отдела (тип "deptId-channelId")
+          // Динамический канал отдела — рендерим тот же GraphCanvas, меняем только breadcrumb
           for (const dept of departments) {
             const ch = (dept.channels || []).find(c => c.page === currentPage);
             if (ch) {
-              return <DepartmentChannelPage deptId={dept.id} channelPage={currentPage} onNavigate={setCurrentPage} />;
+              return (
+                <GraphCanvas
+                  chatOpen={chatOpen}
+                  chatMode={chatMode}
+                  onChatModeChange={(m) => { if (m === "side") setActiveRail(null); setChatMode(m); }}
+                  pendingMaryMessage={pendingMaryMessage}
+                  onPendingConsumed={() => setPendingMaryMessage(null)}
+                  dockedHeight={dockedHeight}
+                  onDockedHeightChange={setDockedHeight}
+                  taskFlow={taskFlow}
+                  onTaskFlowChange={setTaskFlow}
+                  onAddTask={addPendingTask}
+                  onOpenTasks={openTasksDrawer}
+                  onOpenChat={() => { setChatOpen(true); setActiveFilter("all"); }}
+                  onCloseChat={() => setChatOpen(false)}
+                  activeFilter={activeFilter}
+                  onFilter={setActiveFilter}
+                  onAgentChat={(agentId) => { setActiveFilter(agentId); setChatOpen(true); }}
+                  onAgentSettings={(agentId) => { setActiveRail("agents"); setAgentsSelected(agentId); }}
+                  selectedAgentId={activeRail === "agents" ? agentsSelected : null}
+                  deptName={dept.name + "-Отдел"}
+                  channelName={ch.name}
+                />
+              );
             }
           }
-          // Fallback — Tasks (Taskk-style Kanban)
           return <TasksKanbanPage />;
         })()}
       </main>
