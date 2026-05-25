@@ -103,10 +103,10 @@ function HeaderOpt({ agent, label, active, unread, onClick }) {
   );
 }
 
-export function ChatHeader({ activeFilter, onFilter, onClose, startDrag, mode, onToggleMode, typingAgents }) {
+export function ChatHeader({ activeFilter, onFilter, onClose, startDrag, mode, onToggleMode, typingAgents, conversations = [], conversationId, convTitle, onSwitchConv }) {
   const [open, setOpen] = useState(false);
   const agent = activeFilter === "all" ? null : AGENTS.find(a => a.id === activeFilter);
-  const label = agent ? agent.label : "Mary (общий)";
+  const label = agent ? agent.label : (convTitle || "Mary (общий)");
   const dot = agent ? agent.color : "#262633";
 
   return (
@@ -182,13 +182,46 @@ export function ChatHeader({ activeFilter, onFilter, onClose, startDrag, mode, o
             borderRadius: 12,
             boxShadow: "0 8px 24px rgba(38,38,51,0.12)",
             padding: 6,
-            minWidth: 220,
+            minWidth: 240,
+            maxHeight: 320,
+            overflowY: "auto",
             zIndex: 7,
           }}
         >
+          {/* Синхронизированные чаты */}
+          {conversations.length > 0 && (
+            <>
+              <div style={{ fontSize: 10.5, color: "rgba(38,38,51,0.45)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", padding: "4px 8px 2px" }}>
+                Чаты
+              </div>
+              {conversations.slice(0, 8).map(c => (
+                <button key={c.id}
+                  onClick={() => { onFilter("all"); onSwitchConv?.(c); setOpen(false); }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    width: "100%", padding: "6px 8px",
+                    background: c.id === conversationId ? "rgba(38,38,51,0.05)" : "transparent",
+                    border: "none", borderRadius: 7,
+                    cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                  }}
+                  onMouseEnter={e => { if (c.id !== conversationId) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+                  onMouseLeave={e => { if (c.id !== conversationId) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#7A86FF", flexShrink: 0 }} />
+                  <span style={{ fontSize: 12.5, color: "#262633", fontWeight: c.id === conversationId ? 510 : 400, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {c.title || "Без названия"}
+                  </span>
+                </button>
+              ))}
+              <div style={{ height: 1, background: "rgba(38,38,51,0.06)", margin: "4px 4px" }} />
+              <div style={{ fontSize: 10.5, color: "rgba(38,38,51,0.45)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", padding: "4px 8px 2px" }}>
+                Агенты
+              </div>
+            </>
+          )}
           <HeaderOpt
             label="Mary (общий)"
-            active={activeFilter === "all"}
+            active={activeFilter === "all" && !conversations.length}
             unread={AGENTS.reduce((sum, x) => sum + (x.unread || 0), 0)}
             onClick={() => { onFilter("all"); setOpen(false); }}
           />
@@ -271,22 +304,28 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
   const [kbOpen, setKbOpen] = useState(false);
   const [allMessages, setAllMessages] = useState([]);
   const [conversationId, setConversationId] = useState(null);
+  const [conversations, setConversations] = useState([]);
+  const [convTitle, setConvTitle] = useState("Mary (общий)");
 
   useEffect(() => {
     let cancelled = false;
     async function ensureConv() {
       try {
         const list = await fetch("/api/mary/conversations").then(r => r.json());
-        let conv = (list.conversations || []).find(c => c.scope === "smm/tg-kanal");
+        const all = list.conversations || [];
+        setConversations(all);
+        let conv = all.find(c => c.scope === "smm/tg-kanal");
         if (!conv) {
           conv = await fetch("/api/mary/conversations", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title: "Чат СММ-отдела · Тг-канал", scope: "smm/tg-kanal" }),
           }).then(r => r.json());
+          if (!cancelled) setConversations(prev => [conv, ...prev]);
         }
         if (cancelled) return;
         setConversationId(conv.id);
+        setConvTitle(conv.title || "Mary (общий)");
         const full = await fetch(`/api/mary/conversations/${conv.id}`).then(r => r.json());
         if (!cancelled && full.messages?.length > 0) {
           const converted = full.messages.map((m, i) => ({
@@ -302,6 +341,25 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
     ensureConv();
     return () => { cancelled = true; };
   }, []);
+
+  function switchConversation(conv) {
+    if (conv.id === conversationId) return;
+    setConversationId(conv.id);
+    setConvTitle(conv.title || "Чат");
+    setAllMessages([]);
+    fetch(`/api/mary/conversations/${conv.id}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.messages?.length > 0) {
+          setAllMessages(d.messages.map((m, i) => ({
+            id: "h" + i + "-" + (m.ts || ""),
+            agentId: m.role === "user" ? "user" : "mary",
+            time: (m.ts || "").slice(11, 16),
+            text: m.text || "",
+          })));
+        }
+      }).catch(() => {});
+  }
 
   const [typingIds, setTypingIds] = useState(["mary", "copywriter"]);
   const fileRef = useRef(null);
@@ -1041,6 +1099,10 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
         mode={mode}
         onToggleMode={toggleMode}
         typingAgents={typingAgents}
+        conversations={conversations}
+        conversationId={conversationId}
+        convTitle={convTitle}
+        onSwitchConv={switchConversation}
       />
       <div style={{
         flex: 1, minHeight: 0, overflowY: "auto",
@@ -1076,6 +1138,31 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
         {messages.length === 0 && (
           <DeptChatWelcome onPick={handleWelcomePick} />
         )}
+      </div>
+      {/* Quick action chips */}
+      <div style={{ padding: "0 14px 6px", display: "flex", gap: 6, overflowX: "auto", scrollbarWidth: "none" }}>
+        {[
+          { label: "▶ Пайплайн", content: "Прогон всего отдела: ресёрч → идеи → текст", isPipeline: true },
+          { label: "Идеи постов", content: "Придумай 5 идей постов для канала" },
+          { label: "Ресёрч", content: "Сделай ресёрч по нише за неделю" },
+          { label: "Написать пост", content: "Напиши пост по горячей теме" },
+          { label: "+ Задача", content: "помоги поставить задачу" },
+        ].map((chip, i) => (
+          <button key={i}
+            onClick={() => handleWelcomePick({ content: chip.content })}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "4px 10px", height: 26, whiteSpace: "nowrap", flexShrink: 0,
+              background: chip.isPipeline ? "rgba(63,149,255,0.07)" : "transparent",
+              border: chip.isPipeline ? "1px solid rgba(63,149,255,0.22)" : "1px solid rgba(38,38,51,0.12)",
+              borderRadius: 20, fontSize: 12, fontWeight: chip.isPipeline ? 510 : 400,
+              color: chip.isPipeline ? "#3F95FF" : "#262633",
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = chip.isPipeline ? "rgba(63,149,255,0.12)" : "rgba(38,38,51,0.04)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = chip.isPipeline ? "rgba(63,149,255,0.07)" : "transparent"; }}
+          >{chip.label}</button>
+        ))}
       </div>
       <div style={{ padding: "0 14px 14px", position: "relative" }}>
         <div style={{
