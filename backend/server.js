@@ -1352,6 +1352,32 @@ app.post("/webhook/mary/departments", (req, res) => {
 app.delete("/webhook/mary/departments/:id", (req, res) => {
   res.json({ ok: deptDelete(req.params.id) });
 });
+app.delete("/webhook/mary/departments/:deptId/channels/:channelId", (req, res) => {
+  const data = loadDepartments();
+  const dept = data.departments.find(d => d.id === req.params.deptId);
+  if (!dept) return res.status(404).json({ error: "dept not found" });
+  const before = dept.channels.length;
+  dept.channels = dept.channels.filter(c => c.id !== req.params.channelId);
+  saveDepartments(data);
+  res.json({ ok: dept.channels.length < before, channels: dept.channels });
+});
+app.post("/webhook/mary/departments/:deptId/channels", (req, res) => {
+  try { res.json(deptAddChannel(req.params.deptId, req.body || {})); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+app.patch("/webhook/mary/departments/:deptId/channels", (req, res) => {
+  // Replace all channels for a dept
+  const data = loadDepartments();
+  const dept = data.departments.find(d => d.id === req.params.deptId);
+  if (!dept) return res.status(404).json({ error: "dept not found" });
+  dept.channels = (req.body.channels || []).map(ch => {
+    if (!ch.id) ch.id = String(ch.name || "ch").toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 20);
+    if (!ch.page) ch.page = `${req.params.deptId}-${ch.id}`;
+    return ch;
+  });
+  saveDepartments(data);
+  res.json({ channels: dept.channels });
+});
 
 // ── Conversations CRUD ───────────────────────────────────
 app.get("/webhook/mary/conversations", (_req, res) => {
