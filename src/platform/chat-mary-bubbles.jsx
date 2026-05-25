@@ -3,6 +3,7 @@ import { color, transition } from "../ui/tokens.js";
 import { renderMarkdown } from "./markdown.jsx";
 import { parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
 import { ToolsTrail } from "./chat-cards.jsx";
+import { AgentsLog, RunResultPanel, JudgeCard } from "./pages/sandbox-page.jsx";
 
 export function OptionsBlock({ options, multi, onPick }) {
   const [selected, setSelected] = useState(() => new Set());
@@ -123,6 +124,47 @@ export function OptionsBlock({ options, multi, onPick }) {
   );
 }
 
+function PipelineRunBubble({ m }) {
+  return (
+    <div style={{ marginBottom: 22 }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8, marginBottom: 12,
+        fontSize: 11, color: "rgba(38,38,51,0.5)",
+        textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600,
+      }}>
+        <span style={{
+          width: 7, height: 7, borderRadius: "50%",
+          background: m.running ? "#FF8B3D" : "#34C759",
+          animation: m.running ? "marypulse 1.2s ease-in-out infinite" : "none",
+        }} />
+        Пайплайн агентов{m.topic ? ` · ${m.topic.slice(0, 50)}` : ""}
+      </div>
+      {m.agents?.length > 0 ? (
+        <AgentsLog agents={m.agents} running={m.running} />
+      ) : m.running ? (
+        <div style={{ display: "inline-flex", gap: 4, padding: "4px 0" }}>
+          {[0,1,2].map(i => (
+            <span key={i} style={{
+              width: 6, height: 6, borderRadius: "50%",
+              background: "rgba(38,38,51,0.4)",
+              animation: `marypulse 1.4s ease-in-out infinite ${i * 0.2}s`,
+            }} />
+          ))}
+        </div>
+      ) : null}
+      {m.judge && <JudgeCard judge={m.judge} />}
+      {!m.running && m.agents?.length > 0 && (
+        <RunResultPanel
+          postText={m.agents.find(a => a.id === "copywriter" || a.role?.match(/копи/i))?.output || m.agents.at(-1)?.output}
+          insights={m.agents.find(a => a.id === "researcher" || a.role?.match(/ресёрч|исслед/i))?.output}
+          topic={m.topic}
+          deptId={m.deptId || "smm"}
+        />
+      )}
+    </div>
+  );
+}
+
 export function AgentChatBubble({ m }) {
   const initial = (m.agentRole || "?").trim().slice(0, 2).toUpperCase();
   return (
@@ -169,6 +211,9 @@ export function AgentChatBubble({ m }) {
 export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  if (m.role === "pipeline_run") {
+    return <PipelineRunBubble m={m} />;
+  }
   if (m.agentId && m.agentRole) {
     return <AgentChatBubble m={m} />;
   }

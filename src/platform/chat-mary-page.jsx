@@ -74,6 +74,59 @@ export function ChatMaryPage() {
     }
   }
 
+  async function runPipelineInChat(topic, deptId = "smm") {
+    const runId = "pipeline-" + Date.now();
+    setMessages(prev => [...prev, {
+      role: "pipeline_run", _id: runId,
+      topic, deptId, agents: [], running: true, judge: null,
+      ts: new Date().toISOString(),
+    }]);
+    try {
+      const res = await fetch(`/api/mary/departments/${deptId}/sandbox/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: topic, dryRun: false, judge: false }),
+      });
+      if (!res.body) throw new Error("no stream");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() || "";
+        for (const block of blocks) {
+          let event = "message", dataStr = "";
+          for (const line of block.split("\n")) {
+            if (line.startsWith("event:")) event = line.slice(6).trim();
+            else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
+          }
+          if (!dataStr) continue;
+          let data; try { data = JSON.parse(dataStr); } catch { continue; }
+          if (event === "agent_start") {
+            setMessages(prev => prev.map(m => m._id === runId
+              ? { ...m, agents: [...m.agents, { id: data.agentId, role: data.role, status: "running" }] }
+              : m));
+          } else if (event === "agent_end") {
+            setMessages(prev => prev.map(m => m._id === runId
+              ? { ...m, agents: m.agents.map(a => a.id === data.agentId
+                  ? { ...a, status: data.error ? "error" : "done", output: data.output, error: data.error, durationMs: data.durationMs, tokens: data.tokens, costUsd: data.costUsd }
+                  : a) }
+              : m));
+          } else if (event === "judge_end") {
+            setMessages(prev => prev.map(m => m._id === runId ? { ...m, judge: data } : m));
+          } else if (event === "done") {
+            setMessages(prev => prev.map(m => m._id === runId ? { ...m, running: false } : m));
+          }
+        }
+      }
+    } catch {
+      setMessages(prev => prev.map(m => m._id === runId ? { ...m, running: false } : m));
+    }
+  }
+
   async function send(overrideText, opts = {}) {
     const msg = (overrideText ?? text).trim();
     if (!msg || loading) return;
@@ -88,6 +141,16 @@ export function ChatMaryPage() {
     }
     let cid = activeId;
     if (!cid) cid = await newChat();
+
+    // Pipeline intent: "запусти агентов [тема]", "запустить пайплайн [тема]"
+    const pipelineMatch = msg.match(/^запусти(?:ть)?\s+(?:агентов|пайплайн)(?:\s+(.+))?$/i);
+    if (pipelineMatch) {
+      const topic = pipelineMatch[1]?.trim() || "без темы";
+      setMessages(prev => [...prev, { role: "user", text: msg, ts: new Date().toISOString() }]);
+      runPipelineInChat(topic, "smm");
+      return;
+    }
+
     // Добавляем user-сообщение в UI оптимистично
     setMessages(prev => [...prev, { role: "user", text: msg, ts: new Date().toISOString() }]);
     setLoading(true);

@@ -12,6 +12,7 @@ export function ChatWelcome({ onSuggest, children, onPickAudio, onRecord, record
     return () => document.removeEventListener("mousedown", onDoc);
   }, [callMenuOpen]);
   const quickActions = [
+    { label: "▶ Запустить пайплайн",  prompt: "запусти агентов" },
     { label: "Автоматизировать отдел", prompt: "Помоги автоматизировать отдел" },
     { label: "Поставить задачу",       prompt: "Помоги поставить задачу" },
     { label: "Подключить созвон",      isCall: true },
