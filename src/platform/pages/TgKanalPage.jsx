@@ -1154,7 +1154,7 @@ export default function TgKanalPage() {
       {chatKbItem && <KbPopup item={chatKbItem} onClose={() => setChatKbItem(null)} />}
 
       {/* ── Right rail (скрыт на страницах БЗ/Интеграции) ── */}
-      {currentPage === "tg-kanal" && <RightRail
+      {(currentPage === "tg-kanal" || currentPage.startsWith("dept:")) && <RightRail
         activeRail={activeRail}
         onSelect={(id) => {
           // При выборе любого drawer'а — закрываем чат-side, если он был открыт
