@@ -637,8 +637,8 @@ export function ChatMaryPage() {
 
             // Раздел «Отделы» сверху — закрепы СММ, Продажи, HR (статически)
             const deptPins = [
-              { id: "smm-pin", title: "СММ", scope: "smm", color: "#FF8B3D" },
-              { id: "sales-pin", title: "Продажи", scope: "smm", color: "#3F95FF" },
+              { id: "smm-pin", title: "СММ", scope: "smm", color: "#FF8B3D", deptId: "smm" },
+              { id: "sales-pin", title: "Продажи", scope: "smm", color: "#3F95FF", deptId: "sales" },
             ];
             const teamChats = []; // Команда живёт во Входящих, не тут
             // Закреплённые юзером чаты — отдельной секцией, удаляем их из date-buckets
@@ -660,16 +660,21 @@ export function ChatMaryPage() {
                       padding: "4px 10px 4px",
                     }}>Отделы</div>
                     {deptPins.map(d => (
-                      <div key={d.id} style={{
-                        display: "flex", alignItems: "center", gap: 8,
-                        padding: "5px 10px", fontSize: 12, color: "#262633",
-                        cursor: "pointer", borderRadius: 6,
-                      }}
+                      <div key={d.id}
+                        onClick={() => window.__maryNavigate?.("dept://" + d.deptId)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 8,
+                          padding: "5px 10px", fontSize: 12, color: "#262633",
+                          cursor: "pointer", borderRadius: 6,
+                        }}
                         onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
                         onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                       >
                         <span style={{ width: 6, height: 6, borderRadius: "50%", background: d.color, flexShrink: 0 }} />
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.title}</span>
+                        <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.3)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginLeft: "auto" }}>
+                          <path d="M5 12h14M13 6l6 6-6 6" />
+                        </svg>
                       </div>
                     ))}
                   </div>
