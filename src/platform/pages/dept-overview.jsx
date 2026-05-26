@@ -90,10 +90,11 @@ function DeptNode({ dept, pos }) {
 }
 
 // ── Workflow card — style as AgentCard ───────────────────────
-function WorkflowCard({ ch, pos, deptCol, onClick }) {
+function WorkflowCard({ ch, pos, deptCol, agentCount, onClick }) {
   const [hov, setHov] = useState(false);
   const type = chanIcon(ch);
   const chanCol = CHAN_COLORS[type] || CHAN_COLORS.other;
+  const agentLabel = agentCount === 1 ? "1 агент" : agentCount > 1 ? `${agentCount} агента` : null;
   return (
     <div
       onClick={onClick}
@@ -128,7 +129,9 @@ function WorkflowCard({ ch, pos, deptCol, onClick }) {
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {ch.name}
         </div>
-        <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", marginTop: 3 }}>Воркфлоу</div>
+        <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", marginTop: 3 }}>
+          {agentLabel ? agentLabel : "Воркфлоу"}
+        </div>
       </div>
       {/* Top connector dot */}
       <span style={{
@@ -214,6 +217,7 @@ export function DepartmentOverviewPage({ dept, onNavigate, onOpenChat }) {
   const [scale, setScale] = useState(1);
   const [tool, setTool] = useState("pointer");
   const [toolOpen, setToolOpen] = useState(false);
+  const [agentCount, setAgentCount] = useState((dept?.agents || []).length);
 
   function onMouseDown(e) {
     if (e.button !== 0) return;
@@ -232,6 +236,17 @@ export function DepartmentOverviewPage({ dept, onNavigate, onOpenChat }) {
     window.addEventListener("mouseup", onUp);
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
   }, []);
+
+  useEffect(() => {
+    if (!dept?.id) return;
+    fetch("/api/mary/departments")
+      .then(r => r.json())
+      .then(d => {
+        const found = (d.departments || []).find(x => x.id === dept.id);
+        if (found) setAgentCount((found.agents || []).length);
+      })
+      .catch(() => {});
+  }, [dept?.id]);
 
   function fitToView() { setView({ x: 0, y: 0 }); setScale(1); }
   function zoomIn()    { setScale(s => Math.min(s + 0.1, 2)); }
@@ -336,6 +351,7 @@ export function DepartmentOverviewPage({ dept, onNavigate, onOpenChat }) {
             ch={ch}
             pos={cardPositions[i] || { x: 0, y: DEPT_NODE_H + VERT_GAP }}
             deptCol={col}
+            agentCount={agentCount}
             onClick={() => onNavigate?.(ch.page)}
           />
         ))}

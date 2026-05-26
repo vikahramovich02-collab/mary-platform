@@ -142,8 +142,17 @@ const ic = {
 };
 
 function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName, deptId, onDrillChange }) {
-  const activeAgents = channelName === "Instagram" ? INSTAGRAM_AGENTS : AGENTS;
-  const activeEdges  = channelName === "Instagram" ? INSTAGRAM_EDGES  : EDGES;
+  const [dynamicAgents, setDynamicAgents] = useState([]);
+  const activeAgents = useMemo(() => {
+    if (channelName === "Instagram") return INSTAGRAM_AGENTS;
+    if (!deptId || channelName === "Тг-канал") return AGENTS;
+    return dynamicAgents.length > 0 ? dynamicAgents : AGENTS;
+  }, [channelName, deptId, dynamicAgents]);
+  const activeEdges = useMemo(() => {
+    if (channelName === "Instagram") return INSTAGRAM_EDGES;
+    if (!deptId || channelName === "Тг-канал") return EDGES;
+    return [];
+  }, [channelName, deptId]);
   const [positions, setPositions] = useState(() =>
     Object.fromEntries(activeAgents.map(a => [a.id, { x: a.x, y: a.y }]))
   );
@@ -192,11 +201,35 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
       }
       setPipelineByAgentId(map);
       setProfileByAgentId(profMap);
+
+      // Динамические агенты для текущего канала (не хардкод)
+      if (deptId && channelName !== "Тг-канал" && channelName !== "Instagram") {
+        const dept = (d.departments || []).find(x => x.id === deptId);
+        const backendAgents = dept?.agents || [];
+        if (backendAgents.length > 0) {
+          setDynamicAgents(prev => {
+            const prevPositions = Object.fromEntries(prev.map(a => [a.id, { x: a.x, y: a.y }]));
+            return backendAgents.map((a, i) => ({
+              id: a.id,
+              label: a.name || a.role,
+              color: a.color || "#7A86FF",
+              role: a.role,
+              x: prevPositions[a.id]?.x ?? a.x ?? (60 + (i % 3) * 260),
+              y: prevPositions[a.id]?.y ?? a.y ?? (200 + Math.floor(i / 3) * 200),
+              hasUpdate: false, unread: 0,
+              skills: [],
+              tools: a.tools || [],
+              pipeline: [],
+              flow: (map[a.id]) || pipelineToFlow(a.pipeline, a.color) || { nodes: [], edges: [] },
+            }));
+          });
+        }
+      }
     }).catch(() => {});
     load();
     const t = setInterval(load, 5000); // подхватывать изменения от Mary раз в 5с
     return () => { stop = true; clearInterval(t); };
-  }, []);
+  }, [deptId, channelName]); // eslint-disable-line react-hooks/exhaustive-deps
   const [pipelineKb, setPipelineKb] = useState(null);
   const [draggingId, setDraggingId] = useState(null);
   const [view, setView] = useState({ x: 0, y: 0, scale: 1 });
@@ -358,6 +391,18 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drilledAgentId]);
 
+  // Sync positions when new dynamic agents arrive
+  useEffect(() => {
+    setPositions(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const a of activeAgents) {
+        if (!next[a.id]) { next[a.id] = { x: a.x, y: a.y }; changed = true; }
+      }
+      return changed ? next : prev;
+    });
+  }, [activeAgents]);
+
   useEffect(() => {
     function onMove(e) {
       const d = dragRef.current;
@@ -369,15 +414,25 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         setDraggingId(d.id);
       }
       if (d.dragging) {
+        d.lastX = Math.max(0, d.origX + dx);
+        d.lastY = Math.max(0, d.origY + dy);
         setPositions(prev => ({
           ...prev,
-          [d.id]: { x: Math.max(0, d.origX + dx), y: Math.max(0, d.origY + dy) },
+          [d.id]: { x: d.lastX, y: d.lastY },
         }));
       }
     }
     function onUp() {
       if (dragRef.current) {
-        wasDraggedRef.current = dragRef.current.dragging;
+        const d = dragRef.current;
+        wasDraggedRef.current = d.dragging;
+        if (d.dragging && deptId && d.lastX !== undefined) {
+          fetch(`/api/mary/agents/${deptId}/${d.id}/position`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ x: d.lastX, y: d.lastY }),
+          }).catch(() => {});
+        }
         dragRef.current = null;
         setDraggingId(null);
       }
@@ -388,7 +443,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, []);
+  }, [deptId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleAgentMouseDown(id, e) {
     const pos = positions[id];

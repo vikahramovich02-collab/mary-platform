@@ -89,6 +89,7 @@ function deptAddChannel(deptId, channel) {
   saveDepartments(data);
   return channel;
 }
+const AGENT_COLORS = ["#3F95FF", "#FF8B3D", "#34C759", "#AF52DE", "#FF6B6B", "#00C7BE", "#FFD60A", "#FF375F"];
 function deptAddAgent(deptId, agent) {
   const data = loadDepartments();
   const dept = data.departments.find(d => d.id === deptId);
@@ -102,6 +103,12 @@ function deptAddAgent(deptId, agent) {
   agent.tools          = agent.tools          || profile.tools;
   agent.memory         = agent.memory         || profile.memory;
   agent.responseFormat = agent.responseFormat || profile.responseFormat;
+  // Визуальные поля для фронтенда
+  const idx = (dept.agents || []).length;
+  agent.name  = agent.name  || agent.label || agent.role || agent.id;
+  agent.color = agent.color || AGENT_COLORS[idx % AGENT_COLORS.length];
+  agent.x     = agent.x     ?? (60 + (idx % 3) * 260);
+  agent.y     = agent.y     ?? (200 + Math.floor(idx / 3) * 200);
   dept.agents.push(agent);
   saveDepartments(data);
   return agent;
@@ -4015,6 +4022,22 @@ app.patch("/webhook/mary/agents/:deptId/:agentId/profile", (req, res) => {
     }
     saveDepartments(data);
     res.json({ ok: true, agent });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.patch("/webhook/mary/agents/:deptId/:agentId/position", (req, res) => {
+  const { deptId, agentId } = req.params;
+  const { x, y } = req.body || {};
+  try {
+    const data = loadDepartments();
+    const dept = data.departments.find(d => d.id === deptId);
+    if (!dept) return res.status(404).json({ error: "department not found" });
+    const agent = (dept.agents || []).find(a => a.id === agentId);
+    if (!agent) return res.status(404).json({ error: "agent not found" });
+    if (x !== undefined) agent.x = x;
+    if (y !== undefined) agent.y = y;
+    saveDepartments(data);
+    res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
