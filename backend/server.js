@@ -3327,7 +3327,10 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit, 
     let nodeTokens = 0;
     try {
       if (node.type === "trigger") {
-        output = inputs[node.id] || node.settings?.placeholder || `(${node.title})`;
+        // inputs → stored placeholder → defaultPipeline placeholder → title
+        const defPipeline = defaultPipelineFor(agent.role || agent.id);
+        const defNode = defPipeline?.nodes?.find(n => n.id === node.id);
+        output = inputs[node.id] || node.settings?.placeholder || defNode?.settings?.placeholder || `(${node.title})`;
       } else if (node.type === "step") {
         output = `${node.title}:\n${contextFor(node.id)}`;
       } else if (node.type === "llm") {
