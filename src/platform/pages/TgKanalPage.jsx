@@ -340,12 +340,14 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
       const maxY = Math.max(...positions.map(p => p.y + FLOW_NODE_H));
       const w = maxX - minX + 100;
       const h = maxY - minY + 100;
-      const targetScale = Math.min(rect.width / w, rect.height / h, 1.0);
+      const BOTTOM_PANEL_H = 340; // AgentBottomPanel height + padding
+      const availH = rect.height - BOTTOM_PANEL_H;
+      const targetScale = Math.min(rect.width / w, availH / h, 0.9);
       const cx = (minX + maxX) / 2;
       const cy = (minY + maxY) / 2;
       setView({
         x: rect.width / 2 - cx * targetScale,
-        y: rect.height / 2 - cy * targetScale,
+        y: availH / 2 - cy * targetScale,
         scale: targetScale,
       });
     } else if (prevViewRef.current) {
