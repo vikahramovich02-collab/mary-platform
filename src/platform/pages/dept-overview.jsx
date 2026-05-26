@@ -14,6 +14,16 @@ const CHAN_ICONS = {
   other: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
 };
 
+const CHAN_COLORS = {
+  tg:        { icon: "#2AABEE", bg: "#E8F7FE" },
+  inst:      { icon: "#E1306C", bg: "#FDE8F0" },
+  vk:        { icon: "#2787F5", bg: "#E6F1FE" },
+  analytics: { icon: "#34C759", bg: "#E8F8EE" },
+  email:     { icon: "#FF9500", bg: "#FFF3E0" },
+  support:   { icon: "#7A86FF", bg: "#EEF0FF" },
+  other:     { icon: "#8E8EA0", bg: "#F0F0F4" },
+};
+
 function chanIcon(ch) {
   const s = ((ch.id || "") + (ch.name || "") + (ch.type || "")).toLowerCase();
   if (s.includes("аналит") || s.includes("analytics")) return "analytics";
@@ -35,9 +45,10 @@ function layoutCards(n) {
 }
 
 // ── Workflow card — same style as AgentCard ──────────────────
-function WorkflowCard({ ch, pos, col, onClick }) {
+function WorkflowCard({ ch, pos, deptCol, onClick }) {
   const [hov, setHov] = useState(false);
   const type = chanIcon(ch);
+  const chanCol = CHAN_COLORS[type] || CHAN_COLORS.other;
   return (
     <div
       onClick={onClick}
@@ -50,7 +61,7 @@ function WorkflowCard({ ch, pos, col, onClick }) {
         background: color.white,
         borderRadius: 24,
         boxShadow: hov
-          ? `0 0 0 2px ${col}, 0 4px 16px ${col}22`
+          ? `0 0 0 2px ${deptCol}, 0 4px 16px ${deptCol}22`
           : "0 1px 2px rgba(38,38,51,0.04)",
         display: "flex", alignItems: "center", gap: 12,
         padding: "0 16px",
@@ -61,7 +72,7 @@ function WorkflowCard({ ch, pos, col, onClick }) {
     >
       <div style={{
         width: 42, height: 42, borderRadius: 12,
-        background: col + "26", color: col,
+        background: chanCol.bg, color: chanCol.icon,
         display: "flex", alignItems: "center", justifyContent: "center",
         flexShrink: 0,
       }}>
@@ -206,7 +217,7 @@ export function DepartmentOverviewPage({ dept, onNavigate, onOpenChat }) {
             key={ch.id}
             ch={ch}
             pos={positions[i] || { x: 0, y: 0 }}
-            col={col}
+            deptCol={col}
             onClick={() => onNavigate?.(ch.page)}
           />
         ))}
