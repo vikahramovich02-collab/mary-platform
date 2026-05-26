@@ -3174,6 +3174,7 @@ app.post("/webhook/mary/agent/stream", async (req, res) => {
   if (!OPENROUTER_API_KEY) return res.status(503).json({ error: "LLM not configured" });
 
   // Если передан conversationId — берём историю с бэка (а не из request body)
+  // Пользовательское сообщение уже сохранено фронтом через POST /conversations/:id/messages
   let actualHistory = history;
   if (conversationId) {
     const conv = convGet(conversationId);
@@ -3182,8 +3183,6 @@ app.post("/webhook/mary/agent/stream", async (req, res) => {
         agentId: m.role === "user" ? "user" : "mary",
         text: m.text || "",
       }));
-      // Сохраняем user-сообщение в conv
-      convAppend(conversationId, { role: "user", text: message });
     }
   }
 
