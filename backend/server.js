@@ -3337,8 +3337,11 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit, 
         if (dryRun) {
           output = `[DRY] ${node.title} — пропуск LLM-вызова, mock-ответ`;
         } else {
+          const rawCtx = contextFor(node.id);
+          // Limit context to avoid overwhelming the model; prefer end (most processed data)
+          const ctx = rawCtx.length > 2400 ? "…(сокращено)\n" + rawCtx.slice(-2400) : rawCtx;
           const sys = `Ты — узел "${node.title}" (${node.sub || "обработчик"}) внутри pipeline агента "${agent.role}". Делай только свою функцию, кратко.`;
-          const usr = `Контекст от предыдущих узлов:\n${contextFor(node.id)}\n\nВыполни свою функцию и верни результат.`;
+          const usr = `Контекст от предыдущих узлов:\n${ctx}\n\nВыполни свою функцию и верни результат.`;
           const r = await callLLM({ system: sys, user: usr, jsonMode: false, maxTokens: 800, label: `sandbox/${node.id}`, returnUsage: true });
           output = r.content;
           nodeTokens = r.usage?.total_tokens || 0;
