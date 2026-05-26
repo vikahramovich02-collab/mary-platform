@@ -825,7 +825,7 @@ export default function TgKanalPage() {
     window.__maryNavigate = (target) => {
       if (target.startsWith("dept://")) {
         const id = target.slice(7);
-        setCurrentPage("tg-kanal");
+        setCurrentPage("dept:" + id);
         setOpenDepts(prev => ({ ...prev, [id]: true }));
       } else if (target.startsWith("page://")) {
         setCurrentPage(target.slice(7));
@@ -1142,7 +1142,7 @@ export default function TgKanalPage() {
           <DepartmentOverviewPage
             dept={departments.find(d => "dept:" + d.id === currentPage)}
             onNavigate={setCurrentPage}
-            onOpenChat={() => { setChatOpen(true); setActiveFilter("all"); }}
+            onOpenChat={() => { setChatOpen(true); setChatMode("side"); setActiveFilter("all"); }}
           />
         ) : (() => {
           // Динамический канал отдела — рендерим тот же GraphCanvas, меняем только breadcrumb

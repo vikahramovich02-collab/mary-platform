@@ -2,13 +2,35 @@
 // Извлечено из TgKanalPage.jsx (Phase 2).
 import { color } from "../ui/tokens.js";
 
-export function DeptChatWelcome({ onPick, channelName }) {
-  const quickActions = [
-    { label: "Сделай ресёрч по нише за неделю" },
-    { label: "Придумай 5 идей постов для канала" },
-    { label: "Напиши пост по горячей теме" },
-    { label: "Прогон всего отдела: ресёрч → идеи → текст", isPipeline: true },
-  ];
+const CHANNEL_ACTIONS = [
+  { label: "Сделай ресёрч по нише за неделю" },
+  { label: "Придумай 5 идей постов для канала" },
+  { label: "Напиши пост по горячей теме" },
+  { label: "Прогон всего отдела: ресёрч → идеи → текст", isPipeline: true },
+];
+
+const DEPT_ACTIONS = [
+  { label: "Дай контент-план на эту неделю", isPipeline: true },
+  { label: "Что готово к публикации сегодня?" },
+  { label: "Как работают агенты отдела?" },
+  { label: "Запусти пайплайн по всем каналам", isPipeline: true },
+];
+
+export function DeptChatWelcome({ onPick, channelName, deptMode = false }) {
+  const quickActions = deptMode ? DEPT_ACTIONS : CHANNEL_ACTIONS;
+
+  const title = deptMode
+    ? "Чат отдела СММ"
+    : `Чат отдела СММ${channelName ? ` · ${channelName}` : ""}`;
+
+  const subtitle = deptMode
+    ? "Управляй всем отделом из одного места — TG, Instagram, агенты"
+    : "Здесь работают агенты: Ресерчер, Маркетолог, Копирайтер, Дизайнер, Аналитик";
+
+  const description = deptMode
+    ? "Спроси про любой канал или весь отдел сразу. Mary видит все воркфлоу и может агрегировать данные по TG-каналу и Instagram в одном ответе."
+    : "Это рабочий чат отдела. Пиши задачу — Mary раскинет её на нужного агента, результат появится здесь и отдельным артефактом в правой панели. Можно сразу попробовать:";
+
   return (
     <div style={{
       maxWidth: 560, margin: "30px auto 0",
@@ -20,25 +42,31 @@ export function DeptChatWelcome({ onPick, channelName }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
         <div style={{
           width: 38, height: 38, borderRadius: 11,
-          background: "rgba(255,139,61,0.18)", color: "#FF8B3D",
+          background: deptMode ? "rgba(122,134,255,0.15)" : "rgba(255,139,61,0.18)",
+          color: deptMode ? "#7A86FF" : "#FF8B3D",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 3c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8c0-1.5-.4-2.9-1.2-4.1-.5.4-1.2.6-1.9.6-1.7 0-3-1.3-3-3 0-.6.2-1.2.4-1.7C13.6 3.3 12.8 3 12 3z"/>
-            <circle cx="17" cy="6.5" r="2"/>
-          </svg>
+          {deptMode ? (
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+              <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+              <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+            </svg>
+          ) : (
+            <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3c-4.4 0-8 3.6-8 8s3.6 8 8 8 8-3.6 8-8c0-1.5-.4-2.9-1.2-4.1-.5.4-1.2.6-1.9.6-1.7 0-3-1.3-3-3 0-.6.2-1.2.4-1.7C13.6 3.3 12.8 3 12 3z"/>
+              <circle cx="17" cy="6.5" r="2"/>
+            </svg>
+          )}
         </div>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#262633" }}>Чат отдела СММ{channelName ? ` · ${channelName}` : ""}</div>
-          <div style={{ fontSize: 12, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
-            Здесь работают агенты: Ресерчер, Маркетолог, Копирайтер, Дизайнер, Аналитик
-          </div>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#262633" }}>{title}</div>
+          <div style={{ fontSize: 12, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>{subtitle}</div>
         </div>
       </div>
       <div style={{ fontSize: 13, color: "rgba(38,38,51,0.7)", lineHeight: 1.55, marginBottom: 14 }}>
-        Это рабочий чат отдела. Пиши задачу — Mary раскинет её на нужного агента,
-        результат появится здесь и отдельным <b>артефактом</b> в правой панели.
-        Можно сразу попробовать:
+        {description}
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {quickActions.map((a, i) => (

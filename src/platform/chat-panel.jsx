@@ -307,9 +307,10 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
   const [conversations, setConversations] = useState([]);
   const [convTitle, setConvTitle] = useState("Mary (общий)");
 
+  const isDeptChat = !channelName && !!deptId;
   const convScope = channelName
     ? `smm/${channelName.toLowerCase().replace(/\s+/g, "-")}`
-    : "smm/tg-kanal";
+    : isDeptChat ? `dept/${deptId}` : "smm/tg-kanal";
 
   useEffect(() => {
     let cancelled = false;
@@ -324,7 +325,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
           conv = await fetch("/api/mary/conversations", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: `Чат · ${channelName || "Тг-канал"}`, scope: convScope }),
+            body: JSON.stringify({ title: isDeptChat ? `Отдел · ${deptId}` : `Чат · ${channelName || "Тг-канал"}`, scope: convScope }),
           }).then(r => r.json());
           if (!cancelled) setConversations(prev => [conv, ...prev]);
         }
@@ -1143,7 +1144,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
           return <ChatMessage key={m.id} msg={m} onPick={appendUser} onAction={handleAction} onOpenKb={onOpenKb} />;
         })}
         {messages.length === 0 && (
-          <DeptChatWelcome onPick={handleWelcomePick} channelName={channelName} />
+          <DeptChatWelcome onPick={handleWelcomePick} channelName={channelName} deptMode={isDeptChat} />
         )}
       </div>
       {/* Quick action chips */}
