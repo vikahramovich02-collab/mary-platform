@@ -284,7 +284,7 @@ export function AgentBottomPanel({ agent, profile, sandboxStatus = {}, sandboxOu
       flexShrink: 0,
       height: 320,
       borderTop: "1px solid rgba(38,38,51,0.1)",
-      background: "rgba(247,247,247,0.6)",
+      background: color.white,
       display: "flex", flexDirection: "column",
     }}>
       {/* Tab bar */}
