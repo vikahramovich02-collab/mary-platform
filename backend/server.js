@@ -506,9 +506,35 @@ function defaultPipelineFor(roleOrId) {
   if (/(researcher|ресерч)/.test(key)) {
     return {
       nodes: [
-        { id: "channels",  type: "trigger", title: "Список каналов", sub: "источники для парсинга", settings: { sources: [] } },
-        { id: "schedule",  type: "trigger", title: "Расписание",     sub: "cron + on-demand",       settings: { cron: "0 9 * * *" } },
-        { id: "brand",     type: "trigger", title: "Контекст бренда",sub: "ниша и tone of voice",    settings: { niche: "" } },
+        { id: "channels", type: "trigger", title: "Список каналов", sub: "источники для парсинга", settings: { sources: [],
+          placeholder: `Мониторируемые каналы: @smmplanner, @marketingchannels, @digitalbranding, @contentpro_ru, @smm_academy
+
+Посты за неделю:
+---
+[smmplanner] AI в SMM — протестировали ChatGPT, Claude, Gemini для написания постов. Вывод: AI даёт сырой черновик, нужен редактор. Зато экономит 2-3 часа в день. Лучше всего заходит формат "задача → AI-черновик → финальный текст". ER: 6.2% 👁 18к 💬 234
+---
+[marketingchannels] 5 признаков что ваше SMM-агентство сливает бюджет: нет отчётов → нет A/B → только красивые картинки. Как проверить за 15 минут — чек-лист в комментах. ER: 8.9% 👁 22к 💬 411
+---
+[digitalbranding] Тренд: короткие видео доминируют. Reels с нативной интеграцией продукта дают x2.3 охвата vs статичных постов. Для B2B работает видео-кейс: показываешь процесс, не результат. ER: 5.1% 👁 9к 💬 89
+---
+[smmplanner] Как малый бизнес теряет 30% клиентов из-за нерегулярного постинга. Решение: контент-план на месяц + автопостинг. Сравнили SMMPlanner, Later, Buffer — SMMPlanner выиграл по цене и скорости. ER: 4.8% 👁 12к 💬 178
+---
+[contentpro_ru] Кейс: ювелирный бренд вырос с 2к до 47к подписчиков за 8 месяцев без рекламного бюджета. Только органика + правильная частота (7 постов/нед) + UGC-репосты. ER: 7.4% 👁 31к 💬 523
+---
+[smm_academy] Личный бренд vs корпоративный аккаунт: что продвигать в 2025? Алгоритмы ВК и TG всё больше доверяют "живым людям". Личный бренд даёт +40% охвата при одинаковом контенте. ER: 9.2% 👁 14к 💬 302
+---
+[digitalbranding] Ошибка 80% SMM-специалистов: постят когда удобно, а не когда аудитория онлайн. Разбор оптимального времени постинга по нишам — таблица в карусели. ER: 6.8% 👁 11к 💬 144
+---
+[marketingchannels] ChatGPT написал контент-план на месяц за 12 минут. Показываем промпт и результат. Спойлер: 70% идей рабочих, 30% — шаблонщина. Но как стартовая точка — золото. ER: 11.3% 👁 28к 💬 617` } },
+        { id: "schedule", type: "trigger", title: "Расписание", sub: "cron + on-demand", settings: { cron: "0 9 * * 1",
+          placeholder: "Плановый запуск: понедельник 09:00. Период мониторинга: 19–26 мая 2025." } },
+        { id: "brand", type: "trigger", title: "Контекст бренда", sub: "ниша и tone of voice", settings: { niche: "",
+          placeholder: `Бренд: Mary — AI-платформа для управления SMM-командой через агентов.
+Ниша: AI-инструменты для маркетологов, SMM-специалистов и малого бизнеса.
+Tone of voice: дружелюбно, по делу, без маркетинговой воды. Живой язык, конкретные примеры.
+Ключевые темы: AI в SMM, автоматизация контента, аналитика постов, рост без рекламного бюджета, работа с AI-агентами.
+Аудитория: SMM-специалисты 25–40 лет, маркетологи в командах, владельцы малого бизнеса с онлайн-присутствием.
+Что ищут читатели: практические инструменты, кейсы с цифрами, лайфхаки для экономии времени.` } },
         { id: "fetcher",   type: "step",    title: "Сборщик",        sub: "забирает посты" },
         { id: "dedup",     type: "step",    title: "Дедупликатор",   sub: "выкидывает повторы" },
         { id: "filter",    type: "llm",     title: "Фильтр релевантности", sub: "GLM · ниша Mary", settings: { model: "z-ai/glm-5.1" } },
@@ -3303,14 +3329,14 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit, 
       if (node.type === "trigger") {
         output = inputs[node.id] || node.settings?.placeholder || `(${node.title})`;
       } else if (node.type === "step") {
-        output = `${node.title} → обработано (вход: ${contextFor(node.id).slice(0, 100)}…)`;
+        output = `${node.title}:\n${contextFor(node.id)}`;
       } else if (node.type === "llm") {
         if (dryRun) {
           output = `[DRY] ${node.title} — пропуск LLM-вызова, mock-ответ`;
         } else {
           const sys = `Ты — узел "${node.title}" (${node.sub || "обработчик"}) внутри pipeline агента "${agent.role}". Делай только свою функцию, кратко.`;
           const usr = `Контекст от предыдущих узлов:\n${contextFor(node.id)}\n\nВыполни свою функцию и верни результат.`;
-          const r = await callLLM({ system: sys, user: usr, jsonMode: false, maxTokens: 500, label: `sandbox/${node.id}`, returnUsage: true });
+          const r = await callLLM({ system: sys, user: usr, jsonMode: false, maxTokens: 800, label: `sandbox/${node.id}`, returnUsage: true });
           output = r.content;
           nodeTokens = r.usage?.total_tokens || 0;
           nodeCost = estimateCostUsd(r.usage, r.model);
