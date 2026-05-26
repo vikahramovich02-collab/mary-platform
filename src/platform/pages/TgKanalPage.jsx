@@ -19,7 +19,7 @@ import { TaskCard, TasksListView, TasksWeekView, TaskDrawer, DrawerRow, TasksPag
 import { SandboxPage, NewRunForm, AgentsLog, JudgeCard, RunDetail, SandboxChat } from "./sandbox-page.jsx";
 import { PageShell, StatCard, NavCard, HomePage, InboxPage, InboxTeamThread, InboxDetail } from "./home-inbox-pages.jsx";
 import { TeamPage, BizprocPage, SettingsPage, HelpPage, DepartmentChannelPage, SupportPage } from "./misc-pages.jsx";
-import { FlowNode, AgentFlowCanvas, FlowNodeDetailPanel, pipelineToFlow } from "./agent-flow.jsx";
+import { FlowNode, AgentFlowCanvas, FlowNodeEditor, pipelineToFlow } from "./agent-flow.jsx";
 import { AgentSettingsView, SettingRow, AgentJobDescription } from "./agent-settings.jsx";
 import { DepartmentSandbox, AgentBottomPanel, SandboxPanel } from "./agent-view.jsx";
 import { IntegrationsPage, IntegrationCard } from "./integrations-page.jsx";
@@ -141,7 +141,7 @@ const ic = {
   ),
 };
 
-function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName, deptId }) {
+function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName, deptId, onDrillChange }) {
   const activeAgents = channelName === "Instagram" ? INSTAGRAM_AGENTS : AGENTS;
   const activeEdges  = channelName === "Instagram" ? INSTAGRAM_EDGES  : EDGES;
   const [positions, setPositions] = useState(() =>
@@ -150,6 +150,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
   const [expandedId, setExpandedId] = useState(null);
   const [drilledAgentId, setDrilledAgentId] = useState(null);
   const [selectedFlowNode, setSelectedFlowNode] = useState(null);
+  useEffect(() => { onDrillChange?.(!!drilledAgentId); }, [drilledAgentId]);
   // pipelineByAgentId: { agentId → flow } — приходит с бэка, оверрайдит хардкод AGENTS.flow
   const [pipelineByAgentId, setPipelineByAgentId] = useState({});
   // profileByAgentId: { agentId → { model, systemPrompt, tools, memory, responseFormat, tasks } } — должностная инструкция
@@ -680,6 +681,15 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         </button>
       )}
 
+      {/* FlowNode Editor panel — shown during drill-in, replaces RightRail */}
+      {drilledAgentId && (
+        <FlowNodeEditor
+          node={selectedFlowNode}
+          agent={drilledAgent}
+          accent={drilledAgent?.color || "#7A86FF"}
+        />
+      )}
+
       {/* Плавающее или докнутое окно чата (side рендерится снаружи, в layout) */}
       {chatOpen && chatMode !== "side" && (
         <ChatPanel
@@ -843,6 +853,7 @@ export default function TgKanalPage() {
   const [dockedHeight, setDockedHeight] = useState(420);
   const [activeFilter, setActiveFilter] = useState("all");
   const [activeRail, setActiveRail] = useState(null);
+  const [isDrilledInCanvas, setIsDrilledInCanvas] = useState(false);
   const [agentsSelected, setAgentsSelected] = useState(null);
   const [kbUserItems, setKbUserItems] = useState(() => {
     try {
@@ -1103,6 +1114,7 @@ export default function TgKanalPage() {
             }}
             selectedAgentId={activeRail === "agents" ? agentsSelected : null}
             deptId="smm"
+            onDrillChange={setIsDrilledInCanvas}
           />
         ) : currentPage === "kb" ? (
           <KbPage
@@ -1166,6 +1178,7 @@ export default function TgKanalPage() {
                   deptName={dept.name + "-Отдел"}
                   channelName={ch.name}
                   deptId={dept.id}
+                  onDrillChange={setIsDrilledInCanvas}
                 />
               );
             }
@@ -1215,8 +1228,8 @@ export default function TgKanalPage() {
       )}
       {chatKbItem && <KbPopup item={chatKbItem} onClose={() => setChatKbItem(null)} />}
 
-      {/* ── Right rail (скрыт на страницах БЗ/Интеграции) ── */}
-      {(currentPage === "tg-kanal" || currentPage.startsWith("dept:")) && <RightRail
+      {/* ── Right rail (скрыт на страницах БЗ/Интеграции и при drill-in) ── */}
+      {(currentPage === "tg-kanal" || currentPage.startsWith("dept:")) && !isDrilledInCanvas && <RightRail
         activeRail={activeRail}
         onSelect={(id) => {
           // При выборе любого drawer'а — закрываем чат-side, если он был открыт

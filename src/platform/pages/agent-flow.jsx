@@ -190,12 +190,16 @@ export function FlowNode({ n, pos, w, h, accent = "#7A86FF", visible = true, sel
   );
 }
 
-// ── Detail panel: появляется при клике на FlowNode ──────────
-function DetailRow({ label, value }) {
+// ── Editor panel helpers ─────────────────────────────────────
+function EditorRow({ label, value, mono = false }) {
+  if (!value) return null;
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: 13, color: "#262633", lineHeight: 1.4, wordBreak: "break-word" }}>{value}</div>
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.38)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5 }}>{label}</div>
+      <div style={{
+        fontSize: 12.5, color: "#262633", lineHeight: 1.5, wordBreak: "break-word",
+        ...(mono ? { fontFamily: "monospace", background: "rgba(38,38,51,0.04)", borderRadius: 8, padding: "8px 10px", fontSize: 11.5, maxHeight: 180, overflow: "auto" } : {}),
+      }}>{value}</div>
     </div>
   );
 }
@@ -216,91 +220,128 @@ function kindDescription(kind, settings = {}) {
   }
 }
 
-export function FlowNodeDetailPanel({ node, accent = "#7A86FF", onClose }) {
-  if (!node) return null;
-  const s = kindStyle(node.kind, accent);
-  const label = KIND_LABEL[node.kind] || node.kind;
-  const settings = node.settings || {};
+// ── Right-side Editor panel — shown in drill-in mode ─────────
+export function FlowNodeEditor({ node, agent, accent = "#7A86FF" }) {
+  const settings = node?.settings || {};
+  const s = node ? kindStyle(node.kind, accent) : null;
+  const label = node ? (KIND_LABEL[node.kind] || node.kind) : null;
 
   return (
-    <div
-      style={{
-        position: "absolute",
-        right: 16, top: 56, bottom: 90,
-        width: 268,
-        background: "#fff",
-        borderRadius: 20,
-        boxShadow: "0 8px 32px rgba(38,38,51,0.13), 0 0 0 1px rgba(38,38,51,0.06)",
-        zIndex: 20,
-        display: "flex", flexDirection: "column",
-        overflow: "hidden",
-        animation: "fadeSlideIn 0.18s ease",
-      }}
-    >
-      <style>{`@keyframes fadeSlideIn { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }`}</style>
+    <div style={{
+      position: "absolute", right: 0, top: 0, bottom: 0,
+      width: 300,
+      background: color.white,
+      borderLeft: "1px solid rgba(38,38,51,0.08)",
+      zIndex: 15,
+      display: "flex", flexDirection: "column",
+      overflow: "hidden",
+    }}>
+      <style>{`@keyframes editorSlideIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }`}</style>
 
-      {/* Header */}
+      {/* Header — tabs row */}
       <div style={{
-        padding: "15px 15px 12px",
-        borderBottom: "1px solid rgba(38,38,51,0.06)",
-        display: "flex", alignItems: "flex-start", gap: 10,
+        display: "flex", alignItems: "center", gap: 0,
+        padding: "0 16px",
+        borderBottom: "1px solid rgba(38,38,51,0.08)",
+        height: 44,
+        flexShrink: 0,
       }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: 12,
-          background: s.iconBg, color: s.iconColor,
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-        }}>{s.icon && <span style={{ transform: "scale(1.1)", display: "flex" }}>{s.icon}</span>}</div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: "#262633", lineHeight: 1.2, wordBreak: "break-word" }}>{node.title}</div>
-          <div style={{
-            display: "inline-flex", alignItems: "center", marginTop: 5,
-            padding: "2px 8px", borderRadius: 999,
-            background: s.iconColor + "14", color: s.iconColor,
-            fontSize: 10.5, fontWeight: 600,
-          }}>{label}</div>
-        </div>
-        <button
-          onClick={onClose}
-          style={{
-            width: 26, height: 26, borderRadius: 7,
-            background: "rgba(38,38,51,0.05)",
-            border: "none", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flexShrink: 0, color: "rgba(38,38,51,0.45)",
-          }}
-        >
-          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round">
-            <path d="M6 6l12 12M18 6L6 18"/>
-          </svg>
-        </button>
+        {["Copilot", "Toolbar", "Editor"].map(tab => (
+          <button key={tab} style={{
+            padding: "0 12px", height: "100%",
+            background: "none", border: "none", cursor: "pointer",
+            fontSize: 13, fontWeight: tab === "Editor" ? 600 : 400,
+            color: tab === "Editor" ? "#262633" : "rgba(38,38,51,0.45)",
+            borderBottom: tab === "Editor" ? "2px solid #262633" : "2px solid transparent",
+            fontFamily: "inherit",
+          }}>{tab}</button>
+        ))}
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflow: "auto", padding: "14px 15px" }}>
-        <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.6)", lineHeight: 1.55, marginBottom: 14 }}>
-          {kindDescription(node.kind, settings)}
-        </div>
+      <div style={{ flex: 1, overflow: "auto", padding: "16px" }}>
+        {!node ? (
+          /* Empty state */
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", height: "100%", gap: 12,
+            color: "rgba(38,38,51,0.35)",
+            animation: "editorSlideIn 0.2s ease",
+          }}>
+            {agent && (
+              <div style={{
+                width: 48, height: 48, borderRadius: 14,
+                background: (agent.color || accent) + "20",
+                color: agent.color || accent,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                marginBottom: 4,
+              }}>
+                <svg width={24} height={24} viewBox="0 0 24 24">
+                  <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/>
+                  <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/>
+                  <circle cx="9.3" cy="13" r="1.4" fill="white"/>
+                  <circle cx="14.7" cy="13" r="1.4" fill="white"/>
+                </svg>
+              </div>
+            )}
+            <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(38,38,51,0.45)", textAlign: "center" }}>
+              Выбери блок для редактирования
+            </div>
+          </div>
+        ) : (
+          /* Node detail */
+          <div style={{ animation: "editorSlideIn 0.18s ease" }}>
+            {/* Node header */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+              {s && (
+                <div style={{
+                  width: 38, height: 38, borderRadius: 11,
+                  background: s.iconBg, color: s.iconColor,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                }}>{s.icon}</div>
+              )}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#262633", wordBreak: "break-word" }}>{node.title}</div>
+                {label && (
+                  <div style={{
+                    display: "inline-flex", marginTop: 4, padding: "2px 8px",
+                    borderRadius: 999, background: (s?.iconColor || accent) + "14",
+                    color: s?.iconColor || accent, fontSize: 10.5, fontWeight: 600,
+                  }}>{label}</div>
+                )}
+              </div>
+            </div>
 
-        {node.sub && node.sub !== kindDescription(node.kind, settings) && (
-          <DetailRow label="Описание" value={node.sub} />
-        )}
+            <div style={{ height: 1, background: "rgba(38,38,51,0.07)", marginBottom: 16 }} />
 
-        {settings.model && <DetailRow label="Модель" value={settings.model} />}
-        {settings.agentId && node.kind === "subagent" && <DetailRow label="Агент" value={settings.agentId} />}
-        {settings.target && node.kind !== "llm-step" && node.kind !== "llm" && (
-          <DetailRow label="Цель" value={settings.target} />
-        )}
-        {settings.cron && <DetailRow label="Расписание" value={settings.cron} />}
-        {settings.source && <DetailRow label="Источник" value={settings.source} />}
-        {settings.prompt && (
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>Промпт</div>
-            <div style={{
-              fontSize: 11.5, color: "#262633", lineHeight: 1.5,
-              background: "rgba(38,38,51,0.04)", borderRadius: 8,
-              padding: "8px 10px", fontFamily: "monospace",
-              maxHeight: 120, overflow: "auto",
-            }}>{settings.prompt}</div>
+            {/* Description */}
+            <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)", lineHeight: 1.6, marginBottom: 18 }}>
+              {kindDescription(node.kind, settings)}
+            </div>
+
+            {/* Settings rows */}
+            <EditorRow label="Модель"      value={settings.model} />
+            <EditorRow label="Расписание"  value={settings.cron} />
+            <EditorRow label="Источник"    value={settings.source} />
+            <EditorRow label="Агент"       value={settings.agentId} />
+            <EditorRow label="Цель"        value={settings.target?.replace("agent:", "")} />
+            <EditorRow label="Промпт"      value={settings.prompt} mono />
+            {node.sub && <EditorRow label="Описание" value={node.sub} />}
+
+            {/* Connections */}
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.38)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Connections</div>
+              {node.isStart ? (
+                <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.45)" }}>— стартовый блок</div>
+              ) : (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#262633" }}>
+                  <span style={{ width: 20, height: 20, borderRadius: 6, background: (accent) + "20", color: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                  </span>
+                  {node.kind === "next-agent" ? settings.target?.replace("agent:", "") || "следующий агент" : "предыдущий блок"}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
