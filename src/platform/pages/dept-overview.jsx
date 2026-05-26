@@ -412,7 +412,17 @@ export function DepartmentOverviewPage({ dept, onNavigate, onOpenChat }) {
 
       {/* "Спросить у Mary" */}
       <button
-        onClick={() => onOpenChat ? onOpenChat() : onNavigate?.(channels[0]?.page || "tg-kanal")}
+        onClick={() => {
+          const d = new Date();
+          const t = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+          const msg = dept?.name ? {
+            id: "ctx-" + Date.now(),
+            agentId: "mary",
+            time: t,
+            text: `Привет! Я только что открыл отдел **${dept.name}**. Что можно сделать прямо сейчас — добавить каналы, настроить агентов, запустить pipeline?`,
+          } : null;
+          onOpenChat ? onOpenChat(msg) : onNavigate?.(channels[0]?.page || "tg-kanal");
+        }}
         style={{
           position: "absolute", left: "50%", bottom: 16, transform: "translateX(-50%)",
           display: "flex", alignItems: "center", gap: 10,

@@ -141,18 +141,19 @@ const ic = {
   ),
 };
 
-function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName, deptId, onDrillChange }) {
+function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName, deptId, dept, onDrillChange }) {
   const [dynamicAgents, setDynamicAgents] = useState([]);
   const activeAgents = useMemo(() => {
     if (channelName === "Instagram") return INSTAGRAM_AGENTS;
-    if (!deptId || channelName === "Тг-канал") return AGENTS;
-    return dynamicAgents.length > 0 ? dynamicAgents : AGENTS;
+    if (deptId === "smm") return dynamicAgents.length > 0 ? dynamicAgents : AGENTS;
+    if (dynamicAgents.length > 0) return dynamicAgents;
+    return AGENTS;
   }, [channelName, deptId, dynamicAgents]);
   const activeEdges = useMemo(() => {
     if (channelName === "Instagram") return INSTAGRAM_EDGES;
-    if (!deptId || channelName === "Тг-канал") return EDGES;
+    if (deptId === "smm" && dynamicAgents.length === 0) return EDGES;
     return [];
-  }, [channelName, deptId]);
+  }, [channelName, deptId, dynamicAgents]);
   const [positions, setPositions] = useState(() =>
     Object.fromEntries(activeAgents.map(a => [a.id, { x: a.x, y: a.y }]))
   );
@@ -799,6 +800,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
           agents={activeAgents}
           channelName={channelName}
           deptId={deptId}
+          dept={dept}
         />
       )}
     </div>
@@ -914,6 +916,7 @@ export default function TgKanalPage() {
     }
     return null;
   })();
+  const currentDept = departments.find(d => d.id === currentDeptId) || null;
   // Глобальный navigate для dept://X / page://Y ссылок из чата Mary
   useEffect(() => {
     window.__maryNavigate = (target) => {
@@ -1204,6 +1207,7 @@ export default function TgKanalPage() {
             }}
             selectedAgentId={activeRail === "agents" ? agentsSelected : null}
             deptId="smm"
+            dept={departments.find(d => d.id === "smm") || null}
             onDrillChange={setIsDrilledInCanvas}
           />
         ) : currentPage === "kb" ? (
@@ -1238,12 +1242,17 @@ export default function TgKanalPage() {
           <DepartmentOverviewPage
             dept={departments.find(d => "dept:" + d.id === currentPage)}
             onNavigate={setCurrentPage}
-            onOpenChat={() => { setChatOpen(true); setChatMode("side"); setActiveFilter("all"); }}
+            onOpenChat={(msg) => {
+              if (msg) setPendingMaryMessage(msg);
+              setChatOpen(true);
+              setChatMode("side");
+              setActiveFilter("all");
+            }}
           />
         ) : (() => {
           // Динамический канал отдела — рендерим тот же GraphCanvas, меняем только breadcrumb
-          for (const dept of departments) {
-            const ch = (dept.channels || []).find(c => c.page === currentPage);
+          for (const deptItem of departments) {
+            const ch = (deptItem.channels || []).find(c => c.page === currentPage);
             if (ch) {
               return (
                 <GraphCanvas
@@ -1265,9 +1274,10 @@ export default function TgKanalPage() {
                   onAgentChat={(agentId) => { setActiveFilter(agentId); setChatOpen(true); }}
                   onAgentSettings={(agentId) => { setActiveRail("agents"); setAgentsSelected(agentId); }}
                   selectedAgentId={activeRail === "agents" ? agentsSelected : null}
-                  deptName={dept.name + "-Отдел"}
+                  deptName={deptItem.name + "-Отдел"}
                   channelName={ch.name}
-                  deptId={dept.id}
+                  deptId={deptItem.id}
+                  dept={deptItem}
                   onDrillChange={setIsDrilledInCanvas}
                 />
               );
@@ -1314,6 +1324,7 @@ export default function TgKanalPage() {
           agents={currentAgents}
           channelName={currentChannelName}
           deptId={currentDeptId}
+          dept={currentDept}
         />
       )}
       {chatKbItem && <KbPopup item={chatKbItem} onClose={() => setChatKbItem(null)} />}

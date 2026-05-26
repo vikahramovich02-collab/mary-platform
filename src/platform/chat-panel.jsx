@@ -291,7 +291,7 @@ export function FilterBar({ activeFilter, onFilter, agents = AGENTS }) {
   );
 }
 // ── ChatPanel ────────────────────────────────────────────────
-export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChange, dockedHeight = 420, onDockedHeightChange, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, onOpenKb, agents, channelName, deptId }) {
+export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onModeChange, dockedHeight = 420, onDockedHeightChange, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, onOpenKb, agents, channelName, deptId, dept }) {
   const peopleList = usePeople();
   const taskDraftRef = useRef({});
   const [localMode, setLocalMode] = useState("docked");
@@ -325,7 +325,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
           conv = await fetch("/api/mary/conversations", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ title: isDeptChat ? `Отдел · ${deptId}` : `Чат · ${channelName || "Тг-канал"}`, scope: convScope }),
+            body: JSON.stringify({ title: isDeptChat ? `Отдел · ${dept?.name || deptId}` : `Чат · ${channelName || "Тг-канал"}`, scope: convScope }),
           }).then(r => r.json());
           if (!cancelled) setConversations(prev => [conv, ...prev]);
         }
@@ -770,8 +770,15 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
             window.dispatchEvent(new CustomEvent("mary-dept-updated"));
           }
           if (data.name === "create_department" && data.result?.department) {
-            const deptId = data.result.department.id;
-            setTimeout(() => window.__maryNavigate?.(`dept://${deptId}`), 1800);
+            const newDeptId = data.result.department.id;
+            const newDeptName = data.result.department.name;
+            setAllMessages(prev => [...prev, {
+              id: "welcome-dept-" + Date.now(),
+              agentId: "mary",
+              time: nowTime(),
+              text: `Отдел **${newDeptName}** создан и готов к работе.\n\nЧерез несколько секунд перейдём туда — там сможешь добавить каналы, настроить агентов и запустить первый pipeline.`,
+            }]);
+            setTimeout(() => window.__maryNavigate?.(`dept://${newDeptId}`), 2200);
           }
           if (data.name === "add_channel" && data.result?.channel) {
             setTimeout(() => window.__maryNavigate?.(`page://${data.result.channel.page}`), 2200);
@@ -1157,7 +1164,7 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
           return <ChatMessage key={m.id} msg={m} onPick={appendUser} onAction={handleAction} onOpenKb={onOpenKb} />;
         })}
         {messages.length === 0 && (
-          <DeptChatWelcome onPick={handleWelcomePick} channelName={channelName} deptMode={isDeptChat} />
+          <DeptChatWelcome onPick={handleWelcomePick} channelName={channelName} deptMode={isDeptChat} deptName={dept?.name} deptAgents={dept?.agents} />
         )}
       </div>
       {/* Quick action chips */}

@@ -16,16 +16,28 @@ const DEPT_ACTIONS = [
   { label: "Запусти пайплайн по всем каналам", isPipeline: true },
 ];
 
-export function DeptChatWelcome({ onPick, channelName, deptMode = false }) {
+export function DeptChatWelcome({ onPick, channelName, deptMode = false, deptName, deptAgents }) {
   const quickActions = deptMode ? DEPT_ACTIONS : CHANNEL_ACTIONS;
 
-  const title = deptMode
-    ? "Чат отдела СММ"
-    : `Чат отдела СММ${channelName ? ` · ${channelName}` : ""}`;
+  const displayName = deptName || "СММ";
 
-  const subtitle = deptMode
-    ? "Управляй всем отделом из одного места — TG, Instagram, агенты"
-    : "Здесь работают агенты: Ресерчер, Маркетолог, Копирайтер, Дизайнер, Аналитик";
+  const title = deptMode
+    ? `Чат отдела ${displayName}`
+    : `Чат отдела ${displayName}${channelName ? ` · ${channelName}` : ""}`;
+
+  let subtitle;
+  if (deptMode) {
+    if (deptAgents?.length > 0) {
+      const count = deptAgents.length;
+      const ending = count === 1 ? "" : count < 5 ? "а" : "ов";
+      const names = deptAgents.slice(0, 3).map(a => a.name || a.role).filter(Boolean).join(", ");
+      subtitle = `В отделе ${count} агент${ending}${names ? `: ${names}${count > 3 ? "…" : ""}` : ""}`;
+    } else {
+      subtitle = "Управляй всем отделом из одного места — TG, Instagram, агенты";
+    }
+  } else {
+    subtitle = "Здесь работают агенты: Ресерчер, Маркетолог, Копирайтер, Дизайнер, Аналитик";
+  }
 
   const description = deptMode
     ? "Спроси про любой канал или весь отдел сразу. Mary видит все воркфлоу и может агрегировать данные по TG-каналу и Instagram в одном ответе."
