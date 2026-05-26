@@ -587,18 +587,22 @@ export function pipelineToFlow(pipeline, agentColor = "#7A86FF") {
     if (type === "output") return (settings.target || "").startsWith("agent:") ? "next-agent" : "output-kb";
     return "subagent";
   };
+  // Only the topmost trigger node at level-0 gets the "Start" badge
+  let startMarked = false;
   const flowNodes = [];
   for (const L of Object.keys(levels).sort((a, b) => +a - +b)) {
     const items = levels[L];
     const midRow = (items.length - 1) / 2;
     items.forEach((n, idx) => {
+      const nodeIsStart = !startMarked && inDeg[n.id] === 0 && (n.type === "trigger" || Number(L) === 0);
+      if (nodeIsStart) startMarked = true;
       flowNodes.push({
         id: n.id,
         kind: kindMap(n.type, n.settings),
         title: n.title,
         sub: n.sub || "",
         settings: n.settings || {},
-        isStart: inDeg[n.id] === 0,
+        isStart: nodeIsStart,
         ox: (Number(L) - centerLevel) * 320,
         oy: (idx - midRow) * 150,
       });
