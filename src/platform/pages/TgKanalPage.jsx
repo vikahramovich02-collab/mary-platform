@@ -516,7 +516,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
           onClick={() => runSandbox()}
           disabled={sandboxRunning}
           style={{
-            position: "absolute", top: 14, right: 16, zIndex: 6,
+            position: "absolute", top: 14, right: 316, zIndex: 6,
             display: "inline-flex", alignItems: "center", gap: 7,
             padding: "7px 14px",
             background: sandboxRunning ? "rgba(52,199,89,0.15)" : "#34C759",
