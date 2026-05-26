@@ -247,7 +247,6 @@ export function DepartmentSandbox({ deptId, onClose }) {
 
 // Bottom panel в drill-down: Settings / Logs / Output (Sim-style)
 export function AgentBottomPanel({ agent, profile, sandboxStatus = {}, sandboxOutputs = {}, sandboxRunning = false, onRun }) {
-  const [tab, setTab] = useState("settings");
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   // Преобразуем sandboxStatus в runs[] для AgentLogsView
   const nodes = agent?.flow?.nodes || [];
@@ -263,46 +262,45 @@ export function AgentBottomPanel({ agent, profile, sandboxStatus = {}, sandboxOu
     }));
   const selectedRun = runs.find(r => r.nodeId === selectedNodeId) || runs[runs.length - 1];
 
-  // Авто-открыть Logs когда начался прогон
-  useEffect(() => {
-    if (sandboxRunning && tab === "settings") setTab("logs");
-  }, [sandboxRunning]);
-
-  const tabBtn = (id, label) => (
-    <button onClick={() => setTab(id)} style={{
-      padding: "8px 16px",
-      background: tab === id ? color.white : "transparent",
-      color: tab === id ? "#262633" : "rgba(38,38,51,0.55)",
-      border: "none", borderBottom: tab === id ? "2px solid #262633" : "2px solid transparent",
-      fontSize: 12.5, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
-      transition: "all 0.15s",
-    }}>{label}</button>
-  );
-
   return (
     <div style={{
       flexShrink: 0,
-      height: 320,
-      borderTop: "1px solid rgba(38,38,51,0.1)",
+      height: 260,
+      borderTop: "1px solid rgba(38,38,51,0.08)",
       background: color.white,
-      display: "flex", flexDirection: "column",
+      display: "flex",
     }}>
-      {/* Tab bar */}
+      {/* Left: Logs */}
       <div style={{
-        display: "flex", gap: 0, padding: "0 16px",
-        borderBottom: "1px solid rgba(38,38,51,0.06)",
-        background: color.white,
+        flex: 1, minWidth: 0,
+        borderRight: "1px solid rgba(38,38,51,0.07)",
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
       }}>
-        {tabBtn("settings", "⚙️ Settings")}
-        {tabBtn("logs", "📋 Logs")}
-        {tabBtn("output", "📤 Output")}
+        <div style={{
+          padding: "10px 16px 8px",
+          fontSize: 12.5, fontWeight: 600, color: "#262633",
+          borderBottom: "1px solid rgba(38,38,51,0.06)",
+        }}>Logs</div>
+        <div style={{ flex: 1, overflow: "auto" }}>
+          <AgentLogsView runs={runs} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />
+        </div>
       </div>
 
-      {/* Tab content */}
-      <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-        {tab === "settings" && <AgentSettingsView profile={profile} agent={agent} />}
-        {tab === "logs" && <AgentLogsView runs={runs} selectedNodeId={selectedNodeId} onSelect={setSelectedNodeId} />}
-        {tab === "output" && <AgentOutputView run={selectedRun} />}
+      {/* Right: Output */}
+      <div style={{
+        flex: 1, minWidth: 0,
+        display: "flex", flexDirection: "column",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          padding: "10px 16px 8px",
+          fontSize: 12.5, fontWeight: 600, color: "#262633",
+          borderBottom: "1px solid rgba(38,38,51,0.06)",
+        }}>Output</div>
+        <div style={{ flex: 1, overflow: "auto" }}>
+          <AgentOutputView run={selectedRun} />
+        </div>
       </div>
     </div>
   );

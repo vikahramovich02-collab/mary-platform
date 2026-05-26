@@ -341,7 +341,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
       const maxY = Math.max(...positions.map(p => p.y + FLOW_NODE_H));
       const w = maxX - minX + 100;
       const h = maxY - minY + 100;
-      const BOTTOM_PANEL_H = 340; // AgentBottomPanel height + padding
+      const BOTTOM_PANEL_H = 280; // AgentBottomPanel height + padding
       const availH = rect.height - BOTTOM_PANEL_H;
       const targetScale = Math.min(rect.width / w, availH / h, 0.9);
       const cx = (minX + maxX) / 2;
@@ -653,7 +653,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         onZoomIn={() => zoomBy(0.1)}
         onZoomOut={() => zoomBy(-0.1)}
         onFit={fitToView}
-        bottomOffset={drilledAgent?.profile ? 330 : 0}
+        bottomOffset={drilledAgent?.profile ? 270 : 0}
       />
 
       {/* Чип «Спросить у Mary» — всегда виден, открывает чат */}
