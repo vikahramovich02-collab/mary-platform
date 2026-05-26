@@ -221,7 +221,24 @@ function kindDescription(kind, settings = {}) {
 }
 
 // ── Right-side Editor panel — shown in drill-in mode ─────────
+const TOOLBAR_BLOCKS = {
+  "Триггеры": [
+    { kind: "input",          label: "Старт" },
+    { kind: "trigger-cron",   label: "Расписание" },
+    { kind: "trigger-manual", label: "Вручную" },
+    { kind: "integration",    label: "Webhook" },
+  ],
+  "Шаги": [
+    { kind: "llm-step",   label: "LLM-шаг" },
+    { kind: "subagent",   label: "Агент" },
+    { kind: "output-kb",  label: "База знаний" },
+    { kind: "next-agent", label: "Передать агенту" },
+    { kind: "output",     label: "Результат" },
+  ],
+};
+
 export function FlowNodeEditor({ node, agent, accent = "#7A86FF" }) {
+  const [activeTab, setActiveTab] = useState("Editor");
   const settings = node?.settings || {};
   const s = node ? kindStyle(node.kind, accent) : null;
   const label = node ? (KIND_LABEL[node.kind] || node.kind) : null;
@@ -241,109 +258,182 @@ export function FlowNodeEditor({ node, agent, accent = "#7A86FF" }) {
       {/* Header — tabs row */}
       <div style={{
         display: "flex", alignItems: "center", gap: 0,
-        padding: "0 16px",
+        padding: "0 12px",
         borderBottom: "1px solid rgba(38,38,51,0.08)",
         height: 44,
         flexShrink: 0,
       }}>
         {["Copilot", "Toolbar", "Editor"].map(tab => (
-          <button key={tab} style={{
-            padding: "0 12px", height: "100%",
+          <button key={tab} onClick={() => setActiveTab(tab)} style={{
+            padding: "0 10px", height: "100%",
             background: "none", border: "none", cursor: "pointer",
-            fontSize: 13, fontWeight: tab === "Editor" ? 600 : 400,
-            color: tab === "Editor" ? "#262633" : "rgba(38,38,51,0.45)",
-            borderBottom: tab === "Editor" ? "2px solid #262633" : "2px solid transparent",
-            fontFamily: "inherit",
+            fontSize: 13, fontWeight: activeTab === tab ? 600 : 400,
+            color: activeTab === tab ? "#262633" : "rgba(38,38,51,0.45)",
+            borderBottom: activeTab === tab ? "2px solid #262633" : "2px solid transparent",
+            fontFamily: "inherit", transition: "color 0.12s",
           }}>{tab}</button>
         ))}
       </div>
 
       {/* Body */}
-      <div style={{ flex: 1, overflow: "auto", padding: "16px" }}>
-        {!node ? (
-          /* Empty state */
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", height: "100%", gap: 12,
-            color: "rgba(38,38,51,0.35)",
-            animation: "editorSlideIn 0.2s ease",
-          }}>
+      <div style={{ flex: 1, overflow: "auto" }}>
+
+        {/* ── COPILOT tab ── */}
+        {activeTab === "Copilot" && (
+          <div style={{ padding: 16, display: "flex", flexDirection: "column", height: "100%", gap: 12 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: "#262633" }}>Mary · Copilot</div>
+            <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)", lineHeight: 1.6 }}>
+              Я помогу настроить этого агента — добавить шаги, поправить промпт, подключить инструменты.
+            </div>
             {agent && (
               <div style={{
-                width: 48, height: 48, borderRadius: 14,
-                background: (agent.color || accent) + "20",
-                color: agent.color || accent,
-                display: "flex", alignItems: "center", justifyContent: "center",
-                marginBottom: 4,
+                background: "rgba(38,38,51,0.04)", borderRadius: 10, padding: "10px 12px",
+                fontSize: 12.5, color: "#262633",
               }}>
-                <svg width={24} height={24} viewBox="0 0 24 24">
-                  <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/>
-                  <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/>
-                  <circle cx="9.3" cy="13" r="1.4" fill="white"/>
-                  <circle cx="14.7" cy="13" r="1.4" fill="white"/>
-                </svg>
+                Сейчас смотришь: <strong>{agent.label || agent.role}</strong>
               </div>
             )}
-            <div style={{ fontSize: 13, fontWeight: 500, color: "rgba(38,38,51,0.45)", textAlign: "center" }}>
-              Выбери блок для редактирования
-            </div>
-          </div>
-        ) : (
-          /* Node detail */
-          <div style={{ animation: "editorSlideIn 0.18s ease" }}>
-            {/* Node header */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              {s && (
-                <div style={{
-                  width: 38, height: 38, borderRadius: 11,
-                  background: s.iconBg, color: s.iconColor,
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                }}>{s.icon}</div>
-              )}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#262633", wordBreak: "break-word" }}>{node.title}</div>
-                {label && (
-                  <div style={{
-                    display: "inline-flex", marginTop: 4, padding: "2px 8px",
-                    borderRadius: 999, background: (s?.iconColor || accent) + "14",
-                    color: s?.iconColor || accent, fontSize: 10.5, fontWeight: 600,
-                  }}>{label}</div>
-                )}
-              </div>
-            </div>
-
-            <div style={{ height: 1, background: "rgba(38,38,51,0.07)", marginBottom: 16 }} />
-
-            {/* Description */}
-            <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)", lineHeight: 1.6, marginBottom: 18 }}>
-              {kindDescription(node.kind, settings)}
-            </div>
-
-            {/* Settings rows */}
-            <EditorRow label="Модель"      value={settings.model} />
-            <EditorRow label="Расписание"  value={settings.cron} />
-            <EditorRow label="Источник"    value={settings.source} />
-            <EditorRow label="Агент"       value={settings.agentId} />
-            <EditorRow label="Цель"        value={settings.target?.replace("agent:", "")} />
-            <EditorRow label="Промпт"      value={settings.prompt} mono />
-            {node.sub && <EditorRow label="Описание" value={node.sub} />}
-
-            {/* Connections */}
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.38)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Connections</div>
-              {node.isStart ? (
-                <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.45)" }}>— стартовый блок</div>
-              ) : (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#262633" }}>
-                  <span style={{ width: 20, height: 20, borderRadius: 6, background: (accent) + "20", color: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-                  </span>
-                  {node.kind === "next-agent" ? settings.target?.replace("agent:", "") || "следующий агент" : "предыдущий блок"}
-                </div>
-              )}
+            <div style={{ flex: 1 }} />
+            <div style={{ display: "flex", gap: 8, padding: "8px 0" }}>
+              <input placeholder="Спроси у Mary..." style={{
+                flex: 1, height: 36, borderRadius: 8, border: "1px solid rgba(38,38,51,0.12)",
+                padding: "0 12px", fontSize: 13, fontFamily: "inherit",
+                background: color.white, outline: "none",
+              }} />
+              <button style={{
+                width: 36, height: 36, borderRadius: 8, border: "none",
+                background: "#262633", color: "#fff", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              </button>
             </div>
           </div>
         )}
+
+        {/* ── TOOLBAR tab ── */}
+        {activeTab === "Toolbar" && (
+          <div style={{ padding: "12px 0" }}>
+            <div style={{ padding: "6px 16px 10px", display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{
+                flex: 1, height: 30, borderRadius: 7, border: "1px solid rgba(38,38,51,0.1)",
+                padding: "0 10px", display: "flex", alignItems: "center", gap: 6,
+                color: "rgba(38,38,51,0.38)", fontSize: 12.5,
+              }}>
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                Поиск
+              </div>
+            </div>
+            {Object.entries(TOOLBAR_BLOCKS).map(([category, items]) => (
+              <div key={category}>
+                <div style={{ padding: "8px 16px 6px", fontSize: 11.5, fontWeight: 600, color: "rgba(38,38,51,0.4)", textTransform: "uppercase", letterSpacing: "0.06em" }}>{category}</div>
+                {items.map(item => {
+                  const st = kindStyle(item.kind, accent);
+                  return (
+                    <div key={item.kind} style={{
+                      display: "flex", alignItems: "center", gap: 10,
+                      padding: "7px 16px", cursor: "default",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                    >
+                      <div style={{
+                        width: 28, height: 28, borderRadius: 8,
+                        background: st.iconBg, color: st.iconColor,
+                        display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                      }}>
+                        <span style={{ transform: "scale(0.85)", display: "flex" }}>{st.icon}</span>
+                      </div>
+                      <span style={{ fontSize: 13, color: "#262633" }}>{item.label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── EDITOR tab ── */}
+        {activeTab === "Editor" && (
+          <div style={{ padding: 16 }}>
+            {!node ? (
+              <div style={{
+                display: "flex", flexDirection: "column", alignItems: "center",
+                justifyContent: "center", paddingTop: 60, gap: 12,
+                animation: "editorSlideIn 0.2s ease",
+              }}>
+                {agent && (
+                  <div style={{
+                    width: 48, height: 48, borderRadius: 14,
+                    background: (agent.color || accent) + "20", color: agent.color || accent,
+                    display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 4,
+                  }}>
+                    <svg width={24} height={24} viewBox="0 0 24 24">
+                      <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/>
+                      <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/>
+                      <circle cx="9.3" cy="13" r="1.4" fill="white"/>
+                      <circle cx="14.7" cy="13" r="1.4" fill="white"/>
+                    </svg>
+                  </div>
+                )}
+                <div style={{ fontSize: 13, color: "rgba(38,38,51,0.45)", textAlign: "center" }}>
+                  Выбери блок для редактирования
+                </div>
+              </div>
+            ) : (
+              <div style={{ animation: "editorSlideIn 0.18s ease" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  {s && (
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 11,
+                      background: s.iconBg, color: s.iconColor,
+                      display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                    }}>{s.icon}</div>
+                  )}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: "#262633", wordBreak: "break-word" }}>{node.title}</div>
+                    {label && (
+                      <div style={{
+                        display: "inline-flex", marginTop: 4, padding: "2px 8px", borderRadius: 999,
+                        background: (s?.iconColor || accent) + "14", color: s?.iconColor || accent,
+                        fontSize: 10.5, fontWeight: 600,
+                      }}>{label}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ height: 1, background: "rgba(38,38,51,0.07)", marginBottom: 16 }} />
+
+                <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)", lineHeight: 1.6, marginBottom: 18 }}>
+                  {kindDescription(node.kind, settings)}
+                </div>
+
+                <EditorRow label="Модель"     value={settings.model} />
+                <EditorRow label="Расписание" value={settings.cron} />
+                <EditorRow label="Источник"   value={settings.source} />
+                <EditorRow label="Агент"      value={settings.agentId} />
+                <EditorRow label="Цель"       value={settings.target?.replace("agent:", "")} />
+                <EditorRow label="Промпт"     value={settings.prompt} mono />
+                {node.sub && <EditorRow label="Описание" value={node.sub} />}
+
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 10.5, fontWeight: 600, color: "rgba(38,38,51,0.38)", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Connections</div>
+                  {node.isStart ? (
+                    <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.45)" }}>стартовый блок</div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#262633" }}>
+                      <span style={{ width: 20, height: 20, borderRadius: 6, background: accent + "20", color: accent, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                      </span>
+                      {node.kind === "next-agent" ? settings.target?.replace("agent:", "") || "следующий агент" : "предыдущий блок"}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
     </div>
   );

@@ -644,7 +644,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         </div>
       )}
 
-      {/* Tool/zoom bar — поднимается над докнутым чатом */}
+      {/* Tool/zoom bar — поднимается над докнутым чатом и над нижней панелью drill-in */}
       <ToolBar
         chatOpen={chatOpen}
         chatMode={chatMode}
@@ -653,6 +653,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         onZoomIn={() => zoomBy(0.1)}
         onZoomOut={() => zoomBy(-0.1)}
         onFit={fitToView}
+        bottomOffset={drilledAgent?.profile ? 330 : 0}
       />
 
       {/* Чип «Спросить у Mary» — всегда виден, открывает чат */}
@@ -716,13 +717,14 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
   );
 }
 
-function ToolBar({ chatOpen, chatMode, dockedHeight, scale, onZoomIn, onZoomOut, onFit }) {
+function ToolBar({ chatOpen, chatMode, dockedHeight, scale, onZoomIn, onZoomOut, onFit, bottomOffset = 0 }) {
   const [tool, setTool] = useState("pointer"); // "pointer" | "hand"
   const [open, setOpen] = useState(false);
+  const baseBottom = chatOpen && chatMode === "docked" ? (dockedHeight ?? 420) + 28 : 16;
   return (
     <div style={{
       position: "absolute", left: 16,
-      bottom: chatOpen && chatMode === "docked" ? (dockedHeight ?? 420) + 28 : 16,
+      bottom: Math.max(baseBottom, bottomOffset + 16),
       display: "flex", alignItems: "center",
       height: 40,
       background: color.white,
