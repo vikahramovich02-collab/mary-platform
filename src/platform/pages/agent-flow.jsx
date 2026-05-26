@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { color } from "../../ui/tokens.js";
 import { ic } from "../icons.jsx";
 
@@ -147,9 +147,6 @@ export function FlowNode({ n, pos, w, h, accent = "#7A86FF", visible = true, sel
               overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             }}>{n.title}</div>
           </div>
-          <div style={{ display: "flex", gap: 2.5, flexShrink: 0 }}>
-            {[0,1,2].map(i => <span key={i} style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(38,38,51,0.22)" }} />)}
-          </div>
         </div>
 
         {/* Divider + rows */}
@@ -239,9 +236,67 @@ const TOOLBAR_BLOCKS = {
 
 export function FlowNodeEditor({ node, agent, accent = "#7A86FF" }) {
   const [activeTab, setActiveTab] = useState("Editor");
+  const [copilotMessages, setCopilotMessages] = useState([]);
+  const [copilotInput, setCopilotInput] = useState("");
+  const [copilotLoading, setCopilotLoading] = useState(false);
+  const msgsEndRef = useRef(null);
+  useEffect(() => { msgsEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [copilotMessages]);
+
   const settings = node?.settings || {};
   const s = node ? kindStyle(node.kind, accent) : null;
   const label = node ? (KIND_LABEL[node.kind] || node.kind) : null;
+
+  async function sendCopilot() {
+    const text = copilotInput.trim();
+    if (!text || copilotLoading) return;
+    setCopilotInput("");
+    setCopilotMessages(prev => [...prev, { role: "user", text }]);
+    setCopilotLoading(true);
+    const agentCtx = agent
+      ? `Контекст: агент "${agent.label || agent.role}"${node ? `, блок "${node.title}" (${node.kind})` : ""}.`
+      : "";
+    const fullMsg = [agentCtx, text].filter(Boolean).join("\n");
+    try {
+      const res = await fetch("/api/mary/agent/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: fullMsg, history: [] }),
+      });
+      const reader = res.body.getReader();
+      const dec = new TextDecoder();
+      let buf = "", reply = "";
+      setCopilotMessages(prev => [...prev, { role: "assistant", text: "" }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const blocks = buf.split("\n\n");
+        buf = blocks.pop() || "";
+        for (const block of blocks) {
+          let ev = "message", ds = "";
+          for (const line of block.split("\n")) {
+            if (line.startsWith("event:")) ev = line.slice(6).trim();
+            else if (line.startsWith("data:")) ds += line.slice(5).trim();
+          }
+          if (!ds) continue;
+          let d; try { d = JSON.parse(ds); } catch { continue; }
+          if (ev === "delta" && d.text) {
+            reply += d.text;
+            const snap = reply;
+            setCopilotMessages(prev => {
+              const next = [...prev];
+              next[next.length - 1] = { role: "assistant", text: snap };
+              return next;
+            });
+          }
+        }
+      }
+    } catch {
+      setCopilotMessages(prev => [...prev, { role: "assistant", text: "Ошибка соединения с Mary." }]);
+    } finally {
+      setCopilotLoading(false);
+    }
+  }
 
   return (
     <div style={{
@@ -280,31 +335,56 @@ export function FlowNodeEditor({ node, agent, accent = "#7A86FF" }) {
 
         {/* ── COPILOT tab ── */}
         {activeTab === "Copilot" && (
-          <div style={{ padding: 16, display: "flex", flexDirection: "column", height: "100%", gap: 12 }}>
-            <div style={{ fontSize: 13.5, fontWeight: 600, color: "#262633" }}>Mary · Copilot</div>
-            <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)", lineHeight: 1.6 }}>
-              Я помогу настроить этого агента — добавить шаги, поправить промпт, подключить инструменты.
+          <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <div style={{ flex: 1, overflow: "auto", padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+              {copilotMessages.length === 0 && (
+                <>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: "#262633" }}>Mary · Copilot</div>
+                  <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)", lineHeight: 1.6 }}>
+                    Помогу настроить агента — добавить шаги, поправить промпт, подключить инструменты.
+                  </div>
+                  {agent && (
+                    <div style={{ background: "rgba(38,38,51,0.04)", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, color: "#262633" }}>
+                      Сейчас смотришь: <strong>{agent.label || agent.role}</strong>
+                    </div>
+                  )}
+                </>
+              )}
+              {copilotMessages.map((m, i) => (
+                <div key={i} style={{
+                  alignSelf: m.role === "user" ? "flex-end" : "flex-start",
+                  maxWidth: "85%",
+                  background: m.role === "user" ? "#262633" : "rgba(38,38,51,0.05)",
+                  color: m.role === "user" ? "#fff" : "#262633",
+                  borderRadius: m.role === "user" ? "14px 14px 3px 14px" : "14px 14px 14px 3px",
+                  padding: "8px 12px", fontSize: 12.5, lineHeight: 1.5,
+                  whiteSpace: "pre-wrap", wordBreak: "break-word",
+                }}>{m.text || (copilotLoading && i === copilotMessages.length - 1 ? "…" : "")}</div>
+              ))}
+              <div ref={msgsEndRef} />
             </div>
-            {agent && (
-              <div style={{
-                background: "rgba(38,38,51,0.04)", borderRadius: 10, padding: "10px 12px",
-                fontSize: 12.5, color: "#262633",
-              }}>
-                Сейчас смотришь: <strong>{agent.label || agent.role}</strong>
-              </div>
-            )}
-            <div style={{ flex: 1 }} />
-            <div style={{ display: "flex", gap: 8, padding: "8px 0" }}>
-              <input placeholder="Спроси у Mary..." style={{
-                flex: 1, height: 36, borderRadius: 8, border: "1px solid rgba(38,38,51,0.12)",
-                padding: "0 12px", fontSize: 13, fontFamily: "inherit",
-                background: color.white, outline: "none",
-              }} />
-              <button style={{
-                width: 36, height: 36, borderRadius: 8, border: "none",
-                background: "#262633", color: "#fff", cursor: "pointer",
-                display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
+            <div style={{ padding: "8px 12px 12px", borderTop: "1px solid rgba(38,38,51,0.07)", display: "flex", gap: 8 }}>
+              <input
+                value={copilotInput}
+                onChange={e => setCopilotInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), sendCopilot())}
+                placeholder="Спроси у Mary..."
+                style={{
+                  flex: 1, height: 36, borderRadius: 8, border: "1px solid rgba(38,38,51,0.12)",
+                  padding: "0 12px", fontSize: 13, fontFamily: "inherit",
+                  background: color.white, outline: "none",
+                }}
+              />
+              <button
+                onClick={sendCopilot}
+                disabled={copilotLoading}
+                style={{
+                  width: 36, height: 36, borderRadius: 8, border: "none",
+                  background: copilotLoading ? "rgba(38,38,51,0.12)" : "#262633",
+                  color: "#fff", cursor: copilotLoading ? "default" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
                 <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
               </button>
             </div>

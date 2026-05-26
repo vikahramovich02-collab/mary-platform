@@ -510,6 +510,39 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         </button>
       )}
 
+      {/* «Запустить» — только в drill-in режиме */}
+      {drilledAgentId && (
+        <button
+          onClick={() => runSandbox()}
+          disabled={sandboxRunning}
+          style={{
+            position: "absolute", top: 14, right: 16, zIndex: 6,
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "7px 14px",
+            background: sandboxRunning ? "rgba(52,199,89,0.15)" : "#34C759",
+            color: sandboxRunning ? "#34C759" : color.white,
+            border: sandboxRunning ? "1px solid #34C759" : "none",
+            borderRadius: 8, fontSize: 12.5, fontWeight: 500,
+            cursor: sandboxRunning ? "default" : "pointer", fontFamily: "inherit",
+            boxShadow: "0 1px 3px rgba(38,38,51,0.08)",
+            transition: "all 0.14s",
+          }}
+        >
+          {sandboxRunning ? (
+            <>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#34C759", animation: "maryPulse 1.2s infinite" }} />
+              Выполняется…
+            </>
+          ) : (
+            <>
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Запустить
+            </>
+          )}
+        </button>
+      )}
+      <style>{`@keyframes maryPulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.5; transform:scale(1.3); } }`}</style>
+
 
       {/* Pan/zoom-обёртка для графа */}
       <div
