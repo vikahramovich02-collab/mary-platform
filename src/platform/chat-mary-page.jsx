@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { color, transition } from "../ui/tokens.js";
 import { ic } from "./icons.jsx";
 import { MaryInputBox, useTypewriterPlaceholder } from "./chat-input.jsx";
@@ -14,8 +14,17 @@ export function ChatMaryPage() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);    // отправка
   const [draftId, setDraftId] = useState(null);     // id draft-сообщения Mary в стриме
-  // Live-визуализатор того что Mary сейчас собирает
-  const [build, setBuild] = useState(null); // { type: "department", deptId, name, channels:[], agents:[], integrations:[] }
+  // Live-визуализатор того что Mary сейчас собирает — персистентный через localStorage
+  const [build, setBuildRaw] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("mary_build_ctx") || "null"); } catch { return null; }
+  });
+  const setBuild = useCallback((val) => {
+    setBuildRaw(val);
+    try {
+      if (val) localStorage.setItem("mary_build_ctx", JSON.stringify(val));
+      else localStorage.removeItem("mary_build_ctx");
+    } catch {}
+  }, []);
   const [activeAgentIds, setActiveAgentIds] = useState(new Set()); // агенты которые сейчас работают (ask_agent running)
   const [artifacts, setArtifacts] = useState([]); // [{ id, agentId, agentRole, agentColor, title, content, ts }]
   // Публикуем activeAgentIds глобально чтобы dept-page GraphCanvas мог подсветить ноды
@@ -41,6 +50,29 @@ export function ChatMaryPage() {
     } catch {}
   };
   useEffect(() => { refreshList(); }, []);
+
+  // На маунте: синхронизируем build с актуальными данными API
+  useEffect(() => {
+    fetch("/api/mary/departments")
+      .then(r => r.json())
+      .then(d => {
+        const depts = (d.departments || []).filter(x => x.agents?.length || x.channels?.length);
+        if (!depts.length) return;
+        // Берём самый свежий (или тот что уже в build)
+        const cached = (() => { try { return JSON.parse(localStorage.getItem("mary_build_ctx") || "null"); } catch { return null; } })();
+        const match = cached?.deptId ? depts.find(x => x.id === cached.deptId) : null;
+        const latest = match || depts.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0))[0];
+        setBuild({
+          type: "department",
+          deptId: latest.id, name: latest.name,
+          color: latest.color || "#7A86FF",
+          channels: latest.channels || [],
+          agents: latest.agents || [],
+          integrations: latest.integrations || [],
+        });
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Загрузка сообщений активного чата
   useEffect(() => {

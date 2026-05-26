@@ -764,6 +764,19 @@ export function ChatPanel({ onClose, activeFilter, onFilter, mode: modeProp, onM
       } else if (event === "tool_end") {
         renderAgentTrace([{ name: data.name, ok: data.ok, result: data.result }]);
         setDraftStatus(null);
+        // Навигация и refresh сайдбара после dept-mutating tools
+        if (data.ok) {
+          if (data.result?.department || data.result?.channel) {
+            window.dispatchEvent(new CustomEvent("mary-dept-updated"));
+          }
+          if (data.name === "create_department" && data.result?.department) {
+            const deptId = data.result.department.id;
+            setTimeout(() => window.__maryNavigate?.(`dept://${deptId}`), 1800);
+          }
+          if (data.name === "add_channel" && data.result?.channel) {
+            setTimeout(() => window.__maryNavigate?.(`page://${data.result.channel.page}`), 2200);
+          }
+        }
       } else if (event === "done") {
         finalizeDraft();
       } else if (event === "error") {
