@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { color } from "../../ui/tokens.js";
 import { ic } from "../icons.jsx";
 
@@ -42,57 +43,148 @@ const KIND_LABEL = {
   "step":           "Шаг пайплайна",
 };
 
-// ── Узел внутреннего workflow (drill-in) ───────────────────
+// ── Inline rows for each node kind ─────────────────────────
+function getNodeRows(kind, settings = {}, sub = "") {
+  const rows = [];
+  switch (kind) {
+    case "trigger-cron":
+    case "input":
+      if (settings.cron) rows.push({ label: "Расписание", value: settings.cron });
+      if (settings.sources?.length) rows.push({ label: "Источники", value: settings.sources.join(", ") });
+      else if (sub) rows.push({ label: "Описание", value: sub });
+      break;
+    case "trigger-manual":
+      rows.push({ label: "Запуск", value: "по запросу" });
+      if (sub) rows.push({ label: "Описание", value: sub });
+      break;
+    case "subagent":
+      if (settings.agentId) rows.push({ label: "Агент", value: settings.agentId });
+      if (sub) rows.push({ label: "Задача", value: sub });
+      break;
+    case "llm-step":
+    case "llm":
+      if (settings.model) rows.push({ label: "Модель", value: settings.model });
+      if (settings.prompt) rows.push({ label: "Промпт", value: settings.prompt.slice(0, 36) + (settings.prompt.length > 36 ? "…" : "") });
+      else if (sub) rows.push({ label: "Описание", value: sub });
+      break;
+    case "output-kb":
+      rows.push({ label: "Тип", value: "база знаний" });
+      if (settings.target) rows.push({ label: "Хранилище", value: settings.target });
+      break;
+    case "next-agent":
+      rows.push({ label: "Передаёт в", value: settings.target ? settings.target.replace("agent:", "") : (sub || "следующий агент") });
+      break;
+    case "output":
+      rows.push({ label: settings.target ? "Цель" : "Тип", value: settings.target || "финальный вывод" });
+      if (sub) rows.push({ label: "Описание", value: sub });
+      break;
+    default:
+      if (sub) rows.push({ label: "Описание", value: sub });
+  }
+  return rows.slice(0, 2);
+}
+
+// ── Узел внутреннего workflow (drill-in) — expanded card ───
 export function FlowNode({ n, pos, w, h, accent = "#7A86FF", visible = true, selected = false, onClick }) {
+  const [hov, setHov] = useState(false);
   const s = kindStyle(n.kind, accent);
+  const rows = getNodeRows(n.kind, n.settings, n.sub);
+  const isStart = !!n.isStart;
+
   return (
     <div
-      onClick={onClick}
       style={{
         position: "absolute",
         left: pos.x, top: pos.y,
-        width: w, height: h,
-        background: color.white,
-        borderRadius: 24,
-        boxShadow: selected
-          ? `0 0 0 2px ${accent}, 0 4px 16px ${accent}22`
-          : "0 1px 2px rgba(38,38,51,0.04)",
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "0 14px",
+        width: w,
         opacity: visible ? 1 : 0,
         transform: visible ? "scale(1)" : "scale(0.92)",
-        transition: "opacity 0.4s ease 0.2s, transform 0.4s ease 0.2s, box-shadow 0.15s",
+        transition: "opacity 0.4s ease 0.2s, transform 0.4s ease 0.2s",
         userSelect: "none",
         pointerEvents: visible ? "auto" : "none",
-        cursor: onClick ? "pointer" : "default",
       }}
     >
-      <div style={{
-        width: 36, height: 36, borderRadius: 11,
-        background: s.iconBg, color: s.iconColor,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, transition: "background 0.15s",
-      }}>{s.icon}</div>
-      <div style={{ minWidth: 0, flex: 1 }}>
+      {/* "Start" label above first trigger node */}
+      {isStart && (
         <div style={{
-          fontSize: 13, fontWeight: 510, color: "#262633", lineHeight: 1.15,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>{n.title}</div>
+          position: "absolute", bottom: "calc(100% + 7px)", left: 14,
+          fontSize: 11.5, fontWeight: 600, color: "rgba(38,38,51,0.38)",
+          letterSpacing: "0.03em",
+        }}>Start</div>
+      )}
+
+      <div
+        onClick={onClick}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{
+          background: color.white,
+          borderRadius: 14,
+          boxShadow: selected
+            ? `0 0 0 2px ${accent}, 0 6px 20px ${accent}28`
+            : hov
+            ? `0 0 0 1.5px ${accent}60, 0 4px 14px rgba(38,38,51,0.1)`
+            : "0 2px 8px rgba(38,38,51,0.08), 0 0 0 1px rgba(38,38,51,0.07)",
+          transition: "box-shadow 0.14s",
+          cursor: onClick ? "pointer" : "default",
+          overflow: "hidden",
+        }}
+      >
+        {/* Card header */}
         <div style={{
-          fontSize: 11, color: "rgba(38,38,51,0.5)", marginTop: 2,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>{n.sub}</div>
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "12px 14px 10px",
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 9,
+            background: s.iconBg, color: s.iconColor,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>{s.icon}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{
+              fontSize: 13, fontWeight: 600, color: "#262633", lineHeight: 1.2,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>{n.title}</div>
+          </div>
+          <div style={{ display: "flex", gap: 2.5, flexShrink: 0 }}>
+            {[0,1,2].map(i => <span key={i} style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(38,38,51,0.22)" }} />)}
+          </div>
+        </div>
+
+        {/* Divider + rows */}
+        {rows.length > 0 && (
+          <>
+            <div style={{ height: 1, background: "rgba(38,38,51,0.06)" }} />
+            {rows.map((row, i) => (
+              <div key={i} style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "6px 14px",
+                borderBottom: i < rows.length - 1 ? "1px solid rgba(38,38,51,0.045)" : "none",
+                minHeight: 30,
+              }}>
+                <span style={{ fontSize: 11.5, color: "rgba(38,38,51,0.48)", flexShrink: 0 }}>{row.label}</span>
+                <span style={{
+                  fontSize: 11.5, color: "#262633", fontWeight: 500,
+                  maxWidth: "58%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  textAlign: "right",
+                }}>{row.value}</span>
+              </div>
+            ))}
+          </>
+        )}
       </div>
-      {/* Connector dots */}
+
+      {/* Connector dots — positioned at card center height */}
       <span style={{
-        position: "absolute", left: -5, top: "50%", transform: "translateY(-50%)",
+        position: "absolute", left: -5, top: h / 2 - 4.5,
         width: 9, height: 9, borderRadius: "50%",
-        background: color.white, border: "1px solid rgba(38,38,51,0.18)",
+        background: color.white, border: "1px solid rgba(38,38,51,0.22)",
       }} />
       <span style={{
-        position: "absolute", right: -5, top: "50%", transform: "translateY(-50%)",
+        position: "absolute", right: -5, top: h / 2 - 4.5,
         width: 9, height: 9, borderRadius: "50%",
-        background: color.white, border: "1px solid rgba(38,38,51,0.18)",
+        background: color.white, border: "1px solid rgba(38,38,51,0.22)",
       }} />
     </div>
   );
@@ -506,8 +598,9 @@ export function pipelineToFlow(pipeline, agentColor = "#7A86FF") {
         title: n.title,
         sub: n.sub || "",
         settings: n.settings || {},
-        ox: (Number(L) - centerLevel) * 280,
-        oy: (idx - midRow) * 110,
+        isStart: inDeg[n.id] === 0,
+        ox: (Number(L) - centerLevel) * 320,
+        oy: (idx - midRow) * 150,
       });
     });
   }

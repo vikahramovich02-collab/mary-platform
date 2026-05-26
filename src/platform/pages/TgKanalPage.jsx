@@ -303,8 +303,8 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
       setSandboxRunning(false);
     }
   }
-  const FLOW_NODE_W = 220;
-  const FLOW_NODE_H = 64;
+  const FLOW_NODE_W = 240;
+  const FLOW_NODE_H = 112;
   const prevViewRef = useRef(null);
 
   // Вычисляем абсолютные координаты внутренних нод (offset от центра агента)
@@ -623,14 +623,6 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         <KbPopup item={pipelineKb} onClose={() => setPipelineKb(null)} />
       )}
 
-      {/* Flow node detail panel — appears when a node is clicked in drill-in */}
-      {selectedFlowNode && drilledAgent && (
-        <FlowNodeDetailPanel
-          node={selectedFlowNode}
-          accent={drilledAgent.color}
-          onClose={() => setSelectedFlowNode(null)}
-        />
-      )}
 
       {/* Bottom panel: Settings / Logs / Output — Sim-style */}
       {drilledAgent && drilledAgent.profile && (
