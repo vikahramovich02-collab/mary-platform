@@ -3312,10 +3312,22 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit, 
 
   const sorted = topoSort(agent.pipeline);
   const outputs = {}; // nodeId → текст output
+  const nodeById = Object.fromEntries((agent.pipeline.nodes || []).map(n => [n.id, n]));
+  const revAdj = {}; // to → [from]
+  for (const [from, to] of (agent.pipeline.edges || [])) (revAdj[to] = revAdj[to] || []).push(from);
 
-  // Собираем outputs предыдущих узлов как контекст для текущего
+  // Для step-нод: собираем только «листовые» trigger/llm outputs предков, без вложенности
+  const triggerLeafCtx = (nodeId, visited = new Set()) => {
+    if (visited.has(nodeId)) return "";
+    visited.add(nodeId);
+    const n = nodeById[nodeId];
+    if (n?.type === "trigger" || n?.type === "llm") return outputs[nodeId] ? `[${nodeId}]: ${outputs[nodeId]}` : "";
+    return (revAdj[nodeId] || []).map(id => triggerLeafCtx(id, visited)).filter(Boolean).join("\n");
+  };
+
+  // Для llm-нод: прямые предки (с их сохранёнными outputs)
   const contextFor = (nodeId) => {
-    const incoming = (agent.pipeline.edges || []).filter(([_, to]) => to === nodeId).map(([from]) => from);
+    const incoming = (revAdj[nodeId] || []);
     return incoming.map(id => `[${id}]: ${outputs[id] || "(пусто)"}`).join("\n");
   };
 
@@ -3332,14 +3344,13 @@ async function runSandbox({ deptId, agentId, inputs = {}, dryRun = false, emit, 
         const defNode = defPipeline?.nodes?.find(n => n.id === node.id);
         output = inputs[node.id] || node.settings?.placeholder || defNode?.settings?.placeholder || `(${node.title})`;
       } else if (node.type === "step") {
-        output = `${node.title}:\n${contextFor(node.id)}`;
+        // Flat pass-through: collect trigger/llm ancestor outputs without deep nesting
+        output = triggerLeafCtx(node.id);
       } else if (node.type === "llm") {
         if (dryRun) {
           output = `[DRY] ${node.title} — пропуск LLM-вызова, mock-ответ`;
         } else {
-          const rawCtx = contextFor(node.id);
-          // Limit context to avoid overwhelming the model; prefer end (most processed data)
-          const ctx = rawCtx.length > 2400 ? "…(сокращено)\n" + rawCtx.slice(-2400) : rawCtx;
+          const ctx = contextFor(node.id);
           const sys = `Ты — узел "${node.title}" (${node.sub || "обработчик"}) внутри pipeline агента "${agent.role}". Делай только свою функцию, кратко.`;
           const usr = `Контекст от предыдущих узлов:\n${ctx}\n\nВыполни свою функцию и верни результат.`;
           const r = await callLLM({ system: sys, user: usr, jsonMode: false, maxTokens: 800, label: `sandbox/${node.id}`, returnUsage: true });
