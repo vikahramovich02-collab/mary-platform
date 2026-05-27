@@ -128,7 +128,7 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
               display: "flex", alignItems: "center", gap: 10,
               width: "100%",
               padding: "10px 4px",
-              background: hl ? "rgba(52,199,89,0.04)" : "transparent",
+              background: "transparent",
               border: "none",
               borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.08)" : "none",
               fontSize: 13, fontWeight: 400, color: "#262633",
@@ -136,22 +136,22 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
               textAlign: "left", fontFamily: "inherit",
               cursor: "pointer", transition: transition.fast,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = hl ? "rgba(52,199,89,0.08)" : "rgba(38,38,51,0.03)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = hl ? "rgba(52,199,89,0.04)" : "transparent"; }}>
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
             <span style={{
               flexShrink: 0, width: 18, textAlign: "right",
-              color: hl ? "#34C759" : "rgba(38,38,51,0.45)", fontWeight: hl ? 600 : 500,
+              color: "rgba(38,38,51,0.45)", fontWeight: 500,
               fontVariantNumeric: "tabular-nums",
             }}>{idx + 1}.</span>
             {hl && (
               <span style={{
-                width: 6, height: 6, borderRadius: "50%",
-                background: "#34C759", flexShrink: 0, marginLeft: -4,
+                width: 5, height: 5, borderRadius: "50%",
+                background: "#262633", flexShrink: 0, marginLeft: -4,
               }} />
             )}
-            <span style={{ flex: 1, fontWeight: hl ? 510 : 400 }}>{opt}</span>
+            <span style={{ flex: 1 }}>{opt}</span>
             <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-                 stroke={hl ? "#34C759" : "rgba(38,38,51,0.45)"} strokeWidth={1.6}
+                 stroke="rgba(38,38,51,0.45)" strokeWidth={1.6}
                  strokeLinecap="round" strokeLinejoin="round"
                  style={{ transform: "scale(0.85)", flexShrink: 0 }}>
               <path d="M5 12h14M13 6l6 6-6 6" />
