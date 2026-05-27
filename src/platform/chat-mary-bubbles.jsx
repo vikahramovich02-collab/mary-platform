@@ -155,7 +155,7 @@ function DemoChips({ actions, onPick }) {
   );
 }
 
-export function OptionsBlock({ options, multi, onPick, highlights, disabled }) {
+export function OptionsBlock({ options, multi, onPick, highlights, disabled, noTopMargin }) {
   const [selected, setSelected] = useState(() => new Set());
   const [freeText, setFreeText] = useState("");
   const [hoveredIdx, setHoveredIdx] = useState(null);
@@ -179,7 +179,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled }) {
   const canSubmit = selected.size > 0 || freeText.trim().length > 0;
 
   const containerStyle = {
-    marginTop: 12,
+    marginTop: noTopMargin ? 0 : 12,
     border: "1px solid rgba(38,38,51,0.09)",
     borderRadius: 12,
     overflow: "hidden",
@@ -279,7 +279,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled }) {
   }
 
   return (
-    <div style={{ marginTop: 12, opacity: disabled ? 0.55 : 1 }}>
+    <div style={{ marginTop: noTopMargin ? 0 : 12, opacity: disabled ? 0.55 : 1 }}>
       {!disabled && (
         <div style={{ fontSize: 11, color: "rgba(38,38,51,0.45)", marginBottom: 6, fontWeight: 500 }}>
           Можно выбрать несколько · отмеченные подходят лучше всего
@@ -480,7 +480,7 @@ export function AgentChatBubble({ m }) {
   );
 }
 
-export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
+export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInteract }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   if (m.role === "pipeline_run") {
@@ -585,7 +585,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
       </div>
     );
   }
-  const canInteract = isLast && !m._streaming && !m._toolStatus && onPickOption && !m._quickActions;
+  const canInteract = isLast && !suppressInteract && !m._streaming && !m._toolStatus && onPickOption && !m._quickActions;
   const showOptions = !m._streaming && !m._toolStatus && onPickOption && !m._quickActions;
   const checklist = showOptions ? parseChecklistOptions(m.text) : { body: m.text, options: null };
   const numbered  = showOptions && !checklist.options ? parseNumberedOptions(m.text) : { body: m.text, options: null };
@@ -649,6 +649,60 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
         {!m._streaming && body && body.trim().length > 0 && (
           <ActionBar text={body} />
         )}
+      </div>
+    </div>
+  );
+}
+
+export function FloatingOptionsPanel({ message, onPick, onDismiss }) {
+  const checklist = parseChecklistOptions(message.text || "");
+  const numbered = !checklist.options ? parseNumberedOptions(message.text || "") : null;
+  const body = checklist.options ? checklist.body : (numbered?.options ? numbered.body : message.text);
+  const options = checklist.options || numbered?.options;
+  const multi = !!checklist.options || (message._highlights?.length > 1);
+
+  if (!options || options.length < 2) return null;
+
+  const bodyLines = (body || "").trim().split("\n").filter(l => l.trim());
+  const questionText = bodyLines[bodyLines.length - 1] || "";
+
+  return (
+    <div style={{
+      background: color.white,
+      border: "1px solid rgba(38,38,51,0.1)",
+      borderRadius: 14,
+      boxShadow: "0 -2px 12px rgba(38,38,51,0.05), 0 4px 16px rgba(38,38,51,0.08)",
+      overflow: "hidden",
+      marginBottom: 6,
+    }}>
+      <div style={{
+        display: "flex", alignItems: "center", gap: 8,
+        padding: "11px 14px 0",
+      }}>
+        <span style={{ flex: 1, fontSize: 13, color: "rgba(38,38,51,0.6)", lineHeight: 1.4, fontWeight: 500 }}>
+          {questionText}
+        </span>
+        <button onClick={onDismiss}
+          style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 20, height: 20, borderRadius: 5,
+            background: "transparent", border: "none",
+            color: "rgba(38,38,51,0.3)", cursor: "pointer", flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.3)"; }}
+        >
+          <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div style={{ padding: "0 14px 14px" }}>
+        <OptionsBlock
+          options={options} multi={multi} onPick={onPick}
+          highlights={message._highlights} disabled={false}
+          noTopMargin
+        />
       </div>
     </div>
   );
