@@ -20,6 +20,7 @@ export function ChatWelcome({ onSuggest, onDemo, children, onPickAudio, onRecord
     { label: "Метрики и отчёты",       prompt: "Покажи метрики за последнюю неделю" },
     { label: "Идеи постов",            prompt: "Предложи идеи постов на основе свежего ресёрча" },
     { label: "Подключить интеграцию",  prompt: "Помоги подключить новую интеграцию" },
+    { label: "Авторизовать пример",    isDemo: true },
   ];
   return (
     <div style={{
@@ -45,34 +46,6 @@ export function ChatWelcome({ onSuggest, onDemo, children, onPickAudio, onRecord
           {children}
         </div>
       )}
-
-      {/* Two primary CTA buttons */}
-      <div style={{ display: "flex", gap: 8, width: "100%", maxWidth: 640, minHeight: 42 }}>
-        <button
-          onClick={() => onSuggest("Автоматизировать отдел")}
-          style={{
-            flex: 1, height: 42, minWidth: 0,
-            background: "#262633", color: "#fff",
-            border: "none", borderRadius: 11,
-            fontSize: 13.5, fontWeight: 510,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
-        >
-          Авторизовать отдел
-        </button>
-        <button
-          onClick={onDemo}
-          style={{
-            flex: 1, height: 42, minWidth: 0,
-            background: "transparent", color: "#262633",
-            border: "1.5px solid rgba(38,38,51,0.18)", borderRadius: 11,
-            fontSize: 13.5, fontWeight: 510,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
-        >
-          Авторизовать пример
-        </button>
-      </div>
 
       <input ref={localFileRef} type="file" accept="audio/*,video/*"
         onChange={e => { const f = e.target.files?.[0]; if (f && onPickAudio) onPickAudio({ target: { files: [f], value: "" } }); e.target.value = ""; setCallMenuOpen(false); }}
@@ -150,10 +123,11 @@ export function ChatWelcome({ onSuggest, onDemo, children, onPickAudio, onRecord
               </div>
             );
           }
+          const isDemo = a.isDemo;
           return (
             <button
               key={i}
-              onClick={() => onSuggest(a.prompt)}
+              onClick={isDemo ? onDemo : () => onSuggest(a.prompt)}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 4,
                 height: 34, padding: "0 10px",
