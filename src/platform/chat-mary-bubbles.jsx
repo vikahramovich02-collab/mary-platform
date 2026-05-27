@@ -5,6 +5,98 @@ import { parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
 import { ToolsTrail } from "./chat-cards.jsx";
 import { AgentsLog, RunResultPanel, JudgeCard } from "./pages/sandbox-page.jsx";
 
+function DemoBuildLog({ lines, streaming }) {
+  return (
+    <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 1 }}>
+      {lines.map((line, i) => (
+        <div key={i} style={{
+          display: "flex", alignItems: "flex-start", gap: 8,
+          fontSize: 13, color: "rgba(38,38,51,0.85)", lineHeight: 1.45,
+          padding: "4px 0",
+          borderBottom: i < lines.length - 1 ? "1px solid rgba(38,38,51,0.05)" : "none",
+        }}>
+          <span style={{
+            width: 16, height: 16, borderRadius: 5, flexShrink: 0, marginTop: 1,
+            background: "rgba(52,199,89,0.12)",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12l5 5L20 7" />
+            </svg>
+          </span>
+          <span>{line}</span>
+        </div>
+      ))}
+      {streaming && (
+        <div style={{ display: "inline-flex", gap: 4, padding: "6px 0 2px 24px" }}>
+          {[0,1,2].map(i => (
+            <span key={i} style={{
+              width: 5, height: 5, borderRadius: "50%",
+              background: "rgba(38,38,51,0.35)",
+              animation: `marypulse 1.4s ease-in-out infinite ${i * 0.2}s`,
+            }} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DemoChips({ actions, onPick }) {
+  const iconMap = {
+    connect: (
+      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+      </svg>
+    ),
+    person: (
+      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+        <circle cx="9" cy="7" r="4"/>
+        <path d="M19 8v6M22 11h-6"/>
+      </svg>
+    ),
+    calendar: (
+      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <path d="M16 2v4M8 2v4M3 10h18"/>
+      </svg>
+    ),
+    sheets: (
+      <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M3 9h18M9 3v18"/>
+      </svg>
+    ),
+  };
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 14 }}>
+      {actions.map((a, i) => (
+        <button key={i} onClick={() => onPick?.(a.label)}
+          style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            height: 32, padding: "0 12px",
+            background: "rgba(38,38,51,0.04)",
+            border: "1px solid rgba(38,38,51,0.12)",
+            borderRadius: 8,
+            fontSize: 12.5, fontWeight: 500, color: "#262633",
+            cursor: "pointer", fontFamily: "inherit",
+            transition: "background 0.12s, border-color 0.12s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.09)"; e.currentTarget.style.borderColor = "rgba(38,38,51,0.22)"; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "rgba(38,38,51,0.04)"; e.currentTarget.style.borderColor = "rgba(38,38,51,0.12)"; }}
+        >
+          <span style={{ color: "rgba(38,38,51,0.5)", display: "inline-flex" }}>
+            {iconMap[a.icon] || iconMap.connect}
+          </span>
+          <span>{a.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function OptionsBlock({ options, multi, onPick }) {
   const [selected, setSelected] = useState(() => new Set());
   const toggle = (idx) => {
@@ -313,7 +405,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
       </div>
     );
   }
-  const showOptions = isLast && !m._streaming && !m._toolStatus && onPickOption;
+  const showOptions = isLast && !m._streaming && !m._toolStatus && onPickOption && !m._quickActions;
   const checklist = showOptions ? parseChecklistOptions(m.text) : { body: m.text, options: null };
   const numbered  = showOptions && !checklist.options ? parseNumberedOptions(m.text) : { body: m.text, options: null };
   const body = checklist.options ? checklist.body : (numbered.options ? numbered.body : m.text);
@@ -351,10 +443,16 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
             }} />
           )}
         </div>
+        {m._buildLog !== undefined && (
+          <DemoBuildLog lines={m._buildLog} streaming={!!m._streaming} />
+        )}
         {options && options.length >= 2 && (
           <OptionsBlock options={options} multi={multi} onPick={onPickOption} />
         )}
-        {m._streaming && !m.text && !m._toolStatus && (
+        {m._quickActions && isLast && (
+          <DemoChips actions={m._quickActions} onPick={onPickOption} />
+        )}
+        {m._streaming && !m.text && m._buildLog === undefined && !m._toolStatus && (
           <div style={{ display: "inline-flex", gap: 4, padding: "8px 0" }}>
             {[0,1,2].map(i => (
               <span key={i} style={{

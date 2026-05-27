@@ -7,6 +7,59 @@ import { ActivityPanel, ArtifactView, ActivityLog, BuildCanvas } from "./chat-ma
 import { ChatWelcome, ChatItem } from "./chat-mary-sidebar.jsx";
 import { OptionsBlock, AgentChatBubble, ChatBubble, ActionBar } from "./chat-mary-bubbles.jsx";
 
+// ─── Demo flow script ────────────────────────────────────────────────────────
+const DEMO_SCRIPT = [
+  {
+    id: "intro",
+    text: "Разворачиваем отдел под твой бизнес — 5 вопросов, и предложу состав команды.\n\nКакой отдел хочешь автоматизировать?\n\n1. СММ — контент и соцсети\n2. Продажи — лиды и сделки\n3. Поддержка — клиенты и тикеты\n4. Найм — вакансии и кандидаты\n5. Маркетинг — аналитика и реклама\n6. Другое — расскажи",
+  },
+  {
+    id: "q1",
+    text: "СММ — хорошо.\n\nГде ведёте основной контент?\n\n1. Telegram-канал\n2. Instagram / Reels\n3. ВКонтакте\n4. Несколько площадок сразу\n5. Другое — расскажи",
+  },
+  {
+    id: "q2",
+    text: "Хорошо.\n\nКак сейчас организован процесс — кто делает контент?\n\n1. Всё делаю сам — от идеи до публикации\n2. Есть SMM-специалист или фрилансер\n3. Работает небольшая команда\n4. Пока не выстроено, выходит хаотично\n5. Другое — расскажи",
+  },
+  {
+    id: "q3",
+    text: "Понял.\n\nВ чём сейчас главная боль?\n\n1. Нет времени — контент выходит редко\n2. Нет идей — непонятно что писать\n3. Пишу, но аудитория не растёт\n4. Сложно согласовывать посты\n5. Другое — расскажи",
+  },
+  {
+    id: "q4",
+    text: "Ясно.\n\nКто принимает финальное решение по публикации?\n\n1. Я сам — никаких согласований\n2. Нужен апруф руководителя или клиента\n3. Согласовываем внутри команды\n4. Публикую напрямую\n5. Другое — расскажи",
+  },
+  {
+    id: "q5",
+    text: "Последний вопрос — что конкретно продвигаем?\n\n1. SaaS или IT-продукт\n2. Услуги (агентство, консалтинг)\n3. Физический товар или e-commerce\n4. Личный бренд эксперта\n5. Другое — расскажи",
+  },
+  {
+    id: "proposal",
+    isProposal: true,
+    text: "Собрала картинку. Вот что предлагаю:\n\n**Отдел СММ · 5 агентов**\n\n— Ресерчер — мониторит конкурентов, ищет тренды, готовит бриф\n— Маркетолог — ставит цели, определяет ЦА и угол подачи\n— Копирайтер — пишет тексты, держит тон бренда\n— Дизайнер — генерирует визуал под каждый пост\n— Аналитик — следит за охватами, делает выводы\n\nКаналы: Telegram-канал\nАпруф: включён — каждый пост сначала ко мне\n\nСтроим?\n\n1. Да, го — разворачивай\n2. Нет, хочу скорректировать",
+  },
+];
+
+const DEMO_BUILD_STEPS = [
+  { text: "Проверяю дубли...", delay: 500 },
+  { text: "Создаю отдел «СММ»", delay: 900 },
+  { text: "Добавляю канал: Telegram-канал", delay: 650 },
+  { text: "Подключаю Ресерчера — мониторит конкурентов, ищет тренды, готовит бриф", delay: 800 },
+  { text: "Подключаю Маркетолога — ставит цели, определяет ЦА и угол подачи", delay: 780 },
+  { text: "Подключаю Копирайтера — пишет тексты по брифу, держит тон бренда", delay: 780 },
+  { text: "Подключаю Дизайнера — генерирует визуал под каждый пост", delay: 780 },
+  { text: "Подключаю Аналитика — следит за охватами, делает выводы", delay: 780 },
+  { text: "Настраиваю апруф и правила публикации", delay: 600 },
+];
+
+const DEMO_QUICK_RESPONSES = {
+  "Настроить интеграцию": "Подключаем каналы. С чего начнём?\n\n1. Telegram Bot API — нужен токен из @BotFather\n2. Instagram Graph API — нужен бизнес-аккаунт Meta\n3. Google Sheets — для контент-планов и статистики\n4. Notion — для базы знаний отдела",
+  "Добавить человека в отдел": "Кого добавляем?\n\n1. Отправить ссылку-приглашение\n2. Добавить по email\n3. Пропустить — добавлю позже",
+  "Построить контент-план": "На какой период строим план?\n\n1. Эта неделя — 7 постов\n2. Ближайшие 2 недели\n3. Месяц — 20–25 постов\n4. Другой период — расскажи",
+  "Загрузить прошлый контент-план (Google Sheets)": "Подключаем Google Sheets. Вставь ссылку на таблицу с контент-планом — импортирую структуру, прошлые публикации и частоту выхода. Это поможет Ресерчеру не повторять темы.",
+};
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function ChatMaryPage() {
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
@@ -25,6 +78,11 @@ export function ChatMaryPage() {
       else localStorage.removeItem("mary_build_ctx");
     } catch {}
   }, []);
+  // Demo mode — scripted onboarding prototype
+  const [demoMode, setDemoMode] = useState(false);
+  const [demoStep, setDemoStep] = useState(-1);
+  const demoTimersRef = useRef([]);
+
   const [activeAgentIds, setActiveAgentIds] = useState(new Set()); // агенты которые сейчас работают (ask_agent running)
   const [artifacts, setArtifacts] = useState([]); // [{ id, agentId, agentRole, agentColor, title, content, ts }]
   // Публикуем activeAgentIds глобально чтобы dept-page GraphCanvas мог подсветить ноды
@@ -84,6 +142,9 @@ export function ChatMaryPage() {
   }, [activeId]);
 
   async function newChat(scope = "general") {
+    stopDemoTimers();
+    setDemoMode(false);
+    setDemoStep(-1);
     const r = await fetch("/api/mary/conversations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -159,10 +220,122 @@ export function ChatMaryPage() {
     }
   }
 
+  function stopDemoTimers() {
+    demoTimersRef.current.forEach(t => clearTimeout(t));
+    demoTimersRef.current = [];
+  }
+
+  function demoTypeThen(id, text, delay = 700) {
+    const tId = id + "-typing";
+    setMessages(prev => [...prev, {
+      role: "mary", text: "", _streaming: true, _id: tId, ts: new Date().toISOString(),
+    }]);
+    const t = setTimeout(() => {
+      setMessages(prev => prev.map(m => m._id === tId
+        ? { ...m, text, _streaming: false }
+        : m
+      ));
+    }, delay);
+    demoTimersRef.current.push(t);
+  }
+
+  function startDemo() {
+    stopDemoTimers();
+    setDemoMode(true);
+    setDemoStep(0);
+    setMessages([]);
+    const t = setTimeout(() => {
+      demoTypeThen("demo-init", DEMO_SCRIPT[0].text, 650);
+    }, 200);
+    demoTimersRef.current.push(t);
+  }
+
+  function startDemoBuild() {
+    setDemoStep(7);
+    const buildId = "demo-build-" + Date.now();
+    setMessages(prev => [...prev, {
+      role: "mary", text: "", _streaming: true, _buildLog: [], _id: buildId, ts: new Date().toISOString(),
+    }]);
+    let cumDelay = 300;
+    DEMO_BUILD_STEPS.forEach((step, idx) => {
+      cumDelay += step.delay;
+      const d = cumDelay;
+      const isLast = idx === DEMO_BUILD_STEPS.length - 1;
+      const t = setTimeout(() => {
+        setMessages(prev => prev.map(m => m._id === buildId
+          ? { ...m, _buildLog: [...(m._buildLog || []), step.text], _streaming: !isLast }
+          : m
+        ));
+      }, d);
+      demoTimersRef.current.push(t);
+    });
+    cumDelay += 900;
+    const finalT = setTimeout(() => {
+      setMessages(prev => [...prev, {
+        role: "mary",
+        text: "Отдел СММ готов — 5 агентов в связке, Telegram-канал подключён, апруф включён.",
+        _quickActions: [
+          { label: "Настроить интеграцию", icon: "connect" },
+          { label: "Добавить человека в отдел", icon: "person" },
+          { label: "Построить контент-план", icon: "calendar" },
+          { label: "Загрузить прошлый контент-план (Google Sheets)", icon: "sheets" },
+        ],
+        _id: "demo-done-" + Date.now(),
+        ts: new Date().toISOString(),
+      }]);
+      setDemoStep(8);
+    }, cumDelay);
+    demoTimersRef.current.push(finalT);
+  }
+
+  function handleDemoInput(userText) {
+    setMessages(prev => [...prev, {
+      role: "user", text: userText, ts: new Date().toISOString(),
+    }]);
+
+    // Quick action chips response (step 8+)
+    if (demoStep >= 8) {
+      const key = Object.keys(DEMO_QUICK_RESPONSES).find(k => userText.trim() === k || userText.includes(k));
+      if (key) {
+        demoTypeThen("demo-qa-" + Date.now(), DEMO_QUICK_RESPONSES[key], 700);
+      }
+      return;
+    }
+
+    // Proposal step — branch on да/нет
+    if (demoStep === 6) {
+      const isYes = /^1[\s.]|^да\b|^го\b/i.test(userText.trim());
+      if (isYes) {
+        startDemoBuild();
+      } else {
+        demoTypeThen(
+          "demo-no-" + Date.now(),
+          "Конечно, расскажи что скорректировать.\n\n1. Добавить агента\n2. Убрать агента\n3. Изменить каналы\n4. Другое — расскажи",
+          700
+        );
+      }
+      return;
+    }
+
+    const nextStep = demoStep + 1;
+    setDemoStep(nextStep);
+    const nextMsg = DEMO_SCRIPT[nextStep];
+    if (nextMsg) {
+      demoTypeThen("demo-" + nextStep + "-" + Date.now(), nextMsg.text, 700);
+    }
+  }
+
   async function send(overrideText, opts = {}) {
     const msg = (overrideText ?? text).trim();
     if (!msg || loading) return;
     if (overrideText === undefined) setText("");
+
+    // Demo mode: run scripted flow, skip real API
+    if (demoMode) {
+      handleDemoInput(msg);
+      return;
+    }
+
     // Edit & Resend: сначала отрезаем хвост сообщений начиная с editFromIndex,
     // и в UI убираем те же сообщения.
     if (opts.editFromIndex !== undefined && activeId) {
@@ -783,13 +956,36 @@ export function ChatMaryPage() {
                 borderBottom: "1px solid rgba(38,38,51,0.06)",
                 display: "flex", alignItems: "center", gap: 10,
               }}>
-                <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>
-                  {conversations.find(c => c.id === activeId)?.title || "Чат"}
-                </span>
-                <span style={{
-                  fontSize: 11, color: "rgba(38,38,51,0.5)",
-                  padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 999,
-                }}>{SCOPE_LABEL[conversations.find(c => c.id === activeId)?.scope] || ""}</span>
+                {demoMode ? (
+                  <>
+                    <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>Пример онбординга СММ</span>
+                    <span style={{
+                      fontSize: 11, color: "#FF8B3D",
+                      padding: "2px 8px", background: "rgba(255,139,61,0.1)", borderRadius: 999,
+                    }}>Демо</span>
+                    <div style={{ flex: 1 }} />
+                    <button
+                      onClick={() => { stopDemoTimers(); setDemoMode(false); setDemoStep(-1); setMessages([]); }}
+                      style={{
+                        fontSize: 12, color: "rgba(38,38,51,0.5)", background: "transparent",
+                        border: "1px solid rgba(38,38,51,0.12)", borderRadius: 7,
+                        padding: "3px 10px", cursor: "pointer", fontFamily: "inherit",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                    >Выйти из примера</button>
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>
+                      {conversations.find(c => c.id === activeId)?.title || "Чат"}
+                    </span>
+                    <span style={{
+                      fontSize: 11, color: "rgba(38,38,51,0.5)",
+                      padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 999,
+                    }}>{SCOPE_LABEL[conversations.find(c => c.id === activeId)?.scope] || ""}</span>
+                  </>
+                )}
               </div>
             )}
 
@@ -801,6 +997,7 @@ export function ChatMaryPage() {
               {messages.length === 0 ? (
                 <ChatWelcome
                   onSuggest={(s) => send(s)}
+                  onDemo={startDemo}
                   onPickAudio={onPickAudio}
                   onRecord={recording ? stopRecording : startRecording}
                   recording={recording}
