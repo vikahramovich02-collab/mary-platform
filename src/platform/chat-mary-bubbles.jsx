@@ -5,36 +5,94 @@ import { parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
 import { ToolsTrail } from "./chat-cards.jsx";
 import { AgentsLog, RunResultPanel, JudgeCard } from "./pages/sandbox-page.jsx";
 
-function DemoBuildLog({ lines, streaming }) {
+function buildStepIcon(line) {
+  if (/канал|channel/i.test(line)) return (
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+  );
+  if (/отдел|dept|создаю/i.test(line)) return (
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+      <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+    </svg>
+  );
+  if (/подключаю|агент/i.test(line)) return (
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+    </svg>
+  );
+  if (/апруф|настраив/i.test(line)) return (
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/><path d="M12 2v2m0 16v2M4.22 4.22l1.42 1.42m12.72 12.72 1.42 1.42M2 12h2m16 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+    </svg>
+  );
   return (
-    <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 1 }}>
-      {lines.map((line, i) => (
-        <div key={i} style={{
-          display: "flex", alignItems: "flex-start", gap: 8,
-          fontSize: 13, color: "rgba(38,38,51,0.85)", lineHeight: 1.45,
-          padding: "4px 0",
-          borderBottom: i < lines.length - 1 ? "1px solid rgba(38,38,51,0.05)" : "none",
-        }}>
-          <span style={{
-            width: 16, height: 16, borderRadius: 5, flexShrink: 0, marginTop: 1,
-            background: "rgba(52,199,89,0.12)",
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 12l5 5L20 7" />
-            </svg>
+    <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+  );
+}
+
+function DemoBuildLog({ lines, streaming }) {
+  const [expanded, setExpanded] = useState(true);
+  return (
+    <div style={{ marginTop: 8 }}>
+      {/* Collapsible header — стиль "Обдумывая это" */}
+      <button
+        onClick={() => setExpanded(v => !v)}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          background: "transparent", border: "none", padding: "2px 0",
+          cursor: "pointer", fontFamily: "inherit",
+        }}
+      >
+        {/* speech-bubble icon */}
+        <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)", fontWeight: 500 }}>
+          Разворачиваю отдел
+        </span>
+        {streaming && (
+          <span style={{ display: "inline-flex", gap: 3, marginLeft: 2 }}>
+            {[0,1,2].map(i => (
+              <span key={i} style={{
+                width: 4, height: 4, borderRadius: "50%",
+                background: "rgba(38,38,51,0.35)",
+                animation: `marypulse 1.4s ease-in-out infinite ${i * 0.18}s`,
+                display: "inline-block",
+              }} />
+            ))}
           </span>
-          <span>{line}</span>
-        </div>
-      ))}
-      {streaming && (
-        <div style={{ display: "inline-flex", gap: 4, padding: "6px 0 2px 24px" }}>
-          {[0,1,2].map(i => (
-            <span key={i} style={{
-              width: 5, height: 5, borderRadius: "50%",
-              background: "rgba(38,38,51,0.35)",
-              animation: `marypulse 1.4s ease-in-out infinite ${i * 0.2}s`,
-            }} />
+        )}
+        {/* chevron */}
+        <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.4)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+          style={{ transform: expanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s" }}>
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+
+      {/* Steps list with L-indent */}
+      {expanded && lines.length > 0 && (
+        <div style={{
+          marginLeft: 7,
+          borderLeft: "1.5px solid rgba(38,38,51,0.1)",
+          paddingLeft: 14,
+          marginTop: 4,
+          display: "flex", flexDirection: "column", gap: 0,
+        }}>
+          {lines.map((line, i) => (
+            <div key={i} style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "5px 0",
+              borderBottom: i < lines.length - 1 ? "1px solid rgba(38,38,51,0.05)" : "none",
+            }}>
+              <span style={{ color: "rgba(38,38,51,0.4)", display: "inline-flex", flexShrink: 0 }}>
+                {buildStepIcon(line)}
+              </span>
+              <span style={{ fontSize: 13, color: "rgba(38,38,51,0.8)", lineHeight: 1.4 }}>{line}</span>
+            </div>
           ))}
         </div>
       )}
@@ -174,6 +232,7 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
       }}>
         {options.map((opt, idx) => {
           const checked = selected.has(idx);
+          const hl = hlSet.has(idx);
           return (
             <button key={idx} onClick={() => toggle(idx)}
               style={{
@@ -204,6 +263,12 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
                   </svg>
                 )}
               </span>
+              {hl && (
+                <span style={{
+                  width: 5, height: 5, borderRadius: "50%",
+                  background: "#262633", flexShrink: 0, marginLeft: -4,
+                }} />
+              )}
               <span style={{ flex: 1 }}>{opt}</span>
             </button>
           );
