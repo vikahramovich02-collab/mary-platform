@@ -11,31 +11,39 @@ import { OptionsBlock, AgentChatBubble, ChatBubble, ActionBar } from "./chat-mar
 const DEMO_SCRIPT = [
   {
     id: "intro",
+    // highlights: индексы (0-based) вариантов, которые ведут по основному пути
+    _highlights: [0],
     text: "Разворачиваем отдел под твой бизнес — 5 вопросов, и предложу состав команды.\n\nКакой отдел хочешь автоматизировать?\n\n1. СММ — контент и соцсети\n2. Продажи — лиды и сделки\n3. Поддержка — клиенты и тикеты\n4. Найм — вакансии и кандидаты\n5. Маркетинг — аналитика и реклама\n6. Другое — расскажи",
   },
   {
     id: "q1",
+    _highlights: [0, 3], // Telegram ИЛИ несколько площадок — оба работают
     text: "СММ — хорошо.\n\nГде ведёте основной контент?\n\n1. Telegram-канал\n2. Instagram / Reels\n3. ВКонтакте\n4. Несколько площадок сразу\n5. Другое — расскажи",
   },
   {
     id: "q2",
+    _highlights: [0, 3], // всё сам ИЛИ не выстроено — оба типичных кейса
     text: "Хорошо.\n\nКак сейчас организован процесс — кто делает контент?\n\n1. Всё делаю сам — от идеи до публикации\n2. Есть SMM-специалист или фрилансер\n3. Работает небольшая команда\n4. Пока не выстроено, выходит хаотично\n5. Другое — расскажи",
   },
   {
     id: "q3",
+    _highlights: [0, 1], // нет времени ИЛИ нет идей — два главных болевых
     text: "Понял.\n\nВ чём сейчас главная боль?\n\n1. Нет времени — контент выходит редко\n2. Нет идей — непонятно что писать\n3. Пишу, но аудитория не растёт\n4. Сложно согласовывать посты\n5. Другое — расскажи",
   },
   {
     id: "q4",
+    _highlights: [0, 1], // я сам ИЛИ нужен апруф — оба популярны
     text: "Ясно.\n\nКто принимает финальное решение по публикации?\n\n1. Я сам — никаких согласований\n2. Нужен апруф руководителя или клиента\n3. Согласовываем внутри команды\n4. Публикую напрямую\n5. Другое — расскажи",
   },
   {
     id: "q5",
+    _highlights: [0, 1, 3], // SaaS, услуги или личный бренд — три основных типа
     text: "Последний вопрос — что конкретно продвигаем?\n\n1. SaaS или IT-продукт\n2. Услуги (агентство, консалтинг)\n3. Физический товар или e-commerce\n4. Личный бренд эксперта\n5. Другое — расскажи",
   },
   {
     id: "proposal",
     isProposal: true,
+    _highlights: [0], // ТОЛЬКО «Да, го» — только этот вариант запускает билд
     text: "Собрала картинку. Вот что предлагаю:\n\n**Отдел СММ · 5 агентов**\n\n— Ресерчер — мониторит конкурентов, ищет тренды, готовит бриф\n— Маркетолог — ставит цели, определяет ЦА и угол подачи\n— Копирайтер — пишет тексты, держит тон бренда\n— Дизайнер — генерирует визуал под каждый пост\n— Аналитик — следит за охватами, делает выводы\n\nКаналы: Telegram-канал\nАпруф: включён — каждый пост сначала ко мне\n\nСтроим?\n\n1. Да, го — разворачивай\n2. Нет, хочу скорректировать",
   },
 ];
@@ -225,14 +233,14 @@ export function ChatMaryPage() {
     demoTimersRef.current = [];
   }
 
-  function demoTypeThen(id, text, delay = 700) {
+  function demoTypeThen(id, text, delay = 700, extraProps = {}) {
     const tId = id + "-typing";
     setMessages(prev => [...prev, {
       role: "mary", text: "", _streaming: true, _id: tId, ts: new Date().toISOString(),
     }]);
     const t = setTimeout(() => {
       setMessages(prev => prev.map(m => m._id === tId
-        ? { ...m, text, _streaming: false }
+        ? { ...m, text, _streaming: false, ...extraProps }
         : m
       ));
     }, delay);
@@ -244,8 +252,9 @@ export function ChatMaryPage() {
     setDemoMode(true);
     setDemoStep(0);
     setMessages([]);
+    const step0 = DEMO_SCRIPT[0];
     const t = setTimeout(() => {
-      demoTypeThen("demo-init", DEMO_SCRIPT[0].text, 650);
+      demoTypeThen("demo-init", step0.text, 650, step0._highlights ? { _highlights: step0._highlights } : {});
     }, 200);
     demoTimersRef.current.push(t);
   }
@@ -321,7 +330,11 @@ export function ChatMaryPage() {
     setDemoStep(nextStep);
     const nextMsg = DEMO_SCRIPT[nextStep];
     if (nextMsg) {
-      demoTypeThen("demo-" + nextStep + "-" + Date.now(), nextMsg.text, 700);
+      demoTypeThen(
+        "demo-" + nextStep + "-" + Date.now(),
+        nextMsg.text, 700,
+        nextMsg._highlights ? { _highlights: nextMsg._highlights } : {}
+      );
     }
   }
 
