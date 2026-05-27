@@ -21,6 +21,11 @@ const DEMO_SCRIPT = [
     text: "СММ — хорошо.\n\nГде ведёте основной контент?\n\n1. Telegram-канал\n2. Instagram / Reels\n3. ВКонтакте\n4. Несколько площадок сразу\n5. Другое — расскажи",
   },
   {
+    id: "q_scope",
+    _highlights: [0], // только «наш собственный» — именно этот путь мы автоматизируем
+    text: "Хорошо.\n\nЭтот СММ-отдел — для вашей компании или ведёте аккаунты для клиентов?\n\n1. Наш собственный — автоматизируем свой отдел\n2. Ведём аккаунты для клиентов (агентство)\n3. Оба варианта — и своё, и клиентское\n4. Другое — расскажи",
+  },
+  {
     id: "q2",
     _highlights: [0, 3], // всё сам ИЛИ не выстроено — оба типичных кейса
     text: "Хорошо.\n\nКак сейчас организован процесс — кто делает контент?\n\n1. Всё делаю сам — от идеи до публикации\n2. Есть SMM-специалист или фрилансер\n3. Работает небольшая команда\n4. Пока не выстроено, выходит хаотично\n5. Другое — расскажи",
@@ -260,7 +265,7 @@ export function ChatMaryPage() {
   }
 
   function startDemoBuild() {
-    setDemoStep(7);
+    setDemoStep(8);
     const buildId = "demo-build-" + Date.now();
     setMessages(prev => [...prev, {
       role: "mary", text: "", _streaming: true, _buildLog: [], _id: buildId, ts: new Date().toISOString(),
@@ -292,7 +297,7 @@ export function ChatMaryPage() {
         _id: "demo-done-" + Date.now(),
         ts: new Date().toISOString(),
       }]);
-      setDemoStep(8);
+      setDemoStep(9);
     }, cumDelay);
     demoTimersRef.current.push(finalT);
   }
@@ -302,8 +307,8 @@ export function ChatMaryPage() {
       role: "user", text: userText, ts: new Date().toISOString(),
     }]);
 
-    // Quick action chips response (step 8+)
-    if (demoStep >= 8) {
+    // Quick action chips response (step 9+)
+    if (demoStep >= 9) {
       const key = Object.keys(DEMO_QUICK_RESPONSES).find(k => userText.trim() === k || userText.includes(k));
       if (key) {
         demoTypeThen("demo-qa-" + Date.now(), DEMO_QUICK_RESPONSES[key], 700);
@@ -312,7 +317,7 @@ export function ChatMaryPage() {
     }
 
     // Proposal step — branch on да/нет
-    if (demoStep === 6) {
+    if (demoStep === 7) {
       const isYes = /^1[\s.]|^да\b|^го\b/i.test(userText.trim());
       if (isYes) {
         startDemoBuild();
