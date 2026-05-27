@@ -166,7 +166,7 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
   return (
     <div style={{ marginTop: 14 }}>
       <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", marginBottom: 6, fontWeight: 500 }}>
-        Можно выбрать несколько
+        Можно выбрать несколько · отмеченные подходят лучше всего
       </div>
       <div style={{
         borderTop: "1px solid rgba(38,38,51,0.08)",
@@ -420,7 +420,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
   const numbered  = showOptions && !checklist.options ? parseNumberedOptions(m.text) : { body: m.text, options: null };
   const body = checklist.options ? checklist.body : (numbered.options ? numbered.body : m.text);
   const options = checklist.options || numbered.options;
-  const multi   = !!checklist.options;
+  const multi   = !!checklist.options || (m._highlights?.length > 1);
   return (
     <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
       <div style={{
