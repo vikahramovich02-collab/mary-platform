@@ -34,7 +34,7 @@ function buildStepIcon(line) {
   );
 }
 
-function DemoBuildLog({ lines, streaming }) {
+function DemoBuildLog({ lines, streaming, title }) {
   const [expanded, setExpanded] = useState(true);
   return (
     <div style={{ marginTop: 8 }}>
@@ -52,7 +52,7 @@ function DemoBuildLog({ lines, streaming }) {
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
         <span style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)", fontWeight: 500 }}>
-          Разворачиваю отдел
+          {title || "Разворачиваю отдел"}
         </span>
         {streaming && (
           <span style={{ display: "inline-flex", gap: 3, marginLeft: 2 }}>
@@ -513,9 +513,13 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
         {m._tools && m._tools.length > 0 && (
           <ToolsTrail tools={m._tools} />
         )}
+        {m._buildLog !== undefined && (
+          <DemoBuildLog lines={m._buildLog} streaming={!!m._streaming} title={m._buildLogTitle} />
+        )}
+        {(body || (m._streaming && m.text)) && (
         <div style={{
           fontSize: 14, color: "#262633", lineHeight: 1.55,
-          marginTop: (m._tools && m._tools.length > 0) ? 10 : 0,
+          marginTop: (m._tools && m._tools.length > 0) ? 10 : (m._buildLog !== undefined && body ? 10 : 0),
         }}>
           {renderMarkdown(body)}
           {m._streaming && m.text && (
@@ -526,8 +530,6 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
             }} />
           )}
         </div>
-        {m._buildLog !== undefined && (
-          <DemoBuildLog lines={m._buildLog} streaming={!!m._streaming} />
         )}
         {options && options.length >= 2 && (
           <OptionsBlock options={options} multi={multi} onPick={onPickOption} highlights={m._highlights} disabled={!canInteract} />

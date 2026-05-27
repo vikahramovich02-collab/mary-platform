@@ -48,38 +48,55 @@ const DEMO_SCRIPT = [
   // 6 — как подключить Sheets
   {
     id: "q-sheets-connect",
-    _highlights: [0], // Подключить через Google-аккаунт
-    text: "Подключаюсь к Google Таблицам.\n\n1. Подключить через Google-аккаунт\n2. Вставить ссылку\n3. Настрою позже",
+    _highlights: [0], // Кину ссылку
+    text: "Как удобнее подключить?\n\n1. 🔗 Кину ссылку на таблицу\n2. 🔒 Подключить через Google-аккаунт\n3. Настрою позже",
   },
-  // 7 — Sheets подключены + что в Figma
+  // 7 — просим ссылку (пользователь вставляет URL)
+  {
+    id: "q-sheets-link-prompt",
+    text: "Окей, давай ссылку. Если таблиц несколько — кидай по одной, я обработаю каждую.",
+  },
+  // 8 — проверяем доступ (нет доступа → просим открыть)
+  {
+    id: "q-sheets-access-denied",
+    _highlights: [0], // Я открыла доступ, проверь
+    _buildLogTitle: "Проверяю доступ",
+    _buildLog: [
+      "Проверяю доступ к таблице...",
+      "Ссылка корректная",
+      "Таблица закрыта — нет доступа",
+    ],
+    text: "⚠️ Таблица найдена, но доступа нет. Открой её для моего аккаунта:\nmary-bot@anthropic-mary.iam.gserviceaccount.com\n\nИли сделай таблицу доступной по ссылке для просмотра.\n\n1. Я открыла доступ, проверь\n2. Дам ссылку с открытым доступом\n3. Настрою позже",
+  },
+  // 9 — читаем таблицу + результат
+  {
+    id: "q-sheets-result",
+    _highlights: [0], // Да, всё верно
+    _buildLogTitle: "Читаю таблицу",
+    _buildLog: [
+      "Доступ получен",
+      "Анализирую структуру",
+      "Понимаю содержимое",
+    ],
+    text: "✅ Подключилась к таблице «Контент-план Q2 2026».\n\nСтруктура:\n— Лист 1: «План на месяц» — 47 строк, колонки: дата, тема, формат, статус, ответственный\n— Лист 2: «Архив» — 312 строк опубликованных постов\n— Лист 3: «Идеи» — 128 тем\n\nМаркетолог будет дополнять «План на месяц», Ресерчер — добавлять темы в «Идеи».\n\n1. Да, всё верно\n2. Подскажу, где что\n3. Использовать только часть листов",
+  },
+  // 10 — что в Figma
   {
     id: "q-figma-content",
     _highlights: [3], // Всё перечисленное
-    text: "Нашла две таблицы: «Контент-план Q2 2026» (47 постов) и «База идей» (128 тем). Использую обе.\n\n🔌 Что в Figma?\n\n1. Шаблоны постов\n2. Бренд-гайд: цвета, шрифты, логотип\n3. Готовые макеты для переиспользования\n4. Всё перечисленное",
+    text: "🔌 Что в Figma?\n\n1. Шаблоны постов\n2. Бренд-гайд: цвета, шрифты, логотип\n3. Готовые макеты для переиспользования\n4. Всё перечисленное",
   },
-  // 8 — как подключить Figma
+  // 11 — как подключить Figma
   {
     id: "q-figma-connect",
     _highlights: [2], // Настрою позже
     text: "Подключаюсь к Figma.\n\n1. Открыть доступ моему аккаунту\n2. Вставить ссылку\n3. Настрою позже",
   },
-  // 9 — Figma отложена + что в Google Drive
-  {
-    id: "q-drive-content",
-    _highlights: [3], // Всё вместе
-    text: "Окей, отложу. Пока Дизайнер будет генерить визуал по описанию бренда из онбординга.\n\n🔌 Google Drive — что для СММ?\n\n1. Готовые фото и видео\n2. Архив прошлых материалов\n3. Документы с фактурой — кейсы, цифры\n4. Всё вместе",
-  },
-  // 10 — папки в Drive
-  {
-    id: "q-drive-folders",
-    _highlights: [0], // Открыть проводник
-    text: "Подключаюсь к Drive. В какие папки смотреть?\n\n1. Открыть проводник по Drive\n2. Настрою позже",
-  },
-  // 11 — Drive подключён + задачи агентов
+  // 12 — задачи агентов (Figma отложена)
   {
     id: "q-tasks",
     _highlights: [0, 1, 2, 3, 5], // Ресерч, написание, визуал, публикация, аналитика
-    text: "Добавила папки «СММ → Материалы 2026», «Кейсы клиентов», «Медиа».\n\nКакие задачи отдаём агентам?\n\n1. Ресерч тем и трендов\n2. Написание постов\n3. Создание визуала\n4. Публикация по расписанию\n5. Ответы на комментарии\n6. Аналитика и отчёты",
+    text: "Окей, отложу. Пока Дизайнер будет генерить визуал по описанию бренда из онбординга.\n\nКакие задачи отдаём агентам?\n\n1. Ресерч тем и трендов\n2. Написание постов\n3. Создание визуала\n4. Публикация по расписанию\n5. Ответы на комментарии\n6. Аналитика и отчёты",
   },
   // 12 — кто согласует
   {
@@ -347,7 +364,7 @@ export function ChatMaryPage() {
   }
 
   function startDemoBuild() {
-    setDemoStep(20);
+    setDemoStep(21);
     const buildId = "demo-build-" + Date.now();
     setMessages(prev => [...prev, {
       role: "mary", text: "", _streaming: true, _buildLog: [], _id: buildId, ts: new Date().toISOString(),
@@ -379,7 +396,7 @@ export function ChatMaryPage() {
         _id: "demo-done-" + Date.now(),
         ts: new Date().toISOString(),
       }]);
-      setDemoStep(21);
+      setDemoStep(22);
     }, cumDelay);
     demoTimersRef.current.push(finalT);
   }
@@ -389,8 +406,8 @@ export function ChatMaryPage() {
       role: "user", text: userText, ts: new Date().toISOString(),
     }]);
 
-    // Quick action chips response (step 21+)
-    if (demoStep >= 21) {
+    // Quick action chips response (step 22+)
+    if (demoStep >= 22) {
       const key = Object.keys(DEMO_QUICK_RESPONSES).find(k => userText.trim() === k || userText.includes(k));
       if (key) {
         demoTypeThen("demo-qa-" + Date.now(), DEMO_QUICK_RESPONSES[key], 700);
@@ -399,7 +416,7 @@ export function ChatMaryPage() {
     }
 
     // Proposal step — branch on да/нет
-    if (demoStep === 19) {
+    if (demoStep === 20) {
       const isYes = /^1[\s.]|^да\b|^го\b/i.test(userText.trim());
       if (isYes) {
         startDemoBuild();
@@ -417,11 +434,11 @@ export function ChatMaryPage() {
     setDemoStep(nextStep);
     const nextMsg = DEMO_SCRIPT[nextStep];
     if (nextMsg) {
-      demoTypeThen(
-        "demo-" + nextStep + "-" + Date.now(),
-        nextMsg.text, 700,
-        nextMsg._highlights ? { _highlights: nextMsg._highlights } : {}
-      );
+      const extra = {};
+      if (nextMsg._highlights) extra._highlights = nextMsg._highlights;
+      if (nextMsg._buildLog)   extra._buildLog = nextMsg._buildLog;
+      if (nextMsg._buildLogTitle) extra._buildLogTitle = nextMsg._buildLogTitle;
+      demoTypeThen("demo-" + nextStep + "-" + Date.now(), nextMsg.text, 700, extra);
     }
   }
 
