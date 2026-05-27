@@ -157,6 +157,7 @@ function DemoChips({ actions, onPick }) {
 
 export function OptionsBlock({ options, multi, onPick, highlights, disabled }) {
   const [selected, setSelected] = useState(() => new Set());
+  const [freeText, setFreeText] = useState("");
   const hlSet = new Set(highlights || []);
   const toggle = (idx) => {
     if (disabled) return;
@@ -169,57 +170,93 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled }) {
   const submit = () => {
     if (disabled) return;
     const picked = options.filter((_, i) => selected.has(i));
-    if (picked.length === 0) return;
-    onPick(picked.join(", "));
+    const parts = [...picked];
+    if (freeText.trim()) parts.push(freeText.trim());
+    if (parts.length === 0) return;
+    onPick(parts.join(", "));
   };
+  const canSubmit = selected.size > 0 || freeText.trim().length > 0;
 
   if (!multi) {
     return (
-      <div style={{
-        marginTop: 14,
-        borderTop: "1px solid rgba(38,38,51,0.08)",
-        borderBottom: "1px solid rgba(38,38,51,0.08)",
-        opacity: disabled ? 0.5 : 1,
-      }}>
-        {options.map((opt, idx) => {
-          const hl = hlSet.has(idx);
-          return (
-          <button key={idx} onClick={disabled ? undefined : () => onPick(opt)}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              width: "100%",
-              padding: "10px 4px",
-              background: "transparent",
-              border: "none",
-              borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.08)" : "none",
-              fontSize: 13, fontWeight: 400, color: "#262633",
-              lineHeight: 1.3,
-              textAlign: "left", fontFamily: "inherit",
-              cursor: disabled ? "default" : "pointer", transition: transition.fast,
-            }}
-            onMouseEnter={e => { if (!disabled) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
-            <span style={{
-              flexShrink: 0, width: 18, textAlign: "right",
-              color: "rgba(38,38,51,0.45)", fontWeight: 500,
-              fontVariantNumeric: "tabular-nums",
-            }}>{idx + 1}.</span>
-            {hl && (
+      <div style={{ marginTop: 14, opacity: disabled ? 0.5 : 1 }}>
+        <div style={{
+          borderTop: "1px solid rgba(38,38,51,0.08)",
+          borderBottom: freeText.trim() ? "none" : "1px solid rgba(38,38,51,0.08)",
+        }}>
+          {options.map((opt, idx) => {
+            const hl = hlSet.has(idx);
+            return (
+            <button key={idx} onClick={disabled ? undefined : () => onPick(opt)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                width: "100%",
+                padding: "10px 4px",
+                background: "transparent",
+                border: "none",
+                borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.08)" : "none",
+                fontSize: 13, fontWeight: 400, color: "#262633",
+                lineHeight: 1.3,
+                textAlign: "left", fontFamily: "inherit",
+                cursor: disabled ? "default" : "pointer", transition: transition.fast,
+              }}
+              onMouseEnter={e => { if (!disabled) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
               <span style={{
-                width: 5, height: 5, borderRadius: "50%",
-                background: "#262633", flexShrink: 0, marginLeft: -4,
-              }} />
+                flexShrink: 0, width: 18, textAlign: "right",
+                color: "rgba(38,38,51,0.45)", fontWeight: 500,
+                fontVariantNumeric: "tabular-nums",
+              }}>{idx + 1}.</span>
+              {hl && (
+                <span style={{
+                  width: 5, height: 5, borderRadius: "50%",
+                  background: "#262633", flexShrink: 0, marginLeft: -4,
+                }} />
+              )}
+              <span style={{ flex: 1 }}>{opt}</span>
+              <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+                   stroke="rgba(38,38,51,0.45)" strokeWidth={1.6}
+                   strokeLinecap="round" strokeLinejoin="round"
+                   style={{ transform: "scale(0.85)", flexShrink: 0 }}>
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+            );
+          })}
+        </div>
+        {!disabled && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            borderTop: "1px solid rgba(38,38,51,0.08)",
+            borderBottom: "1px solid rgba(38,38,51,0.08)",
+            padding: "8px 4px",
+          }}>
+            <input
+              value={freeText}
+              onChange={e => setFreeText(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && freeText.trim()) { e.preventDefault(); onPick(freeText.trim()); } }}
+              placeholder="или напиши свой вариант…"
+              style={{
+                flex: 1, border: "none", outline: "none",
+                fontSize: 13, color: "#262633", background: "transparent",
+                fontFamily: "inherit", padding: 0,
+              }}
+            />
+            {freeText.trim() && (
+              <button onClick={() => onPick(freeText.trim())}
+                style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: 26, height: 26, borderRadius: "50%",
+                  background: "#262633", border: "none",
+                  color: "#fff", cursor: "pointer", flexShrink: 0,
+                }}>
+                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 19V5M5 12l7-7 7 7" />
+                </svg>
+              </button>
             )}
-            <span style={{ flex: 1 }}>{opt}</span>
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-                 stroke="rgba(38,38,51,0.45)" strokeWidth={1.6}
-                 strokeLinecap="round" strokeLinejoin="round"
-                 style={{ transform: "scale(0.85)", flexShrink: 0 }}>
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </button>
-          );
-        })}
+          </div>
+        )}
       </div>
     );
   }
@@ -280,19 +317,39 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled }) {
         })}
       </div>
       {!disabled && (
-        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-          <button onClick={submit} disabled={selected.size === 0}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "7px 14px",
-              background: selected.size > 0 ? "#262633" : "rgba(38,38,51,0.15)",
-              color: color.white, border: "none", borderRadius: 8,
-              fontSize: 12.5, fontWeight: 500, fontFamily: "inherit",
-              cursor: selected.size > 0 ? "pointer" : "not-allowed",
-            }}>
-            Отправить{selected.size > 0 && ` · ${selected.size}`}
-          </button>
-        </div>
+        <>
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            borderTop: "1px solid rgba(38,38,51,0.08)",
+            borderBottom: "1px solid rgba(38,38,51,0.08)",
+            padding: "8px 4px",
+          }}>
+            <input
+              value={freeText}
+              onChange={e => setFreeText(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && canSubmit) { e.preventDefault(); submit(); } }}
+              placeholder="или напиши свой вариант…"
+              style={{
+                flex: 1, border: "none", outline: "none",
+                fontSize: 13, color: "#262633", background: "transparent",
+                fontFamily: "inherit", padding: 0,
+              }}
+            />
+          </div>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+            <button onClick={submit} disabled={!canSubmit}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "7px 14px",
+                background: canSubmit ? "#262633" : "rgba(38,38,51,0.15)",
+                color: color.white, border: "none", borderRadius: 8,
+                fontSize: 12.5, fontWeight: 500, fontFamily: "inherit",
+                cursor: canSubmit ? "pointer" : "not-allowed",
+              }}>
+              Отправить{selected.size > 0 && ` · ${selected.size}`}
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
