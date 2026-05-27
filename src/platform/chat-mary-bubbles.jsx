@@ -155,10 +155,11 @@ function DemoChips({ actions, onPick }) {
   );
 }
 
-export function OptionsBlock({ options, multi, onPick, highlights }) {
+export function OptionsBlock({ options, multi, onPick, highlights, disabled }) {
   const [selected, setSelected] = useState(() => new Set());
   const hlSet = new Set(highlights || []);
   const toggle = (idx) => {
+    if (disabled) return;
     setSelected(prev => {
       const next = new Set(prev);
       if (next.has(idx)) next.delete(idx); else next.add(idx);
@@ -166,6 +167,7 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
     });
   };
   const submit = () => {
+    if (disabled) return;
     const picked = options.filter((_, i) => selected.has(i));
     if (picked.length === 0) return;
     onPick(picked.join(", "));
@@ -177,11 +179,12 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
         marginTop: 14,
         borderTop: "1px solid rgba(38,38,51,0.08)",
         borderBottom: "1px solid rgba(38,38,51,0.08)",
+        opacity: disabled ? 0.5 : 1,
       }}>
         {options.map((opt, idx) => {
           const hl = hlSet.has(idx);
           return (
-          <button key={idx} onClick={() => onPick(opt)}
+          <button key={idx} onClick={disabled ? undefined : () => onPick(opt)}
             style={{
               display: "flex", alignItems: "center", gap: 10,
               width: "100%",
@@ -192,9 +195,9 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
               fontSize: 13, fontWeight: 400, color: "#262633",
               lineHeight: 1.3,
               textAlign: "left", fontFamily: "inherit",
-              cursor: "pointer", transition: transition.fast,
+              cursor: disabled ? "default" : "pointer", transition: transition.fast,
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+            onMouseEnter={e => { if (!disabled) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}>
             <span style={{
               flexShrink: 0, width: 18, textAlign: "right",
@@ -222,10 +225,12 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
   }
 
   return (
-    <div style={{ marginTop: 14 }}>
-      <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", marginBottom: 6, fontWeight: 500 }}>
-        Можно выбрать несколько · отмеченные подходят лучше всего
-      </div>
+    <div style={{ marginTop: 14, opacity: disabled ? 0.5 : 1 }}>
+      {!disabled && (
+        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.5)", marginBottom: 6, fontWeight: 500 }}>
+          Можно выбрать несколько · отмеченные подходят лучше всего
+        </div>
+      )}
       <div style={{
         borderTop: "1px solid rgba(38,38,51,0.08)",
         borderBottom: "1px solid rgba(38,38,51,0.08)",
@@ -245,9 +250,9 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
                 fontSize: 13, fontWeight: 400, color: "#262633",
                 lineHeight: 1.3,
                 textAlign: "left", fontFamily: "inherit",
-                cursor: "pointer", transition: transition.fast,
+                cursor: disabled ? "default" : "pointer", transition: transition.fast,
               }}
-              onMouseEnter={e => { if (!checked) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+              onMouseEnter={e => { if (!checked && !disabled) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
               onMouseLeave={e => { if (!checked) e.currentTarget.style.background = "transparent"; }}>
               <span style={{
                 flexShrink: 0,
@@ -274,19 +279,21 @@ export function OptionsBlock({ options, multi, onPick, highlights }) {
           );
         })}
       </div>
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-        <button onClick={submit} disabled={selected.size === 0}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "7px 14px",
-            background: selected.size > 0 ? "#262633" : "rgba(38,38,51,0.15)",
-            color: color.white, border: "none", borderRadius: 8,
-            fontSize: 12.5, fontWeight: 500, fontFamily: "inherit",
-            cursor: selected.size > 0 ? "pointer" : "not-allowed",
-          }}>
-          Отправить{selected.size > 0 && ` · ${selected.size}`}
-        </button>
-      </div>
+      {!disabled && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
+          <button onClick={submit} disabled={selected.size === 0}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "7px 14px",
+              background: selected.size > 0 ? "#262633" : "rgba(38,38,51,0.15)",
+              color: color.white, border: "none", borderRadius: 8,
+              fontSize: 12.5, fontWeight: 500, fontFamily: "inherit",
+              cursor: selected.size > 0 ? "pointer" : "not-allowed",
+            }}>
+            Отправить{selected.size > 0 && ` · ${selected.size}`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -480,7 +487,8 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
       </div>
     );
   }
-  const showOptions = isLast && !m._streaming && !m._toolStatus && onPickOption && !m._quickActions;
+  const canInteract = isLast && !m._streaming && !m._toolStatus && onPickOption && !m._quickActions;
+  const showOptions = !m._streaming && !m._toolStatus && onPickOption && !m._quickActions;
   const checklist = showOptions ? parseChecklistOptions(m.text) : { body: m.text, options: null };
   const numbered  = showOptions && !checklist.options ? parseNumberedOptions(m.text) : { body: m.text, options: null };
   const body = checklist.options ? checklist.body : (numbered.options ? numbered.body : m.text);
@@ -522,7 +530,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit }) {
           <DemoBuildLog lines={m._buildLog} streaming={!!m._streaming} />
         )}
         {options && options.length >= 2 && (
-          <OptionsBlock options={options} multi={multi} onPick={onPickOption} highlights={m._highlights} />
+          <OptionsBlock options={options} multi={multi} onPick={onPickOption} highlights={m._highlights} disabled={!canInteract} />
         )}
         {m._quickActions && isLast && (
           <DemoChips actions={m._quickActions} onPick={onPickOption} />
