@@ -85,8 +85,9 @@ function DemoBuildLog({ lines, streaming, title }) {
           {lines.map((line, i) => (
             <div key={i} style={{
               display: "flex", alignItems: "center", gap: 8,
-              padding: "5px 0",
-              borderBottom: i < lines.length - 1 ? "1px solid rgba(38,38,51,0.05)" : "none",
+              padding: "4px 0",
+              animation: "maryFadeIn 0.25s ease both",
+              animationDelay: `${i * 0.07}s`,
             }}>
               <span style={{ color: "rgba(38,38,51,0.4)", display: "inline-flex", flexShrink: 0 }}>
                 {buildStepIcon(line)}
@@ -94,6 +95,7 @@ function DemoBuildLog({ lines, streaming, title }) {
               <span style={{ fontSize: 13, color: "rgba(38,38,51,0.8)", lineHeight: 1.4 }}>{line}</span>
             </div>
           ))}
+          <style>{`@keyframes maryFadeIn { from { opacity:0; transform:translateY(3px) } to { opacity:1; transform:translateY(0) } }`}</style>
         </div>
       )}
     </div>
