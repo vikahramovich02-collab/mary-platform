@@ -6,16 +6,26 @@
   <title>Mary AI</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    ::-webkit-scrollbar { width: 2px; height: 2px; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
-      background: rgba(0,0,0,0.2);
-      border-radius: 2px;
-      min-height: 20px; max-height: 20px;
+      background-color: transparent;
+      background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3));
+      background-size: 2px 20px;
+      background-repeat: no-repeat;
+      background-position: center;
     }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.35); }
+    ::-webkit-scrollbar-thumb:hover {
+      background-image: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5));
+    }
     ::-webkit-scrollbar-corner { background: transparent; }
-    * { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) transparent; }
+    * { scrollbar-width: none; }
+    [data-theme="dark"] ::-webkit-scrollbar-thumb {
+      background-image: linear-gradient(rgba(255,255,255,0.25), rgba(255,255,255,0.25));
+    }
+    [data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+      background-image: linear-gradient(rgba(255,255,255,0.4), rgba(255,255,255,0.4));
+    }
 
     :root {
       --bg: #ffffff;
