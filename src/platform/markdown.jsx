@@ -149,8 +149,8 @@ export function renderMarkdown(text) {
         i++;
       }
       blocks.push(<ul key={blocks.length} style={{
-        margin: "6px 0", paddingLeft: 22,
-      }}>{items.map((it, k) => <li key={k} style={{ marginBottom: 2 }}>{renderInline(it)}</li>)}</ul>);
+        margin: "8px 0", paddingLeft: 22,
+      }}>{items.map((it, k) => <li key={k} style={{ marginBottom: 7, lineHeight: 1.5 }}>{renderInline(it)}</li>)}</ul>);
       continue;
     }
     if (/^\d+\.\s+/.test(line)) {
