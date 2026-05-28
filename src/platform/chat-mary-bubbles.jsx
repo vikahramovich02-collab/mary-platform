@@ -376,6 +376,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
   const [draft, setDraft] = useState("");
   const [hover, setHover] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [userTip, setUserTip] = useState(null);
   if (m.role === "pipeline_run") {
     return <PipelineRunBubble m={m} />;
   }
@@ -442,7 +443,6 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         </div>
       );
     }
-    const [userTip, setUserTip] = useState(null);
     const uBtn = {
       position: "relative",
       display: "inline-flex", alignItems: "center", justifyContent: "center",
