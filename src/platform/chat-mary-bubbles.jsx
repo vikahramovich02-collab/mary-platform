@@ -440,64 +440,43 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         </div>
       );
     }
-    const actBtn = {
+    const [userTip, setUserTip] = useState(null);
+    const uBtn = {
+      position: "relative",
       display: "inline-flex", alignItems: "center", justifyContent: "center",
       width: 26, height: 26, padding: 0,
       background: "transparent", border: "none", borderRadius: 6,
       color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
-      transition: "color 0.12s, background 0.12s",
+      transition: "color 0.15s, background 0.15s",
     };
+    const uHov = (e) => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; };
+    const uLev = (e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; };
     return (
-      <div
-        style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginBottom: 18 }}
-        onMouseEnter={() => setHover(true)}
-        onMouseLeave={() => setHover(false)}
-      >
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginBottom: 18 }}>
         <div style={{
           background: "rgba(38,38,51,0.06)", color: "#262633",
           padding: "10px 14px", borderRadius: 16,
           maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
         }}>{m.text}</div>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 2, marginTop: 4,
-          opacity: hover ? 1 : 0, transition: "opacity 0.15s",
-          pointerEvents: hover ? "auto" : "none",
-        }}>
-          {m.ts && (
-            <span style={{
-              fontSize: 11, color: "rgba(38,38,51,0.35)", marginRight: 4,
-              fontVariantNumeric: "tabular-nums", userSelect: "none",
-            }}>
-              {new Date(m.ts).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          )}
+        <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 8 }}>
           {onEdit && index !== undefined && (
-            <button title="Перегенерировать" onClick={() => onEdit?.(m.text, index)}
-              style={actBtn}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; }}
+            <button style={uBtn}
+              onMouseEnter={e => { uHov(e); setUserTip("edit"); }}
+              onMouseLeave={e => { uLev(e); setUserTip(null); }}
+              onClick={() => { setDraft(m.text); setEditing(true); setUserTip(null); }}
             >
-              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
-              </svg>
-            </button>
-          )}
-          {onEdit && index !== undefined && (
-            <button title="Редактировать" onClick={() => { setDraft(m.text); setEditing(true); }}
-              style={actBtn}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; }}
-            >
+              {userTip === "edit" && <Tip label="Редактировать" align="right" />}
               <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
               </svg>
             </button>
           )}
-          <button title="Копировать" onClick={handleCopy}
-            style={{ ...actBtn, color: copied ? "#262633" : "rgba(38,38,51,0.45)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = copied ? "#262633" : "rgba(38,38,51,0.45)"; }}
+          <button style={{ ...uBtn, color: copied ? "#262633" : uBtn.color }}
+            onMouseEnter={e => { if (!copied) { uHov(e); setUserTip("copy"); } }}
+            onMouseLeave={e => { if (!copied) uLev(e); setUserTip(null); }}
+            onClick={() => { handleCopy(); setUserTip(null); }}
           >
+            {userTip === "copy" && <Tip label="Скопировать" align="right" />}
             {copied
               ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
               : <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
@@ -763,10 +742,16 @@ export function FloatingOptionsPanel({ message, onPick, onDismiss }) {
   );
 }
 
-function Tip({ label }) {
+function Tip({ label, align = "center" }) {
+  const pos = align === "left"
+    ? { left: 0 }
+    : align === "right"
+    ? { right: 0 }
+    : { left: "50%", transform: "translateX(-50%)" };
   return (
     <div style={{
-      position: "absolute", bottom: "calc(100% + 7px)", left: "50%", transform: "translateX(-50%)",
+      position: "absolute", bottom: "calc(100% + 7px)",
+      ...pos,
       background: "#1a1a1a", color: "#fff", fontSize: 11.5, fontWeight: 500,
       padding: "4px 8px", borderRadius: 6, whiteSpace: "nowrap",
       pointerEvents: "none", zIndex: 20,
@@ -800,7 +785,7 @@ export function ActionBar({ text }) {
               style={{ ...btn, color: copied ? "#262633" : btn.color }}
               onMouseEnter={e => { if (!copied) { hov(e); setTip("copy"); } }}
               onMouseLeave={e => { if (!copied) lev(e); setTip(null); }}>
-        {tip === "copy" && <Tip label="Скопировать" />}
+        {tip === "copy" && <Tip label="Скопировать" align="left" />}
         {copied
           ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
           : <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
