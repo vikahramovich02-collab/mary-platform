@@ -911,10 +911,8 @@ export function ChatMaryPage({ dark, toggleDark }) {
           )}
         </div>
         <div style={{
-          padding: "0 8px 16px", overflowY: "scroll", flex: 1,
-          paddingRight: 28, marginRight: -20,
+          padding: "0 8px 16px", overflowY: "auto", flex: 1,
           display: "flex", flexDirection: "column", gap: 2,
-          scrollbarWidth: "none",
         }}>
           {conversations.length === 0 && (
             <div style={{ padding: 14, fontSize: 12.5, color: "rgba(38,38,51,0.5)", textAlign: "center" }}>
@@ -1170,13 +1168,10 @@ export function ChatMaryPage({ dark, toggleDark }) {
               </div>
             )}
 
-            {/* Сообщения — обёртка clip для скрытия нативного скроллбара */}
-            <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+            {/* Сообщения */}
             <div style={{
-              flex: 1, overflowY: "scroll", padding: "16px 0 4px",
-              paddingRight: 20, marginRight: -20,
+              flex: 1, overflowY: "auto", padding: "16px 0 4px",
               display: "flex", flexDirection: "column",
-              scrollbarWidth: "none",
             }}>
               {messages.length === 0 ? (
                 <ChatWelcome
@@ -1207,7 +1202,6 @@ export function ChatMaryPage({ dark, toggleDark }) {
                   ))}
                 </div>
               )}
-            </div>
             </div>
 
             {/* Input внизу — только когда есть переписка. На welcome он внутри центра экрана. */}

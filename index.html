@@ -6,10 +6,6 @@
   <title>Mary AI</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    ::-webkit-scrollbar { width: 0 !important; height: 0 !important; display: none !important; }
-    ::-webkit-scrollbar-track { display: none !important; }
-    ::-webkit-scrollbar-thumb { display: none !important; }
-    * { scrollbar-width: none !important; -ms-overflow-style: none !important; }
 
     :root {
       --bg: #ffffff;
@@ -45,44 +41,6 @@
 </head>
 <body>
   <div id="root"></div>
-  <script>
-    // Custom overlay scrollbar — фиксированная палочка 2x20px
-    (function() {
-      const thumb = document.createElement('div');
-      thumb.id = 'mary-scroll-thumb';
-      thumb.style.cssText = 'position:fixed;width:3px;height:10px;border-radius:3px;opacity:0;transition:opacity 0.25s;pointer-events:none;z-index:2147483647;top:0;left:0;background:rgba(0,0,0,0.5);';
-      const attach = () => {
-        if (document.body && !document.getElementById('mary-scroll-thumb')) {
-          document.body.appendChild(thumb);
-        }
-      };
-      const setColor = () => {
-        thumb.style.background = document.documentElement.dataset.theme === 'dark'
-          ? 'rgba(255,255,255,0.45)' : 'rgba(0,0,0,0.5)';
-      };
-      let hideTimer;
-      const update = (el) => {
-        attach();
-        if (!el || !el.getBoundingClientRect) return;
-        const max = el.scrollHeight - el.clientHeight;
-        if (max <= 1) { thumb.style.opacity = '0'; return; }
-        const rect = el.getBoundingClientRect();
-        const pos = Math.max(0, Math.min(1, el.scrollTop / max));
-        thumb.style.top = (rect.top + pos * (rect.height - 10)) + 'px';
-        thumb.style.left = (rect.right - 6) + 'px';
-        thumb.style.opacity = '1';
-        clearTimeout(hideTimer);
-        hideTimer = setTimeout(() => { thumb.style.opacity = '0'; }, 1200);
-      };
-      if (document.body) attach(); else document.addEventListener('DOMContentLoaded', attach);
-      setTimeout(() => { attach(); setColor(); }, 0);
-      document.addEventListener('scroll', (e) => {
-        const el = e.target === document ? document.documentElement : e.target;
-        update(el);
-      }, true);
-      new MutationObserver(setColor).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
-    })();
-  </script>
   <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
