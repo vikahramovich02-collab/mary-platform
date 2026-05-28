@@ -248,7 +248,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
               fontFamily: "inherit", padding: 0,
             }}
           />
-          {freeText.trim() ? (
+          {!multi && freeText.trim() ? (
             <button onClick={() => onPick(freeText.trim())}
               style={{
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
