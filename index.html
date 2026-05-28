@@ -12,8 +12,13 @@
       -moz-osx-font-smoothing: grayscale;
       text-rendering: optimizeLegibility;
     }
-    ::-webkit-scrollbar { display: none; }
-    * { scrollbar-width: none; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(38,38,51,0.18); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(38,38,51,0.3); }
+    [data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.18); }
+    [data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+    * { scrollbar-width: thin; }
 
     :root {
       --bg: #ffffff;
