@@ -757,30 +757,16 @@ export function ChatMaryPage() {
       {/* Sidebar — список чатов (можно скрыть) */}
       {chatsCollapsed ? (
         <div style={{
-          width: 44, minWidth: 44,
+          width: 10, minWidth: 10,
           background: color.white,
-          borderRight: "1px solid rgba(38,38,51,0.06)",
-          display: "flex", flexDirection: "column", alignItems: "center",
-          padding: "16px 0", gap: 8,
         }}>
-          <button
-            onClick={() => setChatsCollapsed(false)}
-            title="Раскрыть список чатов"
-            style={{
-              width: 32, height: 32,
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              background: "transparent", border: "none", borderRadius: 7,
-              color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          >{ic.collapse}</button>
           <button
             onClick={() => newChat("general")}
             title="Новый чат"
             style={{
+              display: "none",
               width: 32, height: 32,
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              alignItems: "center", justifyContent: "center",
               background: "#262633", border: "none", borderRadius: 7,
               color: color.white, cursor: "pointer", fontFamily: "inherit",
             }}
@@ -1067,43 +1053,35 @@ export function ChatMaryPage() {
           </div>
         ) : (
           <>
-            {/* Шапка — только когда чат начат */}
+            {/* Шапка */}
             {messages.length > 0 && (
               <div style={{
-                padding: "14px 24px",
-                borderBottom: "1px solid rgba(38,38,51,0.06)",
-                display: "flex", alignItems: "center", gap: 10,
+                padding: "12px 20px",
+                display: "flex", alignItems: "center", gap: 8,
               }}>
-                {demoMode ? (
-                  <>
-                    <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>Пример онбординга СММ</span>
-                    <span style={{
-                      fontSize: 11, color: "#FF8B3D",
-                      padding: "2px 8px", background: "rgba(255,139,61,0.1)", borderRadius: 999,
-                    }}>Демо</span>
-                    <div style={{ flex: 1 }} />
-                    <button
-                      onClick={() => { stopDemoTimers(); setDemoMode(false); setDemoStep(-1); setMessages([]); }}
-                      style={{
-                        fontSize: 12, color: "rgba(38,38,51,0.5)", background: "transparent",
-                        border: "1px solid rgba(38,38,51,0.12)", borderRadius: 7,
-                        padding: "3px 10px", cursor: "pointer", fontFamily: "inherit",
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                    >Выйти из примера</button>
-                  </>
-                ) : (
-                  <>
-                    <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>
-                      {conversations.find(c => c.id === activeId)?.title || "Чат"}
-                    </span>
-                    <span style={{
-                      fontSize: 11, color: "rgba(38,38,51,0.5)",
-                      padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 999,
-                    }}>{SCOPE_LABEL[conversations.find(c => c.id === activeId)?.scope] || ""}</span>
-                  </>
+                {chatsCollapsed && (
+                  <button
+                    onClick={() => setChatsCollapsed(false)}
+                    title="Открыть список чатов"
+                    style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      width: 28, height: 28, background: "transparent", border: "none",
+                      borderRadius: 7, color: "rgba(38,38,51,0.5)", cursor: "pointer",
+                      flexShrink: 0,
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  >
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                  </button>
                 )}
+                <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>
+                  {demoMode
+                    ? "Демо автоматизация отдела"
+                    : (conversations.find(c => c.id === activeId)?.title || "Чат")}
+                </span>
               </div>
             )}
 
