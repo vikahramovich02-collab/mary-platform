@@ -1159,23 +1159,17 @@ export function ChatMaryPage() {
               )}
             </div>
 
-            {/* Floating options panel — above input, outside scroll area */}
-            {floatingMsg && messages.length > 0 && (
-              <div style={{ padding: "0 24px 2px" }}>
-                <div style={{ maxWidth: 760, margin: "0 auto" }}>
+            {/* Input внизу — только когда есть переписка. На welcome он внутри центра экрана. */}
+            {messages.length > 0 && (
+            <div style={{ padding: "12px 24px 18px" }}>
+              <div style={{ maxWidth: 760, margin: "0 auto" }}>
+                {floatingMsg ? (
                   <FloatingOptionsPanel
                     message={floatingMsg}
                     onPick={(opt) => send(opt)}
                     onDismiss={() => setDismissedPanelIds(prev => new Set([...prev, floatingMsg._id]))}
                   />
-                </div>
-              </div>
-            )}
-
-            {/* Input внизу — только когда есть переписка. На welcome он внутри центра экрана. */}
-            {messages.length > 0 && (
-            <div style={{ padding: "12px 24px 18px" }}>
-              <div style={{ maxWidth: 760, margin: "0 auto" }}>
+                ) : (
                 <div style={{
                   background: color.white,
                   border: "1px solid rgba(38,38,51,0.12)",
@@ -1189,7 +1183,7 @@ export function ChatMaryPage() {
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                    placeholder={floatingMsg ? "Или ответь напрямую…" : (isEmptyChat ? typewriterText : "Спросить у Mary")}
+                    placeholder={isEmptyChat ? typewriterText : "Спросить у Mary"}
                     disabled={loading}
                     style={{
                       width: "100%", border: "none", outline: "none",
@@ -1276,6 +1270,7 @@ export function ChatMaryPage() {
                     )}
                   </div>
                 </div>
+                )}
               </div>
             </div>
             )}

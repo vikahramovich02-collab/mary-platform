@@ -655,54 +655,182 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
 }
 
 export function FloatingOptionsPanel({ message, onPick, onDismiss }) {
+  const [selected, setSelected] = useState(() => new Set());
+  const [freeText, setFreeText] = useState("");
+
   const checklist = parseChecklistOptions(message.text || "");
   const numbered = !checklist.options ? parseNumberedOptions(message.text || "") : null;
   const body = checklist.options ? checklist.body : (numbered?.options ? numbered.body : message.text);
   const options = checklist.options || numbered?.options;
   const multi = !!checklist.options || (message._highlights?.length > 1);
+  const hlSet = new Set(message._highlights || []);
 
   if (!options || options.length < 2) return null;
 
   const bodyLines = (body || "").trim().split("\n").filter(l => l.trim());
   const questionText = bodyLines[bodyLines.length - 1] || "";
 
+  const toggle = (idx) => {
+    if (!multi) { onPick(options[idx]); return; }
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+
+  const submit = () => {
+    if (multi) {
+      const picked = options.filter((_, i) => selected.has(i));
+      const parts = [...picked];
+      if (freeText.trim()) parts.push(freeText.trim());
+      if (parts.length === 0) return;
+      onPick(parts.join(", "));
+    } else {
+      if (freeText.trim()) onPick(freeText.trim());
+    }
+  };
+
+  const canSubmit = multi
+    ? (selected.size > 0 || freeText.trim().length > 0)
+    : freeText.trim().length > 0;
+
+  const rowStyle = {
+    display: "flex", alignItems: "center", gap: 10,
+    padding: "9px 14px",
+    borderTop: "1px solid rgba(38,38,51,0.07)",
+    cursor: "pointer",
+    transition: "background 0.1s",
+  };
+
   return (
     <div style={{
       background: color.white,
-      border: "1px solid rgba(38,38,51,0.1)",
-      borderRadius: 14,
-      boxShadow: "0 -2px 12px rgba(38,38,51,0.05), 0 4px 16px rgba(38,38,51,0.08)",
+      border: "1px solid rgba(38,38,51,0.12)",
+      borderRadius: 16,
       overflow: "hidden",
-      marginBottom: 6,
     }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        padding: "11px 14px 0",
-      }}>
-        <span style={{ flex: 1, fontSize: 13, color: "rgba(38,38,51,0.6)", lineHeight: 1.4, fontWeight: 500 }}>
-          {questionText}
+      {/* Question header */}
+      <div style={{ padding: "12px 14px 4px", fontSize: 13, color: "rgba(38,38,51,0.55)", fontWeight: 500, lineHeight: 1.4 }}>
+        {questionText}
+      </div>
+
+      {/* Options */}
+      {options.map((opt, idx) => {
+        const checked = selected.has(idx);
+        const hl = hlSet.has(idx);
+        return (
+          <div key={idx}
+            onClick={() => toggle(idx)}
+            style={{ ...rowStyle, background: checked ? "rgba(63,149,255,0.04)" : "transparent" }}
+            onMouseEnter={e => { if (!checked) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
+            onMouseLeave={e => { if (!checked) e.currentTarget.style.background = "transparent"; }}
+          >
+            <span style={{
+              flexShrink: 0, width: 17, height: 17,
+              borderRadius: multi ? 4 : "50%",
+              border: checked ? "none" : "1.5px solid rgba(38,38,51,0.2)",
+              background: checked ? "#3F95FF" : "transparent",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+            }}>
+              {checked && (
+                <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12l5 5L20 7" />
+                </svg>
+              )}
+            </span>
+            {hl && !checked && (
+              <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#262633", flexShrink: 0, marginLeft: -4 }} />
+            )}
+            <span style={{ flex: 1, fontSize: 13.5, color: "#262633", lineHeight: 1.4 }}>{opt}</span>
+          </div>
+        );
+      })}
+
+      {/* Free text row */}
+      <div style={{ ...rowStyle, cursor: "default" }}>
+        <span style={{
+          flexShrink: 0, width: 17, height: 17,
+          borderRadius: multi ? 4 : "50%",
+          border: "1.5px solid rgba(38,38,51,0.15)",
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+        }}>
+          {freeText.trim() && (
+            <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.4)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12l5 5L20 7" />
+            </svg>
+          )}
         </span>
-        <button onClick={onDismiss}
-          style={{
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 20, height: 20, borderRadius: 5,
-            background: "transparent", border: "none",
-            color: "rgba(38,38,51,0.3)", cursor: "pointer", flexShrink: 0,
+        <input
+          value={freeText}
+          onChange={e => setFreeText(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (!multi && freeText.trim()) { onPick(freeText.trim()); return; }
+              if (canSubmit) submit();
+            }
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.3)"; }}
-        >
-          <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.3} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 6 6 18M6 6l12 12" />
+          placeholder="Свой вариант…"
+          style={{
+            flex: 1, border: "none", outline: "none",
+            fontSize: 13.5, color: "#262633", background: "transparent",
+            fontFamily: "inherit", padding: 0,
+          }}
+        />
+      </div>
+
+      {/* Toolbar footer */}
+      <div style={{
+        display: "flex", alignItems: "center", gap: 6,
+        padding: "9px 14px",
+        borderTop: "1px solid rgba(38,38,51,0.07)",
+      }}>
+        <button style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 28, height: 28, background: "transparent",
+          border: "1px solid rgba(38,38,51,0.18)", borderRadius: "50%",
+          color: "rgba(38,38,51,0.7)", cursor: "pointer", fontFamily: "inherit",
+        }}>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
           </svg>
         </button>
-      </div>
-      <div style={{ padding: "0 14px 14px" }}>
-        <OptionsBlock
-          options={options} multi={multi} onPick={onPick}
-          highlights={message._highlights} disabled={false}
-          noTopMargin
-        />
+        <button style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: 28, height: 28, background: "transparent", border: "none", borderRadius: 7,
+          color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
+        }}>
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+          </svg>
+        </button>
+        <div style={{ flex: 1 }} />
+        {!canSubmit && (
+          <button onClick={() => onPick("")}
+            style={{
+              padding: "5px 10px", borderRadius: 7,
+              border: "none", background: "transparent",
+              fontSize: 12, color: "rgba(38,38,51,0.45)",
+              cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
+            }}>Skip</button>
+        )}
+        <button
+          onClick={canSubmit ? submit : undefined}
+          disabled={!canSubmit}
+          style={{
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            width: 30, height: 30,
+            background: canSubmit ? "#262633" : "rgba(38,38,51,0.35)",
+            border: "none", borderRadius: "50%",
+            color: color.white,
+            cursor: canSubmit ? "pointer" : "not-allowed",
+          }}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 19V5" /><path d="M5 12l7-7 7 7" />
+          </svg>
+        </button>
       </div>
     </div>
   );
