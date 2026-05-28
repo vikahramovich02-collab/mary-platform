@@ -759,6 +759,36 @@ export function ChatMaryPage() {
   const abortRef = useRef(null);
   function stopStream() { abortRef.current?.abort(); }
 
+  // Resource picker
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerSearch, setPickerSearch] = useState("");
+  const [pickerKb, setPickerKb] = useState([]);
+  const [pickerDepts, setPickerDepts] = useState([]);
+  const [pickerView, setPickerView] = useState(null); // null | "kb" | "workflows"
+  const pickerRef = useRef(null);
+  useEffect(() => {
+    if (!pickerOpen) return;
+    const onDoc = (e) => { if (!pickerRef.current?.contains(e.target)) { setPickerOpen(false); setPickerView(null); setPickerSearch(""); } };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [pickerOpen]);
+  const openPicker = async () => {
+    setPickerOpen(o => !o);
+    setPickerView(null);
+    setPickerSearch("");
+    const [kb, depts] = await Promise.all([
+      fetch("/api/mary/kb/files").then(r => r.json()).catch(() => ({ files: [] })),
+      fetch("/api/mary/departments").then(r => r.json()).catch(() => []),
+    ]);
+    setPickerKb(kb.files || []);
+    setPickerDepts(Array.isArray(depts) ? depts : []);
+  };
+  const attachResource = (label, content) => {
+    const mention = content ? `[${label}]\n${content.slice(0, 1200)}\n` : `[${label}]`;
+    setText(prev => (prev ? prev + "\n" + mention : mention));
+    setPickerOpen(false); setPickerView(null); setPickerSearch("");
+  };
+
   return (
     <div style={{ display: "flex", flex: 1, minHeight: 0, background: color.white }}>
       {/* Sidebar — список чатов */}
@@ -1047,10 +1077,13 @@ export function ChatMaryPage() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {!activeId ? (
           <div style={{
-            flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-            color: "rgba(38,38,51,0.5)",
+            flex: 1, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: 12,
           }}>
-            Выбери чат или создай новый
+            <img src="/icons/mary-puppy.png" alt="Mary" style={{ width: 48, height: 48, objectFit: "contain", opacity: 0.25 }} />
+            <span style={{ fontSize: 13, color: "rgba(38,38,51,0.35)", fontWeight: 500 }}>
+              Выбери чат или нажми +
+            </span>
           </div>
         ) : (
           <>
@@ -1173,17 +1206,103 @@ export function ChatMaryPage() {
                   />
                   {/* Row 2: actions */}
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <button
-                      title="Добавить из базы знаний"
-                      style={{
-                        display: "inline-flex", alignItems: "center", justifyContent: "center",
-                        width: 28, height: 28,
-                        background: "transparent",
-                        border: "1px solid rgba(38,38,51,0.18)",
-                        borderRadius: "50%",
-                        color: "rgba(38,38,51,0.7)",
-                        cursor: "pointer", fontFamily: "inherit",
-                      }}>{ic.plus}</button>
+                    <div ref={pickerRef} style={{ position: "relative" }}>
+                      <button
+                        onClick={openPicker}
+                        title="Прикрепить файл из БЗ или воркфлоу"
+                        style={{
+                          display: "inline-flex", alignItems: "center", justifyContent: "center",
+                          width: 28, height: 28,
+                          background: pickerOpen ? "rgba(38,38,51,0.08)" : "transparent",
+                          border: "1px solid rgba(38,38,51,0.18)",
+                          borderRadius: "50%",
+                          color: "rgba(38,38,51,0.7)",
+                          cursor: "pointer", fontFamily: "inherit",
+                        }}>{ic.plus}</button>
+                      {pickerOpen && (
+                        <div style={{
+                          position: "absolute", bottom: "calc(100% + 8px)", left: 0,
+                          width: 280, background: "#fff",
+                          border: "1px solid rgba(38,38,51,0.1)", borderRadius: 14,
+                          boxShadow: "0 8px 32px rgba(38,38,51,0.12)",
+                          padding: 8, zIndex: 100,
+                        }}>
+                          <input
+                            autoFocus
+                            value={pickerSearch}
+                            onChange={e => setPickerSearch(e.target.value)}
+                            placeholder="Поиск..."
+                            style={{
+                              width: "100%", padding: "7px 10px",
+                              border: "none", borderRadius: 8,
+                              background: "rgba(38,38,51,0.05)",
+                              fontSize: 13, color: "#262633", outline: "none",
+                              fontFamily: "inherit", marginBottom: 4,
+                            }}
+                          />
+                          {!pickerView ? (
+                            <>
+                              {[
+                                { id: "kb", label: "База знаний", icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg> },
+                                { id: "workflows", label: "Воркфлоу", icon: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="7" height="7" rx="1"/><rect x="15" y="3" width="7" height="7" rx="1"/><rect x="8.5" y="14" width="7" height="7" rx="1"/><path d="M5.5 10v2a3 3 0 0 0 3 3h1m7-5v2a3 3 0 0 1-3 3h-1"/></svg> },
+                              ].map(cat => (
+                                <button key={cat.id} onClick={() => setPickerView(cat.id)}
+                                  style={{
+                                    width: "100%", display: "flex", alignItems: "center", gap: 10,
+                                    padding: "9px 10px", background: "transparent", border: "none",
+                                    borderRadius: 8, fontSize: 13, color: "#262633",
+                                    cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+                                  }}
+                                  onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
+                                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                >
+                                  <span style={{ color: "rgba(38,38,51,0.5)" }}>{cat.icon}</span>
+                                  <span style={{ flex: 1, fontWeight: 500 }}>{cat.label}</span>
+                                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.35)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                                </button>
+                              ))}
+                            </>
+                          ) : pickerView === "kb" ? (
+                            <>
+                              <button onClick={() => setPickerView(null)} style={{ background: "none", border: "none", fontSize: 12, color: "rgba(38,38,51,0.5)", cursor: "pointer", padding: "2px 4px", marginBottom: 4, fontFamily: "inherit" }}>← Назад</button>
+                              {pickerKb.filter(f => !pickerSearch || f.toLowerCase().includes(pickerSearch.toLowerCase())).length === 0
+                                ? <div style={{ fontSize: 12, color: "rgba(38,38,51,0.4)", padding: "8px 10px" }}>Нет файлов</div>
+                                : pickerKb.filter(f => !pickerSearch || f.toLowerCase().includes(pickerSearch.toLowerCase())).map(f => (
+                                  <button key={f}
+                                    onClick={async () => {
+                                      const d = await fetch(`/api/mary/kb/file?name=${encodeURIComponent(f)}`).then(r => r.json()).catch(() => ({}));
+                                      attachResource(f, d.content);
+                                    }}
+                                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                  >
+                                    <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.4)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    {f}
+                                  </button>
+                                ))}
+                            </>
+                          ) : (
+                            <>
+                              <button onClick={() => setPickerView(null)} style={{ background: "none", border: "none", fontSize: 12, color: "rgba(38,38,51,0.5)", cursor: "pointer", padding: "2px 4px", marginBottom: 4, fontFamily: "inherit" }}>← Назад</button>
+                              {pickerDepts.filter(d => !pickerSearch || d.name?.toLowerCase().includes(pickerSearch.toLowerCase())).length === 0
+                                ? <div style={{ fontSize: 12, color: "rgba(38,38,51,0.4)", padding: "8px 10px" }}>Нет воркфлоу</div>
+                                : pickerDepts.filter(d => !pickerSearch || d.name?.toLowerCase().includes(pickerSearch.toLowerCase())).map(d => (
+                                  <button key={d.id}
+                                    onClick={() => attachResource(d.name || d.id, `Воркфлоу: ${d.name || d.id}${d.description ? "\n" + d.description : ""}`)}
+                                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+                                    onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
+                                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                                  >
+                                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: d.color || "#3F95FF", flexShrink: 0 }} />
+                                    {d.name || d.id}
+                                  </button>
+                                ))}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <input ref={fileInputRef} type="file" accept="audio/*,video/*" onChange={onPickAudio} style={{ display: "none" }} />
                     <button
                       onClick={() => fileInputRef.current?.click()}
