@@ -1082,6 +1082,37 @@ export function ChatMaryPage() {
                     ? "Демо автоматизация отдела"
                     : (conversations.find(c => c.id === activeId)?.title || "Чат")}
                 </span>
+                <div style={{ flex: 1 }} />
+                {!showActivity && (
+                  <button
+                    onClick={() => setShowActivity(true)}
+                    title="Что делает Mary"
+                    style={{
+                      position: "relative",
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      width: 32, height: 32, flexShrink: 0,
+                      background: color.white,
+                      border: "1px solid rgba(38,38,51,0.1)",
+                      borderRadius: 8,
+                      cursor: "pointer", fontFamily: "inherit",
+                      color: "rgba(38,38,51,0.6)",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
+                    onMouseLeave={e => e.currentTarget.style.background = color.white}
+                  >
+                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M15 3v18" />
+                    </svg>
+                    {(activity.length > 0 || build) && (
+                      <span style={{
+                        position: "absolute", top: 4, right: 4,
+                        width: 6, height: 6, borderRadius: "50%",
+                        background: "#FF8B3D",
+                      }} />
+                    )}
+                  </button>
+                )}
               </div>
             )}
 
@@ -1249,36 +1280,6 @@ export function ChatMaryPage() {
           })()}
           onClose={() => setShowActivity(false)}
         />
-      )}
-      {!showActivity && messages.length > 0 && (
-        <button
-          onClick={() => setShowActivity(true)}
-          title="Что делает Mary"
-          style={{
-            position: "absolute", right: 16, top: 14, zIndex: 5,
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            width: 32, height: 32,
-            background: color.white,
-            border: "1px solid rgba(38,38,51,0.1)",
-            borderRadius: 8,
-            cursor: "pointer", fontFamily: "inherit",
-            color: "rgba(38,38,51,0.6)",
-            boxShadow: "0 1px 3px rgba(38,38,51,0.05)",
-          }}
-        >
-          {/* sidebar-right иконка */}
-          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <path d="M15 3v18" />
-          </svg>
-          {(activity.length > 0 || build) && (
-            <span style={{
-              position: "absolute", top: 4, right: 4,
-              width: 6, height: 6, borderRadius: "50%",
-              background: "#FF8B3D",
-            }} />
-          )}
-        </button>
       )}
     </div>
   );

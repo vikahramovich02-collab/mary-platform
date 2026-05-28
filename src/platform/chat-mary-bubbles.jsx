@@ -202,11 +202,11 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
             }}>
             <span style={{
               width: 20, textAlign: "right", flexShrink: 0,
-              fontSize: 13, color: checked ? "#3F95FF" : "rgba(38,38,51,0.35)",
+              fontSize: 13, color: "rgba(38,38,51,0.35)",
               fontVariantNumeric: "tabular-nums",
             }}>
               {checked
-                ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#3F95FF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#262633" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
                 : idx + 1}
             </span>
             {hl && !checked && (
@@ -515,8 +515,23 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
   const body = checklist.options ? checklist.body : (numbered.options ? numbered.body : m.text);
   const options = checklist.options || numbered.options;
   const multi   = !!checklist.options || (m._highlights?.length > 1);
+  const handleCopyMary = () => {
+    navigator.clipboard?.writeText(m.text || "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  const maryActBtn = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    width: 26, height: 26, padding: 0,
+    background: "transparent", border: "none", borderRadius: 6,
+    color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
+    transition: "color 0.12s, background 0.12s",
+  };
   return (
-    <div style={{ marginBottom: 22, maxWidth: 640 }}>
+    <div style={{ marginBottom: 22, maxWidth: 640 }}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
       <div style={{ minWidth: 0 }}>
         {m._tools && m._tools.length > 0 && (
           <ToolsTrail tools={m._tools} />
@@ -545,11 +560,8 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         {m._quickActions && isLast && (
           <DemoChips actions={m._quickActions} onPick={onPickOption} />
         )}
-        {!m._streaming && body && body.trim().length > 0 && (
-          <ActionBar text={body} />
-        )}
       </div>
-      {/* Avatar + label at the bottom */}
+      {/* Avatar + label + hover actions at the bottom */}
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
         <img src="/icons/mary-puppy.png" alt="" style={{ width: 18, height: 18, objectFit: "contain", flexShrink: 0 }} />
         <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500 }}>
@@ -566,6 +578,43 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
               }} />
             ))}
           </span>
+        )}
+        {!m._streaming && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 2, marginLeft: 4,
+            opacity: hover ? 1 : 0, transition: "opacity 0.15s",
+            pointerEvents: hover ? "auto" : "none",
+          }}>
+            {m.ts && (
+              <span style={{
+                fontSize: 11, color: "rgba(38,38,51,0.35)", marginRight: 4,
+                fontVariantNumeric: "tabular-nums", userSelect: "none",
+              }}>
+                {new Date(m.ts).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+            {onEdit && index !== undefined && (
+              <button title="Перегенерировать" onClick={() => onEdit?.(m.text, index)}
+                style={maryActBtn}
+                onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
+                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; }}
+              >
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
+                </svg>
+              </button>
+            )}
+            <button title="Копировать" onClick={handleCopyMary}
+              style={{ ...maryActBtn, color: copied ? "#262633" : "rgba(38,38,51,0.45)" }}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = copied ? "#262633" : "rgba(38,38,51,0.45)"; }}
+            >
+              {copied
+                ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                : <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              }
+            </button>
+          </div>
         )}
       </div>
     </div>
