@@ -381,6 +381,8 @@ export function AgentChatBubble({ m }) {
 export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInteract }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+  const [hover, setHover] = useState(false);
+  const [copied, setCopied] = useState(false);
   if (m.role === "pipeline_run") {
     return <PipelineRunBubble m={m} />;
   }
@@ -388,14 +390,19 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
     return <AgentChatBubble m={m} />;
   }
   if (m.role === "user") {
+    const handleCopy = () => {
+      navigator.clipboard?.writeText(m.text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    };
     if (editing) {
       return (
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18 }}>
           <div style={{
-            background: color.white,
-            border: "1px solid rgba(38,38,51,0.18)", borderRadius: 14,
+            border: "1.5px solid #3F95FF", borderRadius: 14,
             padding: 10, width: "min(80%, 520px)",
-            display: "flex", flexDirection: "column", gap: 8,
+            display: "flex", flexDirection: "column", gap: 10,
+            background: color.white,
           }}>
             <textarea
               autoFocus
@@ -423,7 +430,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
                 style={{
                   background: "transparent",
                   border: "1px solid rgba(38,38,51,0.18)", borderRadius: 8,
-                  padding: "5px 12px", fontSize: 12.5, color: "#262633",
+                  padding: "5px 14px", fontSize: 13, color: "#262633",
                   fontFamily: "inherit", cursor: "pointer",
                 }}
               >Отмена</button>
@@ -431,55 +438,62 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
                 disabled={!draft.trim()}
                 onClick={() => { setEditing(false); onEdit?.(draft.trim(), index); }}
                 style={{
-                  background: draft.trim() ? "#262633" : "rgba(38,38,51,0.3)",
+                  background: draft.trim() ? "#262633" : "rgba(38,38,51,0.25)",
                   border: "none", borderRadius: 8,
-                  padding: "5px 12px", fontSize: 12.5, color: color.white,
+                  padding: "5px 14px", fontSize: 13, color: color.white,
                   fontFamily: "inherit", cursor: draft.trim() ? "pointer" : "not-allowed",
                 }}
-              >Отправить</button>
+              >Сохранить</button>
             </div>
           </div>
         </div>
       );
     }
+    const actBtn = {
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      width: 26, height: 26, padding: 0,
+      background: "transparent", border: "none", borderRadius: 6,
+      color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
+      transition: "color 0.12s, background 0.12s",
+    };
     return (
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 18, gap: 6, alignItems: "flex-start" }}
-           className="user-bubble-row">
-        {onEdit && index !== undefined && (
-          <button
-            onClick={() => { setDraft(m.text); setEditing(true); }}
-            title="Изменить и отправить заново"
-            style={{
-              opacity: 0, transition: "opacity 0.15s",
-              background: "transparent", border: "none",
-              color: "rgba(38,38,51,0.4)", cursor: "pointer",
-              padding: 6, marginTop: 2, fontFamily: "inherit",
-              display: "inline-flex",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = 1; }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = 0; }}
+      <div
+        style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginBottom: 18 }}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+      >
+        <div style={{
+          background: "rgba(38,38,51,0.06)", color: "#262633",
+          padding: "10px 14px", borderRadius: 16,
+          maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
+        }}>{m.text}</div>
+        <div style={{
+          display: "flex", gap: 2, marginTop: 4,
+          opacity: hover ? 1 : 0, transition: "opacity 0.15s",
+          pointerEvents: hover ? "auto" : "none",
+        }}>
+          <button title="Копировать" onClick={handleCopy}
+            style={{ ...actBtn, color: copied ? "#34C759" : "rgba(38,38,51,0.45)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = copied ? "#34C759" : "#262633"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = copied ? "#34C759" : "rgba(38,38,51,0.45)"; }}
           >
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-            </svg>
+            {copied
+              ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              : <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            }
           </button>
-        )}
-        <div
-          style={{
-            background: "rgba(38,38,51,0.06)", color: "#262633",
-            padding: "10px 14px", borderRadius: 16,
-            maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
-          }}
-          onMouseEnter={e => {
-            const btn = e.currentTarget.parentElement.querySelector("button");
-            if (btn) btn.style.opacity = 0.6;
-          }}
-          onMouseLeave={e => {
-            const btn = e.currentTarget.parentElement.querySelector("button");
-            if (btn) btn.style.opacity = 0;
-          }}
-        >{m.text}</div>
+          {onEdit && index !== undefined && (
+            <button title="Редактировать" onClick={() => { setDraft(m.text); setEditing(true); }}
+              style={actBtn}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; }}
+            >
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
     );
   }
