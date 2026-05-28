@@ -754,8 +754,8 @@ function Tip({ label, align = "center" }) {
     <div style={{
       position: "absolute", bottom: "calc(100% + 7px)",
       ...pos,
-      background: "#1a1a1a", color: "#fff", fontSize: 11.5, fontWeight: 500,
-      padding: "4px 8px", borderRadius: 6, whiteSpace: "nowrap",
+      background: "rgba(30,30,35,0.88)", color: "#fff", fontSize: 11, fontWeight: 400,
+      padding: "3px 7px", borderRadius: 5, whiteSpace: "nowrap",
       pointerEvents: "none", zIndex: 20,
     }}>{label}</div>
   );
