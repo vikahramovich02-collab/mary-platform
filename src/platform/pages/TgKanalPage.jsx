@@ -891,6 +891,14 @@ export default function TgKanalPage() {
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("page") || "tg-kanal"
   ); // "tg-kanal" | "kb" | "integrations" | "tasks" | "chat-mary" | "home" | "inbox" | "team" | "bizproc" | "settings"
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const navigate = (page) => { setCurrentPage(page); setMobileSidebarOpen(false); };
   // Бэдж непрочитанных Входящих
   const [inboxUnreadCount, setInboxUnreadCount] = useState(0);
   useEffect(() => {
@@ -1017,8 +1025,34 @@ export default function TgKanalPage() {
       fontFamily: font,
       color: cv.text,
     }}>
+      {/* Mobile overlay backdrop */}
+      {isMobile && mobileSidebarOpen && (
+        <div
+          onClick={() => setMobileSidebarOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100 }}
+        />
+      )}
+
+      {/* Mobile hamburger button (top-left, when sidebar closed) */}
+      {isMobile && !mobileSidebarOpen && (
+        <button
+          onClick={() => setMobileSidebarOpen(true)}
+          style={{
+            position: "fixed", top: 14, left: 14, zIndex: 99,
+            width: 36, height: 36,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            background: cv.bg, border: `1px solid ${cv.border}`,
+            borderRadius: 10, cursor: "pointer", color: cv.text,
+          }}
+        >
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+      )}
+
       {/* ── Sidebar ────────────────────────────────────── */}
-      {sidebarCollapsed ? (
+      {!isMobile && sidebarCollapsed ? (
         <div style={{
           width: 44, minWidth: 44,
           background: cv.bg,
@@ -1039,10 +1073,14 @@ export default function TgKanalPage() {
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >{ic.collapse}</button>
         </div>
-      ) : (
+      ) : (!isMobile || mobileSidebarOpen) ? (
       <aside style={{
-        width: SIDEBAR_W,
-        minWidth: SIDEBAR_W,
+        ...(isMobile ? {
+          position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 101,
+          width: Math.min(SIDEBAR_W + 20, 260),
+        } : {
+          width: SIDEBAR_W, minWidth: SIDEBAR_W,
+        }),
         background: cv.bg,
         borderRight: `1px solid ${cv.border}`,
         display: "flex",
@@ -1070,14 +1108,14 @@ export default function TgKanalPage() {
           >{ic.collapse}</button>
         </div>
 
-        <SideRow icon={ic.home}  label="Главная" active={currentPage === "home"} onClick={() => setCurrentPage("home")} />
+        <SideRow icon={ic.home}  label="Главная" active={currentPage === "home"} onClick={() => navigate("home")} />
         <SideRow
           icon={ic.chat}
           label="Чат Mary"
           active={currentPage === "chat-mary"}
-          onClick={() => setCurrentPage("chat-mary")}
+          onClick={() => navigate("chat-mary")}
         />
-        <SideRow icon={ic.inbox} label="Входящие" active={currentPage === "inbox"} onClick={() => setCurrentPage("inbox")}
+        <SideRow icon={ic.inbox} label="Входящие" active={currentPage === "inbox"} onClick={() => navigate("inbox")}
           trailing={inboxUnreadCount > 0 ? (
             <span style={{
               display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -1088,31 +1126,31 @@ export default function TgKanalPage() {
           ) : null} />
 
         <SectionHeader label="Компания" />
-        <SideRow icon={ic.people}       label="Команда" active={currentPage === "team"} onClick={() => setCurrentPage("team")} />
+        <SideRow icon={ic.people}       label="Команда" active={currentPage === "team"} onClick={() => navigate("team")} />
         <SideRow
           icon={ic.tasks}
           label="Задачи"
           active={currentPage === "tasks"}
-          onClick={() => setCurrentPage("tasks")}
+          onClick={() => navigate("tasks")}
         />
         <SideRow
           icon={ic.kb}
           label="База знаний"
           active={currentPage === "kb"}
-          onClick={() => setCurrentPage("kb")}
+          onClick={() => navigate("kb")}
         />
         <SideRow
           icon={ic.integrations}
           label="Интеграции"
           active={currentPage === "integrations"}
-          onClick={() => setCurrentPage("integrations")}
+          onClick={() => navigate("integrations")}
         />
 
         <SectionHeader
           label="Отделы"
           action={
             <span
-              onClick={() => setCurrentPage("chat-mary")}
+              onClick={() => navigate("chat-mary")}
               title="Создать отдел через Mary"
               style={{
                 display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -1146,7 +1184,7 @@ export default function TgKanalPage() {
                       onClick={e => { e.stopPropagation(); setOpenDepts(o => ({ ...o, [d.id]: !isOpen })); }}
                     >{isOpen ? ic.chevronUp : ic.chevron}</span>
                   )}
-                  onClick={() => setCurrentPage("dept:" + d.id)}
+                  onClick={() => navigate("dept:" + d.id)}
                 />
                 {isOpen && (d.channels || []).map(ch => (
                   <SideRow
@@ -1154,7 +1192,7 @@ export default function TgKanalPage() {
                     label={ch.name}
                     indent={28}
                     active={currentPage === ch.page}
-                    onClick={() => setCurrentPage(ch.page)}
+                    onClick={() => navigate(ch.page)}
                   />
                 ))}
               </div>
@@ -1163,9 +1201,9 @@ export default function TgKanalPage() {
         </div>
 
         <div style={{ paddingBottom: 14, borderTop: "1px solid rgba(38,38,51,0.04)", paddingTop: 6 }}>
-          <SideRow icon={ic.help}     label="Помощь" active={currentPage === "help"} onClick={() => setCurrentPage("help")} />
-          <SideRow icon={ic.support}  label="Поддержка" active={currentPage === "support"} onClick={() => setCurrentPage("support")} />
-          <SideRow icon={ic.settings} label="Настройки" active={currentPage === "settings"} onClick={() => setCurrentPage("settings")} />
+          <SideRow icon={ic.help}     label="Помощь" active={currentPage === "help"} onClick={() => navigate("help")} />
+          <SideRow icon={ic.support}  label="Поддержка" active={currentPage === "support"} onClick={() => navigate("support")} />
+          <SideRow icon={ic.settings} label="Настройки" active={currentPage === "settings"} onClick={() => navigate("settings")} />
         </div>
       </aside>
       )}
