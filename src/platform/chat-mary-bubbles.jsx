@@ -159,6 +159,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
   const [selected, setSelected] = useState(() => new Set());
   const [freeText, setFreeText] = useState("");
   const [hoveredIdx, setHoveredIdx] = useState(null);
+  const hlSet = new Set(highlights || []);
 
   const toggle = (idx) => {
     if (disabled) return;
@@ -184,6 +185,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
       {options.map((opt, idx) => {
         const checked = selected.has(idx);
         const hovered = hoveredIdx === idx;
+        const hl = hlSet.has(idx);
         return (
           <div key={idx}
             onClick={() => toggle(idx)}
@@ -207,6 +209,9 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
                 ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#3F95FF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
                 : idx + 1}
             </span>
+            {hl && !checked && (
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#262633", flexShrink: 0, marginLeft: -6 }} />
+            )}
             <span style={{ flex: 1, fontSize: 14, color: "#262633", lineHeight: 1.4 }}>{opt}</span>
             <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
               stroke={hovered && !disabled ? "rgba(38,38,51,0.6)" : "rgba(38,38,51,0.25)"}
