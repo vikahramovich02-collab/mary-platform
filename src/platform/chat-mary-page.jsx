@@ -669,6 +669,13 @@ export function ChatMaryPage() {
   const isEmptyChat = messages.length === 0 && !loading;
   const typewriterText = useTypewriterPlaceholder(typewriterPhrases, isEmptyChat);
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
   const [chatsCollapsed, setChatsCollapsed] = useState(false);
   // Транскриб аудио: загрузка / запись с микрофона
   const [audioUploading, setAudioUploading] = useState(false);
@@ -754,30 +761,24 @@ export function ChatMaryPage() {
 
   return (
     <div style={{ display: "flex", flex: 1, minHeight: 0, background: color.white }}>
-      {/* Sidebar — список чатов (можно скрыть) */}
-      {chatsCollapsed ? (
-        <div style={{
-          width: 10, minWidth: 10,
-          background: color.white,
-        }}>
-          <button
-            onClick={() => newChat("general")}
-            title="Новый чат"
-            style={{
-              display: "none",
-              width: 32, height: 32,
-              alignItems: "center", justifyContent: "center",
-              background: "#262633", border: "none", borderRadius: 7,
-              color: color.white, cursor: "pointer", fontFamily: "inherit",
-            }}
-          >{ic.plus}</button>
-        </div>
-      ) : (
+      {/* Sidebar — список чатов */}
+      {isMobile && mobileSidebarOpen && (
+        <div onClick={() => setMobileSidebarOpen(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", zIndex: 50 }} />
+      )}
+      {!isMobile && chatsCollapsed && (
+        <div style={{ width: 10, minWidth: 10, background: color.white }} />
+      )}
+      {(isMobile ? mobileSidebarOpen : !chatsCollapsed) && (
       <aside style={{
-        width: 226, minWidth: 226,
+        ...(isMobile ? {
+          position: "fixed", left: 0, top: 0, bottom: 0, width: 280, zIndex: 51,
+          boxShadow: "4px 0 24px rgba(38,38,51,0.12)", background: color.white,
+        } : {
+          width: 226, minWidth: 226, background: "transparent",
+        }),
         display: "flex", flexDirection: "column",
-        background: "transparent",
-        padding: "10px 10px 10px 10px",
+        padding: "10px",
       }}>
         <div style={{
           flex: 1, display: "flex", flexDirection: "column",
@@ -829,7 +830,7 @@ export function ChatMaryPage() {
           ) : (
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <button
-                onClick={() => setChatsCollapsed(true)}
+                onClick={() => isMobile ? setMobileSidebarOpen(false) : setChatsCollapsed(true)}
                 title="Скрыть список чатов"
                 style={{
                   width: 24, height: 24, padding: 0,
@@ -1059,9 +1060,9 @@ export function ChatMaryPage() {
                 padding: "12px 20px",
                 display: "flex", alignItems: "center", gap: 8,
               }}>
-                {chatsCollapsed && (
+                {(isMobile || chatsCollapsed) && (
                   <button
-                    onClick={() => setChatsCollapsed(false)}
+                    onClick={() => isMobile ? setMobileSidebarOpen(true) : setChatsCollapsed(false)}
                     title="Открыть список чатов"
                     style={{
                       display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -1083,7 +1084,7 @@ export function ChatMaryPage() {
                     : (conversations.find(c => c.id === activeId)?.title || "Чат")}
                 </span>
                 <div style={{ flex: 1 }} />
-                {!showActivity && (
+                {!showActivity && !isMobile && (
                   <button
                     onClick={() => setShowActivity(true)}
                     title="Что делает Mary"
@@ -1104,13 +1105,6 @@ export function ChatMaryPage() {
                       <rect x="3" y="3" width="18" height="18" rx="2" />
                       <path d="M15 3v18" />
                     </svg>
-                    {(activity.length > 0 || build) && (
-                      <span style={{
-                        position: "absolute", top: 4, right: 4,
-                        width: 6, height: 6, borderRadius: "50%",
-                        background: "#FF8B3D",
-                      }} />
-                    )}
                   </button>
                 )}
               </div>
@@ -1137,7 +1131,7 @@ export function ChatMaryPage() {
                   />
                 </ChatWelcome>
               ) : (
-                <div style={{ maxWidth: 760, width: "100%", margin: "0 auto", padding: "0 24px" }}>
+                <div style={{ maxWidth: 760, width: "100%", margin: "0 auto", padding: isMobile ? "0 12px" : "0 24px" }}>
                   {messages.map((m, i) => (
                     <ChatBubble
                       key={i}
@@ -1154,7 +1148,7 @@ export function ChatMaryPage() {
 
             {/* Input внизу — только когда есть переписка. На welcome он внутри центра экрана. */}
             {messages.length > 0 && (
-            <div style={{ padding: "12px 24px 18px" }}>
+            <div style={{ padding: isMobile ? "8px 12px 16px" : "12px 24px 18px" }}>
               <div style={{ maxWidth: 760, margin: "0 auto" }}>
                 <div style={{
                   background: color.white,

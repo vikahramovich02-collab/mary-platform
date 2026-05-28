@@ -172,7 +172,7 @@ export function renderMarkdown(text) {
       i++;
     }
     if (para.length) {
-      blocks.push(<p key={blocks.length} style={{ margin: "4px 0" }}>{renderInline(para.join(" "))}</p>);
+      blocks.push(<p key={blocks.length} style={{ margin: "0 0 10px 0" }}>{renderInline(para.join(" "))}</p>);
     } else {
       i++;
     }

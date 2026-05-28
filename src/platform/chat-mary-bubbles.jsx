@@ -198,7 +198,6 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
               cursor: disabled ? "default" : "pointer",
               background: checked ? "rgba(63,149,255,0.04)" : hovered ? "rgba(38,38,51,0.02)" : "transparent",
               transition: "background 0.1s",
-              borderRadius: 4,
             }}>
             <span style={{
               width: 20, textAlign: "right", flexShrink: 0,
@@ -206,19 +205,13 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
               fontVariantNumeric: "tabular-nums",
             }}>
               {checked
-                ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#262633" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
                 : idx + 1}
             </span>
             {hl && !checked && (
               <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#262633", flexShrink: 0, marginLeft: -6 }} />
             )}
             <span style={{ flex: 1, fontSize: 14, color: "#262633", lineHeight: 1.4 }}>{opt}</span>
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-              stroke={hovered && !disabled ? "rgba(38,38,51,0.6)" : "rgba(38,38,51,0.25)"}
-              strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
-              style={{ flexShrink: 0, transition: "stroke 0.1s" }}>
-              <path d="M5 12h14M13 6l6 6-6 6"/>
-            </svg>
           </div>
         );
       })}
@@ -515,11 +508,6 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
   const body = checklist.options ? checklist.body : (numbered.options ? numbered.body : m.text);
   const options = checklist.options || numbered.options;
   const multi   = !!checklist.options || (m._highlights?.length > 1);
-  const handleCopyMary = () => {
-    navigator.clipboard?.writeText(m.text || "");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
   const maryActBtn = {
     display: "inline-flex", alignItems: "center", justifyContent: "center",
     width: 26, height: 26, padding: 0,
@@ -559,6 +547,9 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         )}
         {m._quickActions && isLast && (
           <DemoChips actions={m._quickActions} onPick={onPickOption} />
+        )}
+        {!m._streaming && body && body.trim().length > 0 && (
+          <ActionBar text={body} />
         )}
       </div>
       {/* Avatar + label + hover actions at the bottom */}
@@ -604,16 +595,6 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
                 </svg>
               </button>
             )}
-            <button title="Копировать" onClick={handleCopyMary}
-              style={{ ...maryActBtn, color: copied ? "#262633" : "rgba(38,38,51,0.45)" }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = copied ? "#262633" : "rgba(38,38,51,0.45)"; }}
-            >
-              {copied
-                ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
-                : <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              }
-            </button>
           </div>
         )}
       </div>
@@ -803,48 +784,63 @@ export function FloatingOptionsPanel({ message, onPick, onDismiss }) {
   );
 }
 
+function Tip({ label }) {
+  return (
+    <div style={{
+      position: "absolute", bottom: "calc(100% + 7px)", left: "50%", transform: "translateX(-50%)",
+      background: "#1a1a1a", color: "#fff", fontSize: 11.5, fontWeight: 500,
+      padding: "4px 8px", borderRadius: 6, whiteSpace: "nowrap",
+      pointerEvents: "none", zIndex: 20,
+    }}>{label}</div>
+  );
+}
+
 export function ActionBar({ text }) {
   const [copied, setCopied] = useState(false);
   const [reaction, setReaction] = useState(null);
+  const [tip, setTip] = useState(null);
   const onCopy = () => {
     navigator.clipboard?.writeText(text);
     setCopied(true);
+    setTip(null);
     setTimeout(() => setCopied(false), 1500);
   };
   const btn = {
+    position: "relative",
     display: "inline-flex", alignItems: "center", justifyContent: "center",
     width: 26, height: 26, padding: 0,
     background: "transparent", border: "none", borderRadius: 6,
     color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
     transition: "color 0.15s, background 0.15s",
   };
-  const hover = (e) => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; };
-  const leave = (e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; };
+  const hov = (e) => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; };
+  const lev = (e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; };
   return (
     <div style={{ display: "flex", gap: 2, marginTop: 8 }}>
-      <button title={copied ? "Скопировано" : "Копировать"} onClick={onCopy}
-              style={{ ...btn, color: copied ? "#34C759" : btn.color }}
-              onMouseEnter={!copied ? hover : undefined}
-              onMouseLeave={!copied ? leave : undefined}>
-        {copied ? (
-          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
-        ) : (
-          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
-        )}
+      <button onClick={onCopy}
+              style={{ ...btn, color: copied ? "#262633" : btn.color }}
+              onMouseEnter={e => { if (!copied) { hov(e); setTip("copy"); } }}
+              onMouseLeave={e => { if (!copied) lev(e); setTip(null); }}>
+        {tip === "copy" && <Tip label="Скопировать" />}
+        {copied
+          ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
+          : <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+        }
       </button>
-      <button title="Хороший ответ" onClick={() => setReaction(reaction === "up" ? null : "up")}
+      <button onClick={() => { setReaction(r => r === "up" ? null : "up"); setTip(null); }}
               style={{ ...btn, color: reaction === "up" ? "#34C759" : btn.color }}
-              onMouseEnter={hover} onMouseLeave={leave}>
+              onMouseEnter={e => { hov(e); setTip("up"); }}
+              onMouseLeave={e => { lev(e); setTip(null); }}>
+        {tip === "up" && <Tip label="Полезно" />}
         <svg width={13} height={13} viewBox="0 0 24 24" fill={reaction === "up" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
         </svg>
       </button>
-      <button title="Плохой ответ" onClick={() => setReaction(reaction === "down" ? null : "down")}
+      <button onClick={() => { setReaction(r => r === "down" ? null : "down"); setTip(null); }}
               style={{ ...btn, color: reaction === "down" ? "#FF3B30" : btn.color }}
-              onMouseEnter={hover} onMouseLeave={leave}>
+              onMouseEnter={e => { hov(e); setTip("down"); }}
+              onMouseLeave={e => { lev(e); setTip(null); }}>
+        {tip === "down" && <Tip label="Не то" />}
         <svg width={13} height={13} viewBox="0 0 24 24" fill={reaction === "down" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
           <path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zM17 2h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3" />
         </svg>
