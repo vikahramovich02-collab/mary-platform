@@ -1025,33 +1025,43 @@ export default function TgKanalPage() {
       fontFamily: font,
       color: cv.text,
     }}>
-      {/* Mobile overlay backdrop */}
-      {isMobile && mobileSidebarOpen && (
-        <div
-          onClick={() => setMobileSidebarOpen(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 100 }}
-        />
-      )}
+      {/* Mobile bottom nav */}
+      {isMobile && (() => {
+        const mobileNavItems = [
+          { id: "chat-mary", label: "Чат", icon: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> },
+          { id: "inbox",     label: "Входящие", icon: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5h13L22 12v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-6L5.5 5z"/></svg> },
+          { id: "tasks",     label: "Задачи",   icon: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg> },
+          { id: "home",      label: "Главная",  icon: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.8L12 3.5l9 7.3V20a1 1 0 0 1-1 1h-4v-6h-8v6H4a1 1 0 0 1-1-1v-9.2z"/></svg> },
+          { id: "settings",  label: "Настройки",icon: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg> },
+        ];
+        return (
+          <nav style={{
+            position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
+            height: 56, background: cv.bg,
+            borderTop: `1px solid ${cv.border}`,
+            display: "flex", alignItems: "stretch",
+          }}>
+            {mobileNavItems.map(item => {
+              const active = currentPage === item.id;
+              return (
+                <button key={item.id} onClick={() => navigate(item.id)}
+                  style={{
+                    flex: 1, display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center", gap: 3,
+                    background: "transparent", border: "none",
+                    color: active ? cv.text : cv.muted,
+                    cursor: "pointer", fontFamily: "inherit",
+                    fontSize: 10, fontWeight: active ? 600 : 400,
+                    paddingBottom: "env(safe-area-inset-bottom)",
+                  }}
+                >{item.icon}{item.label}</button>
+              );
+            })}
+          </nav>
+        );
+      })()}
 
-      {/* Mobile hamburger button (top-left, when sidebar closed) */}
-      {isMobile && !mobileSidebarOpen && (
-        <button
-          onClick={() => setMobileSidebarOpen(true)}
-          style={{
-            position: "fixed", top: 14, left: 14, zIndex: 99,
-            width: 36, height: 36,
-            display: "inline-flex", alignItems: "center", justifyContent: "center",
-            background: cv.bg, border: `1px solid ${cv.border}`,
-            borderRadius: 10, cursor: "pointer", color: cv.text,
-          }}
-        >
-          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-      )}
-
-      {/* ── Sidebar ────────────────────────────────────── */}
+      {/* ── Sidebar (desktop only) ────────────────────── */}
       {!isMobile && sidebarCollapsed ? (
         <div style={{
           width: 44, minWidth: 44,
@@ -1073,14 +1083,9 @@ export default function TgKanalPage() {
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >{ic.collapse}</button>
         </div>
-      ) : (!isMobile || mobileSidebarOpen) ? (
+      ) : !isMobile ? (
       <aside style={{
-        ...(isMobile ? {
-          position: "fixed", left: 0, top: 0, bottom: 0, zIndex: 101,
-          width: Math.min(SIDEBAR_W + 20, 260),
-        } : {
-          width: SIDEBAR_W, minWidth: SIDEBAR_W,
-        }),
+        width: SIDEBAR_W, minWidth: SIDEBAR_W,
         background: cv.bg,
         borderRight: `1px solid ${cv.border}`,
         display: "flex",
@@ -1215,7 +1220,10 @@ export default function TgKanalPage() {
         display: "flex",
         flexDirection: "column",
         background: cv.bg,
-        padding: (currentPage === "tg-kanal" || (() => { for (const d of departments) { if ((d.channels||[]).some(c=>c.page===currentPage)) return true; } return false; })()) ? 16 : 0,
+        ...((() => {
+          const isCanvas = currentPage === "tg-kanal" || departments.some(d => (d.channels||[]).some(c=>c.page===currentPage));
+          return isCanvas ? { padding: 16, paddingBottom: isMobile ? 56 : 16 } : { paddingBottom: isMobile ? 56 : 0 };
+        })()),
       }}>
         {currentPage === "tg-kanal" ? (
           <GraphCanvas
