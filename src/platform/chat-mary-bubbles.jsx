@@ -576,33 +576,6 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
             ))}
           </span>
         )}
-        {!m._streaming && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 2, marginLeft: 4,
-            opacity: hover ? 1 : 0, transition: "opacity 0.15s",
-            pointerEvents: hover ? "auto" : "none",
-          }}>
-            {m.ts && (
-              <span style={{
-                fontSize: 11, color: "rgba(38,38,51,0.35)", marginRight: 4,
-                fontVariantNumeric: "tabular-nums", userSelect: "none",
-              }}>
-                {new Date(m.ts).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
-              </span>
-            )}
-            {onEdit && index !== undefined && (
-              <button title="Перегенерировать" onClick={() => onEdit?.(m.text, index)}
-                style={maryActBtn}
-                onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
-                onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; }}
-              >
-                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
-                </svg>
-              </button>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
