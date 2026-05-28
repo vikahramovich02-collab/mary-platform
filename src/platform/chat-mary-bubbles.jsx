@@ -196,7 +196,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
               padding: "11px 2px",
               borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.07)" : "none",
               cursor: disabled ? "default" : "pointer",
-              background: checked ? "rgba(63,149,255,0.04)" : hovered ? "rgba(38,38,51,0.02)" : "transparent",
+              background: checked ? "rgba(38,38,51,0.06)" : hovered ? "rgba(38,38,51,0.04)" : "transparent",
               transition: "background 0.1s",
             }}>
             <span style={{
