@@ -1037,7 +1037,7 @@ export default function TgKanalPage() {
         return (
           <nav style={{
             position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 200,
-            height: 56, background: cv.bg,
+            height: 56, background: cv.bgPage,
             borderTop: `1px solid ${cv.border}`,
             display: "flex", alignItems: "stretch",
           }}>
@@ -1065,7 +1065,7 @@ export default function TgKanalPage() {
       {!isMobile && sidebarCollapsed ? (
         <div style={{
           width: 44, minWidth: 44,
-          background: cv.bg,
+          background: cv.bgPage,
           borderRight: `1px solid ${cv.border}`,
           display: "flex", flexDirection: "column", alignItems: "center",
           padding: "16px 0",
@@ -1086,7 +1086,7 @@ export default function TgKanalPage() {
       ) : !isMobile ? (
       <aside style={{
         width: SIDEBAR_W, minWidth: SIDEBAR_W,
-        background: cv.bg,
+        background: cv.bgPage,
         borderRight: `1px solid ${cv.border}`,
         display: "flex",
         flexDirection: "column",
