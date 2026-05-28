@@ -65,13 +65,13 @@ export function ChatWelcome({ onSuggest, onDemo, children, onPickAudio, onRecord
                   style={{
                     display: "inline-flex", alignItems: "center", gap: 4,
                     height: 34, padding: "0 10px",
-                    background: callMenuOpen || busy ? "rgba(38,38,51,0.08)" : "rgba(244,244,244,0.8)",
-                    border: "none", borderRadius: 8,
-                    fontSize: 12, fontWeight: 510, color: busy ? "#FF8B3D" : "#262633",
+                    background: callMenuOpen || busy ? cv.hover : cv.userBubble,
+                    border: `1px solid ${cv.border}`, borderRadius: 8,
+                    fontSize: 12, fontWeight: 510, color: busy ? "#FF8B3D" : cv.text,
                     cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
                   }}
-                  onMouseEnter={e => { if (!callMenuOpen && !busy) e.currentTarget.style.background = "rgba(38,38,51,0.08)"; }}
-                  onMouseLeave={e => { if (!callMenuOpen && !busy) e.currentTarget.style.background = "rgba(244,244,244,0.8)"; }}
+                  onMouseEnter={e => { if (!callMenuOpen && !busy) e.currentTarget.style.background = cv.hover; }}
+                  onMouseLeave={e => { if (!callMenuOpen && !busy) e.currentTarget.style.background = cv.userBubble; }}
                 >
                   <span style={{ fontSize: 14, display: "inline-flex" }}>
                     {recording ? "🔴" : audioUploading ? "⏳" : "📞"}
@@ -83,8 +83,8 @@ export function ChatWelcome({ onSuggest, onDemo, children, onPickAudio, onRecord
                 {callMenuOpen && !busy && (
                   <div style={{
                     position: "absolute", bottom: "calc(100% + 6px)", left: "50%", transform: "translateX(-50%)",
-                    background: color.white, border: "1px solid rgba(38,38,51,0.1)",
-                    borderRadius: 12, boxShadow: "0 8px 24px rgba(38,38,51,0.12)",
+                    background: cv.bg, border: `1px solid ${cv.border}`,
+                    borderRadius: 12, boxShadow: "0 8px 24px var(--shadow)",
                     padding: 4, minWidth: 240, zIndex: 20,
                     display: "flex", flexDirection: "column", gap: 1,
                   }}>
@@ -131,13 +131,14 @@ export function ChatWelcome({ onSuggest, onDemo, children, onPickAudio, onRecord
               style={{
                 display: "inline-flex", alignItems: "center", gap: 4,
                 height: 34, padding: "0 10px",
-                background: "rgba(244,244,244,0.8)",
-                border: "none", borderRadius: 8,
-                fontSize: 12, fontWeight: 510, color: "#262633",
+                background: cv.userBubble,
+                border: `1px solid ${cv.border}`,
+                borderRadius: 8,
+                fontSize: 12, fontWeight: 510, color: cv.text,
                 cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
               }}
-              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.08)"; }}
-              onMouseLeave={e => { e.currentTarget.style.background = "rgba(244,244,244,0.8)"; }}
+              onMouseEnter={e => { e.currentTarget.style.background = cv.hover; e.currentTarget.style.borderColor = cv.borderStrong; }}
+              onMouseLeave={e => { e.currentTarget.style.background = cv.userBubble; e.currentTarget.style.borderColor = cv.border; }}
             >
               <img src="/icons/mary-puppy.png" alt="" style={{ width: 20, height: 20, objectFit: "contain" }} />
               <span>{a.label}</span>

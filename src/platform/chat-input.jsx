@@ -1,15 +1,15 @@
 // Inline-input для Чата Mary + хук typewriter-плейсхолдера.
 // Извлечено из TgKanalPage.jsx (Phase 2).
 import { useState, useEffect } from "react";
-import { color, transition } from "../ui/tokens.js";
+import { color, transition, cv } from "../ui/tokens.js";
 import { ic } from "./icons.jsx";
 
 // Переиспользуемая обёртка inline-input'а Mary (двухстрочная: text + actions row).
 export function MaryInputBox({ text, setText, send, loading, onStop, placeholder }) {
   return (
     <div style={{
-      background: color.white,
-      border: "1px solid rgba(38,38,51,0.12)",
+      background: cv.bg,
+      border: `1px solid ${cv.borderStrong}`,
       borderRadius: 16,
       padding: "12px 14px",
       display: "flex", flexDirection: "column", gap: 10,
@@ -23,7 +23,7 @@ export function MaryInputBox({ text, setText, send, loading, onStop, placeholder
         disabled={loading}
         style={{
           width: "100%", border: "none", outline: "none",
-          fontSize: 14, color: "#262633",
+          fontSize: 14, color: cv.text,
           background: "transparent", fontFamily: "inherit",
           padding: 0, minHeight: 22,
         }}
