@@ -212,6 +212,12 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
               <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#262633", flexShrink: 0, marginLeft: -6 }} />
             )}
             <span style={{ flex: 1, fontSize: 14, color: "#262633", lineHeight: 1.4 }}>{opt}</span>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+              stroke="rgba(38,38,51,0.25)"
+              strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+              style={{ flexShrink: 0 }}>
+              <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
           </div>
         );
       })}
