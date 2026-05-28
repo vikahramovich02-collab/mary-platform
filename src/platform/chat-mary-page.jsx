@@ -1163,8 +1163,7 @@ export function ChatMaryPage() {
                     value={text}
                     onChange={e => setText(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                    placeholder={isEmptyChat ? typewriterText : "Спросить у Mary"}
-                    disabled={loading}
+                    placeholder={loading ? "Mary работает…" : (isEmptyChat ? typewriterText : "Спросить у Mary")}
                     style={{
                       width: "100%", border: "none", outline: "none",
                       fontSize: 14, color: "#262633",
