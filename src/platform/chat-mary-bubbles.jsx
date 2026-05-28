@@ -193,10 +193,10 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
             onMouseLeave={() => setHoveredIdx(null)}
             style={{
               display: "flex", alignItems: "center", gap: 12,
-              padding: "11px 2px",
+              padding: "8px 2px",
               borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.07)" : "none",
               cursor: disabled ? "default" : "pointer",
-              background: checked ? "rgba(38,38,51,0.06)" : hovered ? "rgba(38,38,51,0.04)" : "transparent",
+              background: checked ? "rgba(38,38,51,0.04)" : hovered ? "rgba(38,38,51,0.03)" : "transparent",
               transition: "background 0.1s",
             }}>
             <span style={{
@@ -226,7 +226,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
       {!disabled && (
         <div style={{
           display: "flex", alignItems: "center", gap: 12,
-          padding: "11px 2px",
+          padding: "8px 2px",
           borderTop: "1px solid rgba(38,38,51,0.07)",
         }}>
           <span style={{
@@ -522,7 +522,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
     transition: "color 0.12s, background 0.12s",
   };
   return (
-    <div style={{ marginBottom: 22, maxWidth: 640 }}
+    <div style={{ marginBottom: 22, width: "100%", overflowX: "hidden" }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
     >

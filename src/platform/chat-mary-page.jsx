@@ -1131,7 +1131,7 @@ export function ChatMaryPage() {
                   />
                 </ChatWelcome>
               ) : (
-                <div style={{ maxWidth: 760, width: "100%", margin: "0 auto", padding: isMobile ? "0 12px" : "0 24px" }}>
+                <div style={{ maxWidth: 760, width: "100%", margin: "0 auto", padding: isMobile ? "0 16px" : "0 24px", overflowX: "hidden" }}>
                   {messages.map((m, i) => (
                     <ChatBubble
                       key={i}
@@ -1148,7 +1148,7 @@ export function ChatMaryPage() {
 
             {/* Input внизу — только когда есть переписка. На welcome он внутри центра экрана. */}
             {messages.length > 0 && (
-            <div style={{ padding: isMobile ? "8px 12px 16px" : "12px 24px 18px" }}>
+            <div style={{ padding: isMobile ? "8px 16px 16px" : "12px 24px 18px" }}>
               <div style={{ maxWidth: 760, margin: "0 auto" }}>
                 <div style={{
                   background: color.white,
