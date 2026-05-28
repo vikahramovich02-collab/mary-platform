@@ -4,7 +4,7 @@
 // ─────────────────────────────────────────
 
 export const font =
-  "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', system-ui, sans-serif";
+  "-apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
 
 // ── Colors ──────────────────────────────
 export const color = {
