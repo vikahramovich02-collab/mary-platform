@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { color, transition } from "../../ui/tokens.js";
+import { color, transition, cv } from "../../ui/tokens.js";
 import { ic } from "../icons.jsx";
 import { AGENTS, CARD_W, CARD_H } from "../agents-config.js";
 import { zoomBtn } from "../chat-panel.jsx";
@@ -24,14 +24,14 @@ export function SideRow({ icon, label, active, indent = 0, trailing, onClick, we
         padding: `0 10px 0 ${10 + indent}px`,
         margin: "1px 8px",
         borderRadius: 8,
-        background: active ? "rgba(38,38,51,0.06)" : h ? "rgba(38,38,51,0.035)" : "transparent",
-        color: "#262633",
+        background: active ? cv.userBubble : h ? cv.hover : "transparent",
+        color: cv.text,
         cursor: "pointer",
         transition: transition.fast,
         userSelect: "none",
       }}
     >
-      {icon && <span style={{ display: "flex", width: 14, height: 14, color: "#262633", flexShrink: 0 }}>{icon}</span>}
+      {icon && <span style={{ display: "flex", width: 14, height: 14, color: cv.text, flexShrink: 0 }}>{icon}</span>}
       <span style={{ fontSize: 13.5, fontWeight: weight, lineHeight: 1.1, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
         {label}
       </span>

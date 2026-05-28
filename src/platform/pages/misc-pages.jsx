@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { color } from "../../ui/tokens.js";
+import { color, cv } from "../../ui/tokens.js";
+import { useTheme } from "../../ui/theme.js";
 import { ic } from "../icons.jsx";
 import { usePeople, MOCK_PEOPLE } from "../people.js";
 import { ChatPanel, zoomBtn } from "../chat-panel.jsx";
@@ -397,42 +398,216 @@ export function BizprocPage({ onNavigate }) {
 // ── Настройки ───────────────────────────────────────────
 export function SettingsPage() {
   const [health, setHealth] = useState(null);
+  const [section, setSection] = useState("general");
+  const [tgNotify, setTgNotify] = useState(true);
+  const { dark, toggle: toggleDark } = useTheme();
+
   useEffect(() => {
     fetch("/api/mary/health").then(r => r.json()).then(setHealth).catch(() => {});
   }, []);
-  return (
-    <PageShell title="Настройки" sub="Профиль, токены, доступы">
-      <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
-        Профиль
-      </div>
-      <div style={{ background: "rgba(38,38,51,0.025)", borderRadius: 12, padding: 18, marginBottom: 24 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#8A38F5", color: color.white, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 600 }}>ВА</div>
+
+  const navSections = [
+    {
+      label: "Аккаунт",
+      items: [
+        { id: "general", label: "Основные" },
+        { id: "integrations", label: "Интеграции" },
+        { id: "secrets", label: "Секреты" },
+      ],
+    },
+    {
+      label: "Инструменты",
+      items: [
+        { id: "models", label: "Модели" },
+        { id: "apikeys", label: "API ключи" },
+      ],
+    },
+    {
+      label: "Система",
+      items: [
+        { id: "backend", label: "Backend" },
+        { id: "telegram", label: "Telegram" },
+      ],
+    },
+  ];
+
+  const NavItem = ({ id, label }) => {
+    const [hov, setHov] = useState(false);
+    const active = section === id;
+    return (
+      <button
+        onClick={() => setSection(id)}
+        onMouseEnter={() => setHov(true)}
+        onMouseLeave={() => setHov(false)}
+        style={{
+          display: "flex", alignItems: "center", width: "100%",
+          height: 34, padding: "0 12px", border: "none",
+          background: active ? cv.userBubble : (hov ? cv.hover : "transparent"),
+          borderRadius: 8, fontSize: 13, fontWeight: active ? 500 : 400,
+          color: cv.text, cursor: "pointer", fontFamily: "inherit",
+          textAlign: "left", transition: "background 0.12s",
+        }}
+      >{label}</button>
+    );
+  };
+
+  const SettingRow = ({ label, children, last }) => (
+    <div style={{
+      display: "flex", alignItems: "center", justifyContent: "space-between",
+      padding: "14px 0",
+      borderBottom: last ? "none" : `1px solid ${cv.border}`,
+    }}>
+      <span style={{ fontSize: 14, color: cv.text }}>{label}</span>
+      {children}
+    </div>
+  );
+
+  const Toggle = ({ value, onChange }) => (
+    <div
+      onClick={() => onChange(!value)}
+      style={{
+        width: 44, height: 24, borderRadius: 12, cursor: "pointer",
+        background: value ? "#262633" : "rgba(38,38,51,0.2)",
+        position: "relative", transition: "background 0.2s",
+        flexShrink: 0,
+      }}
+    >
+      <div style={{
+        position: "absolute", top: 3, left: value ? 23 : 3,
+        width: 18, height: 18, borderRadius: "50%",
+        background: "#fff", transition: "left 0.2s",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+      }} />
+    </div>
+  );
+
+  const renderContent = () => {
+    if (section === "general") return (
+      <div>
+        {/* Profile */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", background: "#8A38F5", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 600, flexShrink: 0 }}>ВА</div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 15, fontWeight: 500, color: "#262633" }}>Виктория Ахрамович</div>
-            <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.55)" }}>Head of SMM · vikahramovich02@gmail.com</div>
+            <div style={{ fontSize: 15, fontWeight: 500, color: cv.text }}>Виктория Ахрамович</div>
+            <div style={{ fontSize: 12.5, color: cv.muted }}>vikahramovich02@gmail.com</div>
           </div>
+          <button style={{ background: "none", border: "none", cursor: "pointer", color: cv.muted, padding: 4, display: "inline-flex" }}>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </button>
+        </div>
+
+        <SettingRow label="Тема">
+          <select
+            value={dark ? "dark" : "light"}
+            onChange={e => { if ((e.target.value === "dark") !== dark) toggleDark(); }}
+            style={{
+              border: `1px solid ${cv.borderStrong}`, borderRadius: 8,
+              padding: "5px 28px 5px 10px", fontSize: 13, color: cv.text,
+              background: cv.bg, cursor: "pointer", fontFamily: "inherit",
+              appearance: "none",
+              backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+              backgroundRepeat: "no-repeat",
+              backgroundPosition: "right 8px center",
+            }}
+          >
+            <option value="light">Светлая</option>
+            <option value="dark">Тёмная</option>
+          </select>
+        </SettingRow>
+
+        <SettingRow label="Уведомления в Telegram">
+          <Toggle value={tgNotify} onChange={setTgNotify} />
+        </SettingRow>
+
+        <SettingRow label="Автопубликация постов">
+          <Toggle value={false} onChange={() => {}} />
+        </SettingRow>
+
+        <SettingRow label="Звуковые уведомления" last>
+          <Toggle value={false} onChange={() => {}} />
+        </SettingRow>
+
+        {/* Bottom buttons */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 32 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={{
+              padding: "8px 16px", border: `1px solid ${cv.borderStrong}`, borderRadius: 8,
+              background: "transparent", fontSize: 13, color: cv.text,
+              cursor: "pointer", fontFamily: "inherit",
+            }}>Выйти</button>
+            <button style={{
+              padding: "8px 16px", border: `1px solid ${cv.borderStrong}`, borderRadius: 8,
+              background: "transparent", fontSize: 13, color: cv.text,
+              cursor: "pointer", fontFamily: "inherit",
+            }}>Сбросить пароль</button>
+          </div>
+          <button style={{
+            padding: "8px 16px", border: `1px solid ${cv.borderStrong}`, borderRadius: 8,
+            background: "transparent", fontSize: 13, color: cv.text,
+            cursor: "pointer", fontFamily: "inherit",
+          }}>Главная</button>
         </div>
       </div>
+    );
 
-      <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
-        Backend
-      </div>
-      <div style={{ background: "rgba(38,38,51,0.025)", borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 13, color: "#262633", fontFamily: "ui-monospace, SF Mono, monospace" }}>
+    if (section === "backend") return (
+      <div style={{ fontSize: 13, color: cv.text, fontFamily: "ui-monospace, SF Mono, monospace", lineHeight: 1.8 }}>
         <div>URL: 77.237.241.242:5678</div>
-        <div style={{ marginTop: 4 }}>LLM: {health?.llmModel || "..."}</div>
-        <div style={{ marginTop: 4 }}>Telegram bot: {health?.telegram?.botConnected ? "✓ подключён" : "✗"} · {health?.telegram?.allowlistSize || 0} получателей</div>
-        <div style={{ marginTop: 4 }}>Posts in KB: {health?.posts || "..."}</div>
-        <div style={{ marginTop: 4 }}>Uptime: {health ? `${Math.round(health.uptime / 60)} мин` : "..."}</div>
+        <div>LLM: {health?.llmModel || "..."}</div>
+        <div>Telegram bot: {health?.telegram?.botConnected ? "✓ подключён" : "✗"} · {health?.telegram?.allowlistSize || 0} получателей</div>
+        <div>Posts in KB: {health?.posts || "..."}</div>
+        <div>Uptime: {health ? `${Math.round(health.uptime / 60)} мин` : "..."}</div>
+      </div>
+    );
+
+    if (section === "telegram") return (
+      <div style={{ fontSize: 14, color: cv.muted, lineHeight: 1.6 }}>
+        Чтобы добавить получателя уведомлений — он пишет любое сообщение боту <a href="https://t.me/botikkkklkkk_bot" target="_blank" rel="noreferrer" style={{ color: "#3F95FF" }}>@botikkkklkkk_bot</a>, потом chat_id добавляется в .env.
+      </div>
+    );
+
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 200, flexDirection: "column", gap: 10 }}>
+        <div style={{ fontSize: 32 }}>🔜</div>
+        <div style={{ fontSize: 14, color: cv.muted }}>Скоро</div>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ display: "flex", flex: 1, minHeight: 0, background: cv.bg }}>
+      {/* Left nav */}
+      <div style={{
+        width: 210, minWidth: 210,
+        borderRight: `1px solid ${cv.border}`,
+        display: "flex", flexDirection: "column",
+        padding: "20px 8px",
+        overflowY: "auto",
+      }}>
+        {navSections.map(sec => (
+          <div key={sec.label} style={{ marginBottom: 4 }}>
+            <div style={{
+              fontSize: 11, color: cv.muted, fontWeight: 600,
+              textTransform: "uppercase", letterSpacing: "0.05em",
+              padding: "12px 12px 4px",
+            }}>{sec.label}</div>
+            {sec.items.map(item => <NavItem key={item.id} id={item.id} label={item.label} />)}
+          </div>
+        ))}
       </div>
 
-      <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: 12 }}>
-        Telegram-уведомления (allowlist)
+      {/* Content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "36px 48px" }}>
+        <div style={{ maxWidth: 680 }}>
+          <div style={{ fontSize: 28, fontWeight: 600, color: cv.text, marginBottom: 28, letterSpacing: "-0.02em" }}>
+            {navSections.flatMap(s => s.items).find(i => i.id === section)?.label || "Основные"}
+          </div>
+          {renderContent()}
+        </div>
       </div>
-      <div style={{ background: "rgba(38,38,51,0.025)", borderRadius: 12, padding: 18, fontSize: 13, color: "rgba(38,38,51,0.7)" }}>
-        Чтобы добавить нового получателя — он пишет любое сообщение боту <a href="https://t.me/botikkkklkkk_bot" target="_blank" rel="noreferrer" style={{ color: "#3F95FF" }}>@botikkkklkkk_bot</a>, потом chat_id добавляется в .env.
-      </div>
-    </PageShell>
+    </div>
   );
 }
 

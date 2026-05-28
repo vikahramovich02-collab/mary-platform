@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { color, transition } from "../ui/tokens.js";
+import { color, transition, cv } from "../ui/tokens.js";
 
 export function ChatWelcome({ onSuggest, onDemo, children, onPickAudio, onRecord, recording, audioUploading }) {
   const [callMenuOpen, setCallMenuOpen] = useState(false);
@@ -36,7 +36,7 @@ export function ChatWelcome({ onSuggest, onDemo, children, onPickAudio, onRecord
       />
       <div style={{
         textAlign: "center",
-        fontSize: 32, fontWeight: 600, color: "#262633",
+        fontSize: 32, fontWeight: 600, color: cv.text,
         letterSpacing: "-0.02em",
       }}>
         Что сделаем, Виктория?
@@ -175,7 +175,7 @@ export function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, 
         position: "relative",
         display: "flex", alignItems: "center", gap: 6,
         height: 30, padding: "0 32px 0 10px",
-        background: active ? "rgba(38,38,51,0.06)" : (hover ? "rgba(38,38,51,0.03)" : "transparent"),
+        background: active ? cv.userBubble : (hover ? cv.hover : "transparent"),
         borderRadius: 8, cursor: renaming ? "text" : "pointer",
       }}
     >
@@ -198,15 +198,15 @@ export function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, 
           style={{
             flex: 1, minWidth: 0,
             border: "1px solid rgba(63,149,255,0.4)", borderRadius: 5,
-            background: color.white, outline: "none",
-            fontSize: 12, fontWeight: 510, color: "#262633",
+            background: cv.bg, outline: "none",
+            fontSize: 12, fontWeight: 510, color: cv.text,
             fontFamily: "inherit", padding: "2px 6px",
           }}
         />
       ) : (
         <span style={{
           flex: 1, minWidth: 0,
-          fontSize: 12, color: "#262633", fontWeight: 510,
+          fontSize: 12, color: cv.text, fontWeight: 510,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{c.title}</span>
       )}
@@ -218,15 +218,15 @@ export function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, 
           style={{
             position: "absolute", right: 6, top: "50%", transform: "translateY(-50%)",
             width: 22, height: 22, padding: 0,
-            background: menuOpen ? "rgba(38,38,51,0.08)" : color.white,
-            border: "1px solid rgba(38,38,51,0.12)",
+            background: menuOpen ? cv.hover : cv.bg,
+            border: `1px solid ${cv.border}`,
             borderRadius: 6,
-            color: "rgba(38,38,51,0.55)", cursor: "pointer",
+            color: cv.muted, cursor: "pointer",
             display: "inline-flex", alignItems: "center", justifyContent: "center",
             fontFamily: "inherit",
           }}
-          onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; }}
-          onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background = color.white; }}
+          onMouseEnter={e => { e.currentTarget.style.background = cv.userBubble; }}
+          onMouseLeave={e => { if (!menuOpen) e.currentTarget.style.background = cv.bg; }}
         >
           <svg width={12} height={12} viewBox="0 0 24 24" fill="currentColor">
             <circle cx="6" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="18" cy="12" r="1.5" />
@@ -238,9 +238,9 @@ export function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, 
           onClick={e => e.stopPropagation()}
           style={{
             position: "absolute", right: 0, top: "100%", marginTop: 4,
-            background: color.white, borderRadius: 10,
-            border: "1px solid rgba(38,38,51,0.08)",
-            boxShadow: "0 6px 20px rgba(38,38,51,0.1)",
+            background: cv.bg, borderRadius: 10,
+            border: `1px solid ${cv.border}`,
+            boxShadow: "0 6px 20px var(--shadow)",
             padding: 4, zIndex: 10, minWidth: 160,
             display: "flex", flexDirection: "column", gap: 1,
           }}>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { color, transition } from "../ui/tokens.js";
+import { color, transition, cv } from "../ui/tokens.js";
 import { renderMarkdown } from "./markdown.jsx";
 import { parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
 import { ToolsTrail } from "./chat-cards.jsx";
@@ -396,7 +396,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
             border: "1.5px solid #3F95FF", borderRadius: 14,
             padding: 10, width: "min(80%, 520px)",
             display: "flex", flexDirection: "column", gap: 10,
-            background: color.white,
+            background: cv.bg,
           }}>
             <textarea
               autoFocus
@@ -414,7 +414,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
               style={{
                 width: "100%", border: "none", outline: "none",
                 resize: "none", fontFamily: "inherit",
-                fontSize: 14, color: "#262633",
+                fontSize: 14, color: cv.text,
                 background: "transparent", padding: 0,
               }}
             />
@@ -456,7 +456,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", marginBottom: 18 }}>
         <div style={{
-          background: "rgba(38,38,51,0.06)", color: "#262633",
+          background: cv.userBubble, color: cv.text,
           padding: "10px 14px", borderRadius: 16,
           maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
         }}>{m.text}</div>
@@ -516,7 +516,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         )}
         {(body || (m._streaming && m.text)) && (
           <div style={{
-            fontSize: 14, color: "#262633", lineHeight: 1.55,
+            fontSize: 14, color: cv.text, lineHeight: 1.55,
             marginTop: (m._tools && m._tools.length > 0) ? 10 : (m._buildLog !== undefined && body ? 10 : 0),
           }}>
             {renderMarkdown(body)}

@@ -123,3 +123,19 @@ export const T = {
 };
 
 export default T;
+
+// CSS variable references — use in inline styles for dark mode awareness
+export const cv = {
+  bg:          "var(--bg)",
+  bgPage:      "var(--bg-page)",
+  bgSurface:   "var(--bg-surface)",
+  bgCard:      "var(--bg-card)",
+  text:        "var(--text)",
+  muted:       "var(--text-muted)",
+  ghost:       "var(--text-ghost)",
+  border:      "var(--border)",
+  borderStrong: "var(--border-strong)",
+  userBubble:  "var(--user-bubble)",
+  hover:       "var(--hover)",
+  inputBg:     "var(--input-bg)",
+};

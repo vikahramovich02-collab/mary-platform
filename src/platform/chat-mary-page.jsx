@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { color, transition } from "../ui/tokens.js";
+import { color, transition, cv } from "../ui/tokens.js";
 import { ic } from "./icons.jsx";
 import { MaryInputBox, useTypewriterPlaceholder } from "./chat-input.jsx";
 import { zoomBtn } from "./chat-panel.jsx";
@@ -172,7 +172,7 @@ const DEMO_QUICK_RESPONSES = {
 };
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function ChatMaryPage() {
+export function ChatMaryPage({ dark, toggleDark }) {
   const [conversations, setConversations] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);     // сообщения активного чата
@@ -790,20 +790,20 @@ export function ChatMaryPage() {
   };
 
   return (
-    <div style={{ display: "flex", flex: 1, minHeight: 0, background: color.white }}>
+    <div style={{ display: "flex", flex: 1, minHeight: 0, background: cv.bg }}>
       {/* Sidebar — список чатов */}
       {isMobile && mobileSidebarOpen && (
         <div onClick={() => setMobileSidebarOpen(false)}
           style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.25)", zIndex: 50 }} />
       )}
       {!isMobile && chatsCollapsed && (
-        <div style={{ width: 10, minWidth: 10, background: color.white }} />
+        <div style={{ width: 10, minWidth: 10, background: cv.bg }} />
       )}
       {(isMobile ? mobileSidebarOpen : !chatsCollapsed) && (
       <aside style={{
         ...(isMobile ? {
           position: "fixed", left: 0, top: 0, bottom: 0, width: 280, zIndex: 51,
-          boxShadow: "4px 0 24px rgba(38,38,51,0.12)", background: color.white,
+          boxShadow: "4px 0 24px var(--shadow)", background: cv.bg,
         } : {
           width: 226, minWidth: 226, background: "transparent",
         }),
@@ -812,8 +812,8 @@ export function ChatMaryPage() {
       }}>
         <div style={{
           flex: 1, display: "flex", flexDirection: "column",
-          background: "rgba(247,247,247,0.5)",
-          border: "1px solid rgba(0,0,0,0.06)",
+          background: cv.bgCard,
+          border: `1px solid ${cv.border}`,
           borderRadius: 16,
           overflow: "hidden",
         }}>
@@ -1111,12 +1111,37 @@ export function ChatMaryPage() {
                     </svg>
                   </button>
                 )}
-                <span style={{ fontSize: 14, fontWeight: 510, color: "#262633" }}>
+                <span style={{ fontSize: 14, fontWeight: 510, color: cv.text }}>
                   {demoMode
                     ? "Демо автоматизация отдела"
                     : (conversations.find(c => c.id === activeId)?.title || "Чат")}
                 </span>
                 <div style={{ flex: 1 }} />
+                {/* Тёмная тема */}
+                {toggleDark && (
+                  <button
+                    onClick={toggleDark}
+                    title={dark ? "Светлая тема" : "Тёмная тема"}
+                    style={{
+                      display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      width: 32, height: 32, flexShrink: 0,
+                      background: "transparent", border: "none", borderRadius: 8,
+                      cursor: "pointer", fontFamily: "inherit", color: cv.muted,
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = cv.hover; e.currentTarget.style.color = cv.text; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = cv.muted; }}
+                  >
+                    {dark ? (
+                      <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32 1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+                      </svg>
+                    ) : (
+                      <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                      </svg>
+                    )}
+                  </button>
+                )}
                 {!showActivity && !isMobile && (
                   <button
                     onClick={() => setShowActivity(true)}
@@ -1129,10 +1154,10 @@ export function ChatMaryPage() {
                       border: "none",
                       borderRadius: 8,
                       cursor: "pointer", fontFamily: "inherit",
-                      color: "rgba(38,38,51,0.5)",
+                      color: cv.muted,
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.5)"; }}
+                    onMouseEnter={e => { e.currentTarget.style.background = cv.hover; e.currentTarget.style.color = cv.text; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = cv.muted; }}
                   >
                     <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
                       <rect x="3" y="3" width="18" height="18" rx="2" />

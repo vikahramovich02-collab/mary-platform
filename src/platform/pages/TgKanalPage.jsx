@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { color, transition, font } from "../../ui/tokens.js";
+import { color, transition, font, cv } from "../../ui/tokens.js";
+import { useTheme } from "../../ui/theme.js";
 import { I, P } from "../icons.jsx";
 import { usePeople, MOCK_PEOPLE } from "../people.js";
 import { renderMarkdown, parseNumberedOptions, parseChecklistOptions } from "../markdown.jsx";
@@ -884,6 +885,7 @@ function ToolOpt({ icon, label, active, onClick }) {
 
 // ── Корневой компонент ──────────────────────────────────────
 export default function TgKanalPage() {
+  const { dark, toggle: toggleDark } = useTheme();
   const [smmOpen, setSmmOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState(
     typeof window !== "undefined" && new URLSearchParams(window.location.search).get("page") || "tg-kanal"
@@ -1011,16 +1013,16 @@ export default function TgKanalPage() {
       display: "flex",
       width: "100vw",
       height: "100vh",
-      background: color.white,
+      background: cv.bg,
       fontFamily: font,
-      color: "#262633",
+      color: cv.text,
     }}>
       {/* ── Sidebar ────────────────────────────────────── */}
       {sidebarCollapsed ? (
         <div style={{
           width: 44, minWidth: 44,
-          background: color.white,
-          borderRight: "1px solid rgba(38,38,51,0.06)",
+          background: cv.bg,
+          borderRight: `1px solid ${cv.border}`,
           display: "flex", flexDirection: "column", alignItems: "center",
           padding: "16px 0",
         }}>
@@ -1041,8 +1043,8 @@ export default function TgKanalPage() {
       <aside style={{
         width: SIDEBAR_W,
         minWidth: SIDEBAR_W,
-        background: color.white,
-        borderRight: "1px solid rgba(38,38,51,0.06)",
+        background: cv.bg,
+        borderRight: `1px solid ${cv.border}`,
         display: "flex",
         flexDirection: "column",
         height: "100vh",
@@ -1174,7 +1176,7 @@ export default function TgKanalPage() {
         minWidth: 0,
         display: "flex",
         flexDirection: "column",
-        background: color.white,
+        background: cv.bg,
         padding: (currentPage === "tg-kanal" || (() => { for (const d of departments) { if ((d.channels||[]).some(c=>c.page===currentPage)) return true; } return false; })()) ? 16 : 0,
       }}>
         {currentPage === "tg-kanal" ? (
@@ -1221,7 +1223,7 @@ export default function TgKanalPage() {
             onOpenChat={() => { setChatOpen(true); setChatMode("mini"); setActiveFilter("all"); }}
           />
         ) : currentPage === "chat-mary" ? (
-          <ChatMaryPage />
+          <ChatMaryPage dark={dark} toggleDark={toggleDark} />
         ) : currentPage === "sandbox" ? (
           <SandboxPage />
         ) : currentPage === "home" ? (
