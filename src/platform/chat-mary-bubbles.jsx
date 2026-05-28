@@ -468,20 +468,29 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
           maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
         }}>{m.text}</div>
         <div style={{
-          display: "flex", gap: 2, marginTop: 4,
+          display: "flex", alignItems: "center", gap: 2, marginTop: 4,
           opacity: hover ? 1 : 0, transition: "opacity 0.15s",
           pointerEvents: hover ? "auto" : "none",
         }}>
-          <button title="Копировать" onClick={handleCopy}
-            style={{ ...actBtn, color: copied ? "#34C759" : "rgba(38,38,51,0.45)" }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = copied ? "#34C759" : "#262633"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = copied ? "#34C759" : "rgba(38,38,51,0.45)"; }}
-          >
-            {copied
-              ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
-              : <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            }
-          </button>
+          {m.ts && (
+            <span style={{
+              fontSize: 11, color: "rgba(38,38,51,0.35)", marginRight: 4,
+              fontVariantNumeric: "tabular-nums", userSelect: "none",
+            }}>
+              {new Date(m.ts).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          {onEdit && index !== undefined && (
+            <button title="Перегенерировать" onClick={() => onEdit?.(m.text, index)}
+              style={actBtn}
+              onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "rgba(38,38,51,0.45)"; }}
+            >
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/>
+              </svg>
+            </button>
+          )}
           {onEdit && index !== undefined && (
             <button title="Редактировать" onClick={() => { setDraft(m.text); setEditing(true); }}
               style={actBtn}
@@ -493,6 +502,16 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
               </svg>
             </button>
           )}
+          <button title="Копировать" onClick={handleCopy}
+            style={{ ...actBtn, color: copied ? "#262633" : "rgba(38,38,51,0.45)" }}
+            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.06)"; e.currentTarget.style.color = "#262633"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = copied ? "#262633" : "rgba(38,38,51,0.45)"; }}
+          >
+            {copied
+              ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+              : <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            }
+          </button>
         </div>
       </div>
     );
@@ -505,21 +524,8 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
   const options = checklist.options || numbered.options;
   const multi   = !!checklist.options || (m._highlights?.length > 1);
   return (
-    <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
-      <div style={{
-        width: 28, height: 28, borderRadius: 7,
-        background: "rgba(38,38,51,0.08)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0, color: "#262633",
-      }}>
-        <svg width={14} height={14} viewBox="0 0 24 24">
-          <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor" />
-          <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor" />
-          <circle cx="9.3" cy="13" r="1.4" fill="white" />
-          <circle cx="14.7" cy="13" r="1.4" fill="white" />
-        </svg>
-      </div>
-      <div style={{ flex: 1, minWidth: 0, maxWidth: 640, paddingTop: 4 }}>
+    <div style={{ marginBottom: 22, maxWidth: 640 }}>
+      <div style={{ minWidth: 0 }}>
         {m._tools && m._tools.length > 0 && (
           <ToolsTrail tools={m._tools} />
         )}
@@ -527,19 +533,19 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
           <DemoBuildLog lines={m._buildLog} streaming={!!m._streaming} title={m._buildLogTitle} />
         )}
         {(body || (m._streaming && m.text)) && (
-        <div style={{
-          fontSize: 14, color: "#262633", lineHeight: 1.55,
-          marginTop: (m._tools && m._tools.length > 0) ? 10 : (m._buildLog !== undefined && body ? 10 : 0),
-        }}>
-          {renderMarkdown(body)}
-          {m._streaming && m.text && (
-            <span style={{
-              display: "inline-block", width: 7, height: 14,
-              background: "#262633", marginLeft: 2, verticalAlign: "text-bottom",
-              animation: "maryblink 1s steps(2) infinite",
-            }} />
-          )}
-        </div>
+          <div style={{
+            fontSize: 14, color: "#262633", lineHeight: 1.55,
+            marginTop: (m._tools && m._tools.length > 0) ? 10 : (m._buildLog !== undefined && body ? 10 : 0),
+          }}>
+            {renderMarkdown(body)}
+            {m._streaming && m.text && (
+              <span style={{
+                display: "inline-block", width: 7, height: 14,
+                background: "#262633", marginLeft: 2, verticalAlign: "text-bottom",
+                animation: "maryblink 1s steps(2) infinite",
+              }} />
+            )}
+          </div>
         )}
         {options && options.length >= 2 && (
           <OptionsBlock options={options} multi={multi} onPick={onPickOption} highlights={m._highlights} disabled={!canInteract} />
@@ -547,19 +553,27 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         {m._quickActions && isLast && (
           <DemoChips actions={m._quickActions} onPick={onPickOption} />
         )}
-        {m._streaming && !m.text && m._buildLog === undefined && !m._toolStatus && (
-          <div style={{ display: "inline-flex", gap: 4, padding: "8px 0" }}>
-            {[0,1,2].map(i => (
-              <span key={i} style={{
-                width: 6, height: 6, borderRadius: "50%",
-                background: "rgba(38,38,51,0.4)",
-                animation: `marypulse 1.4s ease-in-out infinite ${i*0.2}s`,
-              }} />
-            ))}
-          </div>
-        )}
         {!m._streaming && body && body.trim().length > 0 && (
           <ActionBar text={body} />
+        )}
+      </div>
+      {/* Avatar + label at the bottom */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+        <img src="/icons/mary-puppy.png" alt="" style={{ width: 18, height: 18, objectFit: "contain", flexShrink: 0 }} />
+        <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500 }}>
+          {m._streaming ? "Mary работает" : "Mary"}
+        </span>
+        {m._streaming && (
+          <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
+            {[0,1,2].map(i => (
+              <span key={i} style={{
+                width: 3, height: 3, borderRadius: "50%",
+                background: "rgba(38,38,51,0.4)",
+                display: "inline-block",
+                animation: `marypulse 1.4s ease-in-out infinite ${i * 0.18}s`,
+              }} />
+            ))}
+          </span>
         )}
       </div>
     </div>
