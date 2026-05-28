@@ -159,9 +159,10 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
   const [selected, setSelected] = useState(() => new Set());
   const [freeText, setFreeText] = useState("");
   const [hoveredIdx, setHoveredIdx] = useState(null);
-  const hlSet = new Set(highlights || []);
+
   const toggle = (idx) => {
     if (disabled) return;
+    if (!multi) { onPick(options[idx]); return; }
     setSelected(prev => {
       const next = new Set(prev);
       if (next.has(idx)) next.delete(idx); else next.add(idx);
@@ -178,220 +179,112 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
   };
   const canSubmit = selected.size > 0 || freeText.trim().length > 0;
 
-  const containerStyle = {
-    marginTop: noTopMargin ? 0 : 12,
-    border: "1px solid rgba(38,38,51,0.09)",
-    borderRadius: 12,
-    overflow: "hidden",
-    opacity: disabled ? 0.55 : 1,
-  };
-
-  if (!multi) {
-    return (
-      <div style={containerStyle}>
-        {options.map((opt, idx) => {
-          const hl = hlSet.has(idx);
-          const hovered = hoveredIdx === idx;
-          return (
-            <button key={idx}
-              onClick={disabled ? undefined : () => onPick(opt)}
-              onMouseEnter={() => { if (!disabled) setHoveredIdx(idx); }}
-              onMouseLeave={() => setHoveredIdx(null)}
-              style={{
-                display: "flex", alignItems: "center", gap: 10,
-                width: "100%", padding: "10px 12px",
-                background: hovered ? "rgba(38,38,51,0.04)" : "transparent",
-                border: "none",
-                borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.07)" : "none",
-                fontSize: 13.5, fontWeight: 400, color: "#262633",
-                textAlign: "left", fontFamily: "inherit",
-                cursor: disabled ? "default" : "pointer", transition: "background 0.1s",
-              }}>
-              <span style={{
-                flexShrink: 0, width: 22, height: 22, borderRadius: 6,
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-                background: hl ? "#262633" : "rgba(38,38,51,0.07)",
-                color: hl ? "#fff" : "rgba(38,38,51,0.5)",
-                fontSize: 11, fontWeight: 600,
-              }}>{idx + 1}</span>
-              {hl && (
-                <span style={{
-                  width: 5, height: 5, borderRadius: "50%",
-                  background: "#262633", flexShrink: 0, marginLeft: -4,
-                }} />
-              )}
-              <span style={{ flex: 1, lineHeight: 1.4 }}>{opt}</span>
-              {hovered && !disabled && (
-                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-                  <polyline points="9 10 4 15 9 20"/><path d="M20 4v7a4 4 0 0 1-4 4H4"/>
-                </svg>
-              )}
-            </button>
-          );
-        })}
-        {!disabled && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 8,
-            borderTop: "1px solid rgba(38,38,51,0.07)",
-            padding: "9px 12px",
-            background: freeText ? "rgba(38,38,51,0.03)" : "transparent",
-          }}>
-            <span style={{
-              flexShrink: 0, width: 22, height: 22, borderRadius: 6,
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(38,38,51,0.06)",
-              color: "rgba(38,38,51,0.4)",
-            }}>
-              <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-              </svg>
-            </span>
-            <input
-              value={freeText}
-              onChange={e => setFreeText(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && freeText.trim()) { e.preventDefault(); onPick(freeText.trim()); } }}
-              placeholder="Свой вариант…"
-              style={{
-                flex: 1, border: "none", outline: "none",
-                fontSize: 13.5, color: "#262633", background: "transparent",
-                fontFamily: "inherit", padding: 0,
-              }}
-            />
-            {freeText.trim() ? (
-              <button onClick={() => onPick(freeText.trim())}
-                style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 28, height: 28, borderRadius: 8,
-                  background: "#FF8B3D", border: "none",
-                  color: "#fff", cursor: "pointer", flexShrink: 0,
-                }}>
-                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 19V5M5 12l7-7 7 7" />
-                </svg>
-              </button>
-            ) : (
-              <span style={{ fontSize: 11, color: "rgba(38,38,51,0.3)", fontWeight: 500 }}>Skip</span>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div style={{ marginTop: noTopMargin ? 0 : 12, opacity: disabled ? 0.55 : 1 }}>
+      {options.map((opt, idx) => {
+        const checked = selected.has(idx);
+        const hovered = hoveredIdx === idx;
+        return (
+          <div key={idx}
+            onClick={() => toggle(idx)}
+            onMouseEnter={() => { if (!disabled) setHoveredIdx(idx); }}
+            onMouseLeave={() => setHoveredIdx(null)}
+            style={{
+              display: "flex", alignItems: "center", gap: 12,
+              padding: "11px 2px",
+              borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.07)" : "none",
+              cursor: disabled ? "default" : "pointer",
+              background: checked ? "rgba(63,149,255,0.04)" : hovered ? "rgba(38,38,51,0.02)" : "transparent",
+              transition: "background 0.1s",
+              borderRadius: 4,
+            }}>
+            <span style={{
+              width: 20, textAlign: "right", flexShrink: 0,
+              fontSize: 13, color: checked ? "#3F95FF" : "rgba(38,38,51,0.35)",
+              fontVariantNumeric: "tabular-nums",
+            }}>
+              {checked
+                ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#3F95FF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                : idx + 1}
+            </span>
+            <span style={{ flex: 1, fontSize: 14, color: "#262633", lineHeight: 1.4 }}>{opt}</span>
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
+              stroke={hovered && !disabled ? "rgba(38,38,51,0.6)" : "rgba(38,38,51,0.25)"}
+              strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+              style={{ flexShrink: 0, transition: "stroke 0.1s" }}>
+              <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+          </div>
+        );
+      })}
+
+      {/* Свой вариант */}
       {!disabled && (
-        <div style={{ fontSize: 11, color: "rgba(38,38,51,0.45)", marginBottom: 6, fontWeight: 500 }}>
-          Можно выбрать несколько · отмеченные подходят лучше всего
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "11px 2px",
+          borderTop: "1px solid rgba(38,38,51,0.07)",
+        }}>
+          <span style={{
+            width: 20, textAlign: "right", flexShrink: 0,
+            fontSize: 13, color: "rgba(38,38,51,0.25)",
+            fontVariantNumeric: "tabular-nums",
+          }}>{options.length + 1}</span>
+          <input
+            value={freeText}
+            onChange={e => setFreeText(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === "Enter" && freeText.trim()) { e.preventDefault(); onPick(freeText.trim()); }
+            }}
+            placeholder="Свой вариант…"
+            style={{
+              flex: 1, border: "none", outline: "none",
+              fontSize: 14, color: "#262633", background: "transparent",
+              fontFamily: "inherit", padding: 0,
+            }}
+          />
+          {freeText.trim() ? (
+            <button onClick={() => onPick(freeText.trim())}
+              style={{
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                width: 26, height: 26, borderRadius: 7,
+                background: "#262633", border: "none",
+                color: "#fff", cursor: "pointer", flexShrink: 0,
+              }}>
+              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5M5 12l7-7 7 7"/>
+              </svg>
+            </button>
+          ) : (
+            <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.25)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M5 12h14M13 6l6 6-6 6"/>
+            </svg>
+          )}
         </div>
       )}
-      <div style={containerStyle}>
-        {options.map((opt, idx) => {
-          const checked = selected.has(idx);
-          const hl = hlSet.has(idx);
-          return (
-            <button key={idx} onClick={() => toggle(idx)}
-              style={{
-                display: "flex", alignItems: "center", gap: 10,
-                width: "100%", padding: "10px 12px",
-                background: checked ? "rgba(63,149,255,0.04)" : "transparent",
-                border: "none",
-                borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.07)" : "none",
-                fontSize: 13.5, fontWeight: 400, color: "#262633",
-                textAlign: "left", fontFamily: "inherit",
-                cursor: disabled ? "default" : "pointer", transition: "background 0.1s",
-              }}
-              onMouseEnter={e => { if (!checked && !disabled) e.currentTarget.style.background = "rgba(38,38,51,0.03)"; }}
-              onMouseLeave={e => { if (!checked) e.currentTarget.style.background = "transparent"; }}>
-              <span style={{
-                flexShrink: 0,
-                width: 18, height: 18, borderRadius: 5,
-                border: checked ? "none" : "1.5px solid rgba(38,38,51,0.22)",
-                background: checked ? "#3F95FF" : "transparent",
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-              }}>
-                {checked && (
-                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12l5 5L20 7" />
-                  </svg>
-                )}
-              </span>
-              {hl && (
-                <span style={{
-                  width: 5, height: 5, borderRadius: "50%",
-                  background: "#262633", flexShrink: 0, marginLeft: -2,
-                }} />
-              )}
-              <span style={{ flex: 1, lineHeight: 1.4 }}>{opt}</span>
-            </button>
-          );
-        })}
-        {!disabled && (
-          <div style={{
-            display: "flex", alignItems: "center", gap: 10,
-            borderTop: "1px solid rgba(38,38,51,0.07)",
-            padding: "9px 12px",
-            background: freeText ? "rgba(38,38,51,0.03)" : "transparent",
-          }}>
-            <span style={{
-              flexShrink: 0, width: 18, height: 18, borderRadius: 5,
-              border: "1.5px solid rgba(38,38,51,0.15)",
+
+      {/* Footer для multi */}
+      {multi && !disabled && canSubmit && (
+        <div style={{
+          display: "flex", justifyContent: "flex-end", alignItems: "center",
+          gap: 8, paddingTop: 10,
+        }}>
+          <span style={{ fontSize: 12, color: "rgba(38,38,51,0.4)" }}>
+            {selected.size + (freeText.trim() ? 1 : 0)} выбрано
+          </span>
+          <button onClick={submit}
+            style={{
               display: "inline-flex", alignItems: "center", justifyContent: "center",
+              width: 28, height: 28, borderRadius: 8,
+              background: "#262633", border: "none",
+              color: "#fff", cursor: "pointer",
             }}>
-              {freeText.trim() && (
-                <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.4)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12l5 5L20 7" />
-                </svg>
-              )}
-            </span>
-            <input
-              value={freeText}
-              onChange={e => setFreeText(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && canSubmit) { e.preventDefault(); submit(); } }}
-              placeholder="Свой вариант…"
-              style={{
-                flex: 1, border: "none", outline: "none",
-                fontSize: 13.5, color: "#262633", background: "transparent",
-                fontFamily: "inherit", padding: 0,
-              }}
-            />
-          </div>
-        )}
-        {!disabled && (
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            borderTop: "1px solid rgba(38,38,51,0.07)",
-            padding: "9px 12px",
-            background: "rgba(38,38,51,0.02)",
-          }}>
-            <span style={{ fontSize: 12, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>
-              {canSubmit ? `${selected.size + (freeText.trim() ? 1 : 0)} выбрано` : ""}
-            </span>
-            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {!canSubmit && (
-                <button onClick={() => onPick("")}
-                  style={{
-                    padding: "5px 12px", borderRadius: 7,
-                    border: "1px solid rgba(38,38,51,0.15)",
-                    background: "transparent", fontSize: 12, color: "rgba(38,38,51,0.55)",
-                    cursor: "pointer", fontFamily: "inherit", fontWeight: 500,
-                  }}>Skip</button>
-              )}
-              <button onClick={submit} disabled={!canSubmit}
-                style={{
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  width: 30, height: 30, borderRadius: 8,
-                  background: canSubmit ? "#FF8B3D" : "rgba(38,38,51,0.12)",
-                  border: "none", color: "#fff", cursor: canSubmit ? "pointer" : "not-allowed",
-                }}>
-                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 19V5M5 12l7-7 7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+            <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 19V5M5 12l7-7 7 7"/>
+            </svg>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
