@@ -5,8 +5,7 @@ import { MaryInputBox, useTypewriterPlaceholder } from "./chat-input.jsx";
 import { zoomBtn } from "./chat-panel.jsx";
 import { ActivityPanel, ArtifactView, ActivityLog, BuildCanvas } from "./chat-mary-activity.jsx";
 import { ChatWelcome, ChatItem } from "./chat-mary-sidebar.jsx";
-import { OptionsBlock, AgentChatBubble, ChatBubble, ActionBar, FloatingOptionsPanel } from "./chat-mary-bubbles.jsx";
-import { parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
+import { OptionsBlock, AgentChatBubble, ChatBubble, ActionBar } from "./chat-mary-bubbles.jsx";
 
 // ─── Demo flow script ────────────────────────────────────────────────────────
 const DEMO_SCRIPT = [
@@ -195,7 +194,6 @@ export function ChatMaryPage() {
   const [demoMode, setDemoMode] = useState(false);
   const [demoStep, setDemoStep] = useState(-1);
   const demoTimersRef = useRef([]);
-  const [dismissedPanelIds, setDismissedPanelIds] = useState(() => new Set());
 
   const [activeAgentIds, setActiveAgentIds] = useState(new Set()); // агенты которые сейчас работают (ask_agent running)
   const [artifacts, setArtifacts] = useState([]); // [{ id, agentId, agentRole, agentColor, title, content, ts }]
@@ -448,7 +446,6 @@ export function ChatMaryPage() {
     const msg = (overrideText ?? text).trim();
     if (!msg || loading) return;
     if (overrideText === undefined) setText("");
-    if (floatingMsg) setDismissedPanelIds(prev => new Set([...prev, floatingMsg._id]));
 
     // Demo mode: run scripted flow, skip real API
     if (demoMode) {
@@ -672,18 +669,6 @@ export function ChatMaryPage() {
   const isEmptyChat = messages.length === 0 && !loading;
   const typewriterText = useTypewriterPlaceholder(typewriterPhrases, isEmptyChat);
 
-  // Floating options panel: find last settled mary message with parseable options
-  const floatingMsg = useMemo(() => {
-    const msg = [...messages].reverse().find(
-      m => m.role === "mary" && !m._streaming && !m._quickActions && !m._toolStatus
-    );
-    if (!msg || dismissedPanelIds.has(msg._id)) return null;
-    const checklist = parseChecklistOptions(msg.text || "");
-    const numbered = !checklist.options ? parseNumberedOptions(msg.text || "") : null;
-    const opts = checklist.options || numbered?.options;
-    if (!opts || opts.length < 2) return null;
-    return msg;
-  }, [messages, dismissedPanelIds]);
   const [chatsCollapsed, setChatsCollapsed] = useState(false);
   // Транскриб аудио: загрузка / запись с микрофона
   const [audioUploading, setAudioUploading] = useState(false);
@@ -1150,7 +1135,6 @@ export function ChatMaryPage() {
                       m={m}
                       index={i}
                       isLast={i === messages.length - 1}
-                      suppressInteract={!!floatingMsg}
                       onPickOption={(opt) => send(opt)}
                       onEdit={(newText, idx) => send(newText, { editFromIndex: idx })}
                     />
@@ -1163,13 +1147,6 @@ export function ChatMaryPage() {
             {messages.length > 0 && (
             <div style={{ padding: "12px 24px 18px" }}>
               <div style={{ maxWidth: 760, margin: "0 auto" }}>
-                {floatingMsg ? (
-                  <FloatingOptionsPanel
-                    message={floatingMsg}
-                    onPick={(opt) => send(opt)}
-                    onDismiss={() => setDismissedPanelIds(prev => new Set([...prev, floatingMsg._id]))}
-                  />
-                ) : (
                 <div style={{
                   background: color.white,
                   border: "1px solid rgba(38,38,51,0.12)",
@@ -1270,7 +1247,6 @@ export function ChatMaryPage() {
                     )}
                   </div>
                 </div>
-                )}
               </div>
             </div>
             )}
