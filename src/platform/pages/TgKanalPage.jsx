@@ -1264,15 +1264,32 @@ export default function TgKanalPage() {
                   )}
                   onClick={() => navigate("dept:" + d.id)}
                 />
-                {isOpen && (d.channels || []).map(ch => (
-                  <SideRow
-                    key={ch.id}
-                    label={ch.name}
-                    indent={28}
-                    active={currentPage === ch.page}
-                    onClick={() => navigate(ch.page)}
-                  />
-                ))}
+                {isOpen && (d.channels || []).map(ch => {
+                  const chActive = currentPage === ch.page;
+                  return (
+                    <div
+                      key={ch.id}
+                      onClick={() => navigate(ch.page)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 9,
+                        height: 30,
+                        padding: "0 10px 0 32px",
+                        margin: "1px 8px",
+                        borderRadius: 8,
+                        background: chActive ? cv.userBubble : "transparent",
+                        color: cv.muted,
+                        cursor: "pointer",
+                        transition: transition.fast,
+                        userSelect: "none",
+                      }}
+                      onMouseEnter={e => { if (!chActive) e.currentTarget.style.background = cv.hover; }}
+                      onMouseLeave={e => { if (!chActive) e.currentTarget.style.background = "transparent"; }}
+                    >
+                      <span style={{ display: "flex", color: cv.muted, flexShrink: 0 }}>{ic.bizproc}</span>
+                      <span style={{ fontSize: 12.5, lineHeight: 1.1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ch.name}</span>
+                    </div>
+                  );
+                })}
               </div>
             );
           })}
