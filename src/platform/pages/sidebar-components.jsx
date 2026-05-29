@@ -51,6 +51,89 @@ export function SideRow({ icon, label, active, indent = 0, trailing, onClick, we
   );
 }
 
+// ── Меню профиля (всплывает над полем профиля) ──────────────
+export function ProfileMenu({ dark, toggleDark, notif, setNotif, onSettings, onHelp, onClose }) {
+  const Item = ({ label, onClick, danger }) => {
+    const [h, setH] = useState(false);
+    return (
+      <div onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
+        style={{
+          display: "flex", alignItems: "center", height: 36, padding: "0 12px",
+          margin: "0 6px", borderRadius: 8, cursor: "pointer",
+          fontSize: 13, fontWeight: 460,
+          color: danger ? "#e5484d" : cv.text,
+          background: h ? (danger ? "rgba(229,72,77,0.08)" : cv.hover) : "transparent",
+          transition: transition.fast,
+        }}>{label}</div>
+    );
+  };
+  return (
+    <div style={{
+      position: "absolute", bottom: "100%", left: 8, right: 8, marginBottom: 4,
+      background: cv.bg, border: `1px solid ${cv.border}`, borderRadius: 12,
+      boxShadow: "0 12px 32px rgba(38,38,51,0.16)", zIndex: 50,
+      padding: "6px 0", overflow: "hidden",
+    }}>
+      {/* Шапка */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 14px 10px" }}>
+        <div style={{
+          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          background: "linear-gradient(135deg,#6b6bff,#a36bff)",
+          color: "#fff", fontSize: 12.5, fontWeight: 600,
+        }}>ВА</div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: cv.text, lineHeight: 1.2,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Виктория Ахрамович</div>
+          <div style={{ fontSize: 11, color: cv.muted, lineHeight: 1.2, marginTop: 1 }}>vikahramovich02@gmail.com</div>
+        </div>
+      </div>
+
+      {/* Тема — сегмент */}
+      <div style={{ display: "flex", gap: 4, margin: "2px 6px 6px", padding: 3,
+        background: cv.hover, borderRadius: 9 }}>
+        {[["Светлая", false], ["Тёмная", true]].map(([lbl, isDark]) => {
+          const active = dark === isDark;
+          return (
+            <button key={lbl} onClick={() => { if (dark !== isDark) toggleDark(); }}
+              style={{
+                flex: 1, height: 28, border: "none", borderRadius: 7, cursor: "pointer",
+                fontSize: 12, fontWeight: 500, fontFamily: "inherit",
+                background: active ? cv.bg : "transparent",
+                color: active ? cv.text : cv.muted,
+                boxShadow: active ? "0 1px 3px rgba(38,38,51,0.12)" : "none",
+                transition: transition.fast,
+              }}>{lbl}</button>
+          );
+        })}
+      </div>
+
+      {/* Уведомления + переключатель */}
+      <div style={{ display: "flex", alignItems: "center", height: 36, padding: "0 12px",
+        margin: "0 6px", borderRadius: 8, fontSize: 13, fontWeight: 460, color: cv.text }}>
+        <span style={{ flex: 1 }}>Уведомления</span>
+        <button onClick={() => setNotif(v => !v)}
+          style={{
+            width: 36, height: 20, borderRadius: 20, border: "none", cursor: "pointer", padding: 0,
+            background: notif ? "#6b6bff" : cv.border, position: "relative", transition: transition.fast,
+          }}>
+          <span style={{
+            position: "absolute", top: 2, left: notif ? 18 : 2, width: 16, height: 16,
+            borderRadius: "50%", background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.2)",
+            transition: transition.fast,
+          }} />
+        </button>
+      </div>
+
+      <Item label="Настройки" onClick={onSettings} />
+      <Item label="Помощь" onClick={onHelp} />
+
+      <div style={{ height: 1, background: cv.border, margin: "6px 0" }} />
+      <Item label="Выйти" danger onClick={onClose} />
+    </div>
+  );
+}
+
 export function SectionHeader({ label, action }) {
   return (
     <div style={{

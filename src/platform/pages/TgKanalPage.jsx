@@ -24,7 +24,7 @@ import { FlowNode, AgentFlowCanvas, FlowNodeEditor, pipelineToFlow } from "./age
 import { AgentSettingsView, SettingRow, AgentJobDescription } from "./agent-settings.jsx";
 import { DepartmentSandbox, AgentBottomPanel, SandboxPanel } from "./agent-view.jsx";
 import { IntegrationsPage, IntegrationCard } from "./integrations-page.jsx";
-import { MaryLogo, SideRow, SectionHeader, PipelineItem, AgentCard, CardToolBtn } from "./sidebar-components.jsx";
+import { MaryLogo, SideRow, SectionHeader, PipelineItem, AgentCard, CardToolBtn, ProfileMenu } from "./sidebar-components.jsx";
 import { KbPopup, AddKbPopup, TextViewerPopup } from "./kb-content.jsx";
 import { PeopleContent, ProfilePopup, SendMessagePopup, IntegrationsContent } from "./people-content.jsx";
 import { AgentsContent, AgentDetail, KbPage, KbTreeRow, KbCard } from "./agents-content.jsx";
@@ -901,9 +901,11 @@ export default function TgKanalPage() {
   const { dark, toggle: toggleDark } = useTheme();
   const [smmOpen, setSmmOpen] = useState(true);
   const [currentPage, setCurrentPage] = useState(
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("page") || "tg-kanal"
+    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("page") || "chat-mary"
   ); // "tg-kanal" | "kb" | "integrations" | "tasks" | "chat-mary" | "home" | "inbox" | "team" | "bizproc" | "settings"
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [profileMenu, setProfileMenu] = useState(false);
+  const [notif, setNotif] = useState(true);
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < 768);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   useEffect(() => {
@@ -1225,36 +1227,51 @@ export default function TgKanalPage() {
           <SideRow icon={ic.settings} label="Настройки" active={currentPage === "settings"} onClick={() => navigate("settings")} />
         </div>
 
-        {/* Профиль пользователя */}
-        <div
-          onClick={() => navigate("settings")}
-          style={{
-            display: "flex", alignItems: "center", gap: 11,
-            padding: "12px 16px",
-            margin: "0 8px 8px",
-            borderRadius: 10,
-            borderTop: `1px solid ${cv.border}`,
-            cursor: "pointer",
-            transition: transition.fast,
-          }}
-          onMouseEnter={e => { e.currentTarget.style.background = cv.hover; }}
-          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-        >
-          <div style={{
-            width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "linear-gradient(135deg,#6b6bff,#a36bff)",
-            color: "#fff", fontSize: 13.5, fontWeight: 600, letterSpacing: 0.2,
-          }}>ВА</div>
-          <div style={{ minWidth: 0, flex: 1 }}>
+        {/* Профиль пользователя + меню */}
+        <div style={{ position: "relative" }}>
+          {profileMenu && (
+            <>
+              <div onClick={() => setProfileMenu(false)}
+                style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+              <ProfileMenu
+                dark={dark} toggleDark={toggleDark}
+                notif={notif} setNotif={setNotif}
+                onSettings={() => { setProfileMenu(false); navigate("settings"); }}
+                onHelp={() => { setProfileMenu(false); navigate("help"); }}
+                onClose={() => setProfileMenu(false)}
+              />
+            </>
+          )}
+          <div
+            onClick={() => setProfileMenu(v => !v)}
+            style={{
+              display: "flex", alignItems: "center", gap: 9,
+              padding: "7px 10px",
+              margin: "4px 8px 8px",
+              borderRadius: 9,
+              cursor: "pointer",
+              transition: transition.fast,
+              background: profileMenu ? cv.hover : "transparent",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = cv.hover; }}
+            onMouseLeave={e => { if (!profileMenu) e.currentTarget.style.background = "transparent"; }}
+          >
             <div style={{
-              fontSize: 13.5, fontWeight: 550, color: cv.text, lineHeight: 1.2,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>Виктория Ахрамович</div>
-            <div style={{
-              fontSize: 11.5, color: cv.muted, lineHeight: 1.2, marginTop: 1,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            }}>Администратор</div>
+              width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "linear-gradient(135deg,#6b6bff,#a36bff)",
+              color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: 0.2,
+            }}>ВА</div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{
+                fontSize: 12.5, fontWeight: 550, color: cv.text, lineHeight: 1.2,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>Виктория Ахрамович</div>
+              <div style={{
+                fontSize: 10.5, color: cv.muted, lineHeight: 1.2, marginTop: 1,
+                overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>Администратор</div>
+            </div>
           </div>
         </div>
       </aside>
