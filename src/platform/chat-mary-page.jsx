@@ -870,7 +870,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
                 onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-              >{ic.collapse}</button>
+              >{ic.panel}</button>
               <div style={{ display: "flex", gap: 4 }}>
                 <button
                   onClick={() => setSearchOpen(true)}
@@ -1105,11 +1105,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-                  >
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-                    </svg>
-                  </button>
+                  >{ic.panel}</button>
                 )}
                 <span style={{ fontSize: 14, fontWeight: 510, color: cv.text }}>
                   {demoMode
