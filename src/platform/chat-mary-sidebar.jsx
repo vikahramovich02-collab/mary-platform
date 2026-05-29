@@ -59,10 +59,10 @@ export function ChatWelcome({ onSuggest, children }) {
       width: "100%", maxWidth: 760, margin: "0 auto",
       padding: "20px 24px",
     }}>
-      <img
-        src="/icons/mary-puppy.png"
-        alt="Mary"
-        style={{ width: 130, height: 130, objectFit: "contain", flexShrink: 0 }}
+      <video
+        src="/mary-hero.mp4"
+        autoPlay loop muted playsInline
+        style={{ width: 140, height: 140, objectFit: "cover", borderRadius: 28, flexShrink: 0 }}
       />
       <div style={{
         textAlign: "center",
