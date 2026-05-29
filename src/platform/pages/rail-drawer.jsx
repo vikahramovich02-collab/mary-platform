@@ -89,11 +89,10 @@ export function RailItem({ icon, label, active, onClick }) {
         <span style={{
           position: "absolute", right: "100%", top: "50%", transform: "translateY(-50%)",
           marginRight: 10,
-          background: "#2C2C38", color: "#fff",
+          background: "#8A8A94", color: "#fff",
           fontSize: 12, fontWeight: 500, lineHeight: 1, whiteSpace: "nowrap",
           padding: "7px 10px", borderRadius: 8,
           pointerEvents: "none", zIndex: 100,
-          boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
         }}>{label}</span>
       )}
     </div>
