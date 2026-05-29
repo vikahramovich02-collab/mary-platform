@@ -1192,7 +1192,7 @@ export default function TgKanalPage() {
               <div key={d.id}>
                 <SideRow
                   icon={
-                    <span style={{ display: "flex", color: d.color }}>
+                    <span style={{ display: "flex", color: cv.text }}>
                       {ic.paw}
                     </span>
                   }
