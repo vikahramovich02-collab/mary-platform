@@ -30,6 +30,7 @@ import { PeopleContent, ProfilePopup, SendMessagePopup, IntegrationsContent } fr
 import { AgentsContent, AgentDetail, KbPage, KbTreeRow, KbCard } from "./agents-content.jsx";
 import { RightRail, RailItem, RailDrawer, TasksContent, FilesContent } from "./rail-drawer.jsx";
 import { DepartmentOverviewPage } from "./dept-overview.jsx";
+import { CrmPage } from "./crm-page.jsx";
 
 // Реплика экрана Figma node 5522:2547 (file: o1syNp93H3v2dyA3JHp4em — Mary)
 // Сабпейдж "Тг-канал" в отделе "СММ".
@@ -46,6 +47,7 @@ const ic = {
   depts:        <P src="/icons/icon_main-5.png" />,
   people:       <P src="/icons/icon_main-6.png" />,
   tasks:        <P src="/icons/icon_main-7.png" />,
+  crm:          <I d={<><path d="M3 13a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" /><path d="M15 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" /></>} />,
   kb:           <P src="/icons/icon_main-8.png" />,
   integrations: <P src="/icons/icon_main-9.png" />,
   hr:           <P src="/icons/icon_main-3.png" />,
@@ -1131,6 +1133,7 @@ export default function TgKanalPage() {
           ) : null} />
 
         <SectionHeader label="Компания" />
+        <SideRow icon={ic.crm}          label="CRM" active={currentPage === "crm"} onClick={() => navigate("crm")} />
         <SideRow icon={ic.people}       label="Команда" active={currentPage === "team"} onClick={() => navigate("team")} />
         <SideRow
           icon={ic.tasks}
@@ -1211,7 +1214,7 @@ export default function TgKanalPage() {
           <SideRow icon={ic.settings} label="Настройки" active={currentPage === "settings"} onClick={() => navigate("settings")} />
         </div>
       </aside>
-      )}
+      ) : null}
 
       {/* ── Main: канвас / БЗ / Интеграции ────────────── */}
       <main style={{
@@ -1276,6 +1279,8 @@ export default function TgKanalPage() {
           <HomePage onNavigate={setCurrentPage} />
         ) : currentPage === "inbox" ? (
           <InboxPage onNavigate={setCurrentPage} />
+        ) : currentPage === "crm" ? (
+          <CrmPage />
         ) : currentPage === "team" ? (
           <TeamPage />
         ) : currentPage === "bizproc" ? (
