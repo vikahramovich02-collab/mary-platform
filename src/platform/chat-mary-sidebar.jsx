@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { color, transition, cv } from "../ui/tokens.js";
 import { I } from "./icons.jsx";
 
-export function ChatWelcome({ onSuggest, children }) {
+export function ChatWelcome({ onSuggest, onDemo, children }) {
   const [sel, setSel] = useState(0);
   const quickActions = [
     {
@@ -105,6 +105,26 @@ export function ChatWelcome({ onSuggest, children }) {
             </button>
           );
         })}
+        {onDemo && (
+          <button
+            onClick={onDemo}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 7,
+              height: 36, padding: "0 14px",
+              background: "transparent",
+              border: "none", borderRadius: 18,
+              fontSize: 14, fontWeight: 500, color: cv.muted,
+              cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = cv.hover; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+          >
+            <span style={{ display: "inline-flex", color: cv.muted }}>
+              <I d={<><path d="M12 3l2.1 4.3 4.7.7-3.4 3.3.8 4.7-4.2-2.2-4.2 2.2.8-4.7L5.2 8l4.7-.7L12 3z" /></>} size={15} />
+            </span>
+            <span>Демо</span>
+          </button>
+        )}
       </div>
 
       {/* Быстрые запросы выбранной категории */}
