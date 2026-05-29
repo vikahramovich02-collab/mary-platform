@@ -1174,6 +1174,8 @@ export function ChatMaryPage({ dark, toggleDark }) {
             <div style={{
               flex: 1, overflowY: "auto", padding: "16px 0 4px",
               display: "flex", flexDirection: "column",
+              backgroundImage: "radial-gradient(var(--dot) 1px, transparent 1px)",
+              backgroundSize: "22px 22px",
             }}>
               {messages.length === 0 ? (
                 <ChatWelcome

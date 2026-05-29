@@ -3,33 +3,55 @@ import { color, transition, cv } from "../ui/tokens.js";
 import { I } from "./icons.jsx";
 
 export function ChatWelcome({ onSuggest, children }) {
+  const [sel, setSel] = useState(0);
   const quickActions = [
     {
       label: "Запустить пайплайн",
-      prompt: "запусти агентов",
-      icon: <I d={<><polygon points="6 4 19 12 6 20 6 4" /></>} size={14} />,
+      icon: <I d={<><polygon points="6 4 19 12 6 20 6 4" /></>} size={15} />,
+      prompts: [
+        "Запусти всех агентов СММ-отдела и собери сводный отчёт",
+        "Прогони пайплайн: ресёрч → черновики постов → публикация",
+        "Покажи статус текущих пайплайнов и где сейчас затык",
+      ],
     },
     {
       label: "Автоматизировать отдел",
-      prompt: "Помоги автоматизировать отдел",
-      icon: <I d={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></>} size={14} />,
+      icon: <I d={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></>} size={15} />,
+      prompts: [
+        "Помоги автоматизировать рутину в отделе продаж",
+        "Собери воркфлоу: заявка → квалификация → задача менеджеру",
+        "Какие процессы в отделе можно отдать агентам?",
+      ],
     },
     {
       label: "Поставить задачу",
-      prompt: "Помоги поставить задачу",
-      icon: <I d={<><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>} size={14} />,
+      icon: <I d={<><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>} size={15} />,
+      prompts: [
+        "Поставь задачу дизайнеру: баннер к акции на пятницу",
+        "Создай задачу и назначь ответственного из команды",
+        "Разбей большой проект на задачи с дедлайнами",
+      ],
     },
     {
       label: "Найти документ",
-      prompt: "Найди документ в базе знаний",
-      icon: <I d={<><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>} size={14} />,
+      icon: <I d={<><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></>} size={15} />,
+      prompts: [
+        "Найди в базе знаний регламент по отпускам",
+        "Покажи последние загруженные документы",
+        "Найди презентацию по продукту за этот квартал",
+      ],
     },
     {
       label: "Идеи постов",
-      prompt: "Предложи идеи постов на основе свежего ресёрча",
-      icon: <I d={<><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z" /></>} size={14} />,
+      icon: <I d={<><path d="M9 18h6" /><path d="M10 22h4" /><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1V18h6v-1.2c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2z" /></>} size={15} />,
+      prompts: [
+        "Предложи 5 идей постов на основе свежего ресёрча",
+        "Дай контент-план для ТГ-канала на неделю",
+        "Придумай посты под текущие тренды в нашей нише",
+      ],
     },
   ];
+  const arrow = <I d={<><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></>} size={16} stroke={1.6} />;
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
@@ -55,27 +77,55 @@ export function ChatWelcome({ onSuggest, children }) {
         </div>
       )}
 
+      {/* Категории */}
       <div style={{
-        display: "flex", flexWrap: "wrap", gap: 8,
+        display: "flex", flexWrap: "wrap", gap: 4,
         justifyContent: "center", marginTop: 4,
       }}>
-        {quickActions.map((a, i) => (
+        {quickActions.map((a, i) => {
+          const active = sel === i;
+          return (
+            <button
+              key={i}
+              onClick={() => setSel(i)}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                height: 36, padding: "0 14px",
+                background: active ? cv.hover : "transparent",
+                border: "none", borderRadius: 18,
+                fontSize: 14, fontWeight: active ? 600 : 500,
+                color: active ? cv.text : cv.muted,
+                cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
+              }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = cv.hover; }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+            >
+              <span style={{ display: "inline-flex", color: active ? cv.text : cv.muted }}>{a.icon}</span>
+              <span>{a.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Быстрые запросы выбранной категории */}
+      <div style={{ width: "100%", maxWidth: 640, display: "flex", flexDirection: "column", gap: 2 }}>
+        {quickActions[sel].prompts.map((p, i) => (
           <button
             key={i}
-            onClick={() => onSuggest(a.prompt)}
+            onClick={() => onSuggest(p)}
             style={{
-              display: "inline-flex", alignItems: "center", gap: 7,
-              height: 38, padding: "0 14px",
-              background: "transparent",
-              border: "none", borderRadius: 10,
-              fontSize: 14, fontWeight: 500, color: cv.text,
+              display: "flex", alignItems: "center", gap: 14,
+              width: "100%", textAlign: "left",
+              padding: "12px 14px",
+              background: "transparent", border: "none", borderRadius: 10,
+              fontSize: 15, fontWeight: 450, color: cv.text,
               cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
             }}
             onMouseEnter={e => { e.currentTarget.style.background = cv.hover; }}
             onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
           >
-            <span style={{ display: "inline-flex", color: cv.muted }}>{a.icon}</span>
-            <span>{a.label}</span>
+            <span style={{ display: "inline-flex", color: cv.muted, flexShrink: 0 }}>{arrow}</span>
+            <span>{p}</span>
           </button>
         ))}
       </div>
