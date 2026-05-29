@@ -90,8 +90,8 @@ export function RailItem({ icon, label, active, onClick }) {
           position: "absolute", right: "100%", top: "50%", transform: "translateY(-50%)",
           marginRight: 10,
           background: "#8A8A94", color: "#fff",
-          fontSize: 12, fontWeight: 500, lineHeight: 1, whiteSpace: "nowrap",
-          padding: "7px 10px", borderRadius: 8,
+          fontSize: 11, fontWeight: 500, lineHeight: 1, whiteSpace: "nowrap",
+          padding: "4px 8px", borderRadius: 6,
           pointerEvents: "none", zIndex: 100,
         }}>{label}</span>
       )}
