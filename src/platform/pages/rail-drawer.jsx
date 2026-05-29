@@ -52,7 +52,7 @@ export function RightRail({ activeRail, onSelect, chatSideActive, onToggleChatSi
       borderLeft: "1px solid rgba(38,38,51,0.06)",
       display: "flex", flexDirection: "column", alignItems: "center",
       padding: "16px 0",
-      gap: 6,
+      gap: 4,
     }}>
       {items.map(it => (
         <RailItem
@@ -82,14 +82,26 @@ export function RailItem({ icon, label, active, onClick }) {
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
       style={{
-        display: "flex", flexDirection: "column", alignItems: "center", gap: 5,
-        padding: "8px 6px", width: 50, borderRadius: 10,
-        background: active ? "rgba(38,38,51,0.05)" : h ? "rgba(38,38,51,0.03)" : "transparent",
+        position: "relative",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        width: 38, height: 38, borderRadius: 9,
+        color: "#262633",
+        background: active ? "rgba(38,38,51,0.07)" : h ? "rgba(38,38,51,0.04)" : "transparent",
         cursor: "pointer", transition: transition.fast,
       }}
     >
-      <span style={{ display: "flex", color: "#262633" }}>{icon}</span>
-      <span style={{ fontSize: 11, color: "#262633", lineHeight: 1.1 }}>{label}</span>
+      <span style={{ display: "flex" }}>{icon}</span>
+      {h && (
+        <span style={{
+          position: "absolute", right: "100%", top: "50%", transform: "translateY(-50%)",
+          marginRight: 10,
+          background: "#2C2C38", color: "#fff",
+          fontSize: 12, fontWeight: 500, lineHeight: 1, whiteSpace: "nowrap",
+          padding: "7px 10px", borderRadius: 8,
+          pointerEvents: "none", zIndex: 100,
+          boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
+        }}>{label}</span>
+      )}
     </div>
   );
 }
