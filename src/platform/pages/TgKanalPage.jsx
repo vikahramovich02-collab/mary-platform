@@ -155,6 +155,37 @@ const ic = {
   ),
 };
 
+// Кнопка свёрнутого сайдбара (icon-rail)
+function RailBtn({ icon, label, active, onClick, badge }) {
+  const [h, setH] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      onMouseEnter={() => setH(true)}
+      onMouseLeave={() => setH(false)}
+      style={{
+        position: "relative",
+        width: 36, height: 36, flexShrink: 0,
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
+        color: cv.text,
+        background: active ? cv.userBubble : h ? cv.hover : "transparent",
+        transition: transition.fast,
+      }}
+    >
+      <span style={{ display: "flex" }}>{icon}</span>
+      {badge && (
+        <span style={{
+          position: "absolute", top: 7, right: 7,
+          width: 7, height: 7, borderRadius: "50%", background: "#FF3B30",
+          border: `1.5px solid ${cv.bg}`,
+        }} />
+      )}
+    </button>
+  );
+}
+
 function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDockedHeightChange, onOpenChat, onCloseChat, activeFilter, onFilter, onAgentChat, onAgentSettings, selectedAgentId, pendingMaryMessage, onPendingConsumed, taskFlow, onTaskFlowChange, onAddTask, onOpenTasks, deptName, channelName, deptId, dept, onDrillChange }) {
   const [dynamicAgents, setDynamicAgents] = useState([]);
   const activeAgents = useMemo(() => {
@@ -1079,24 +1110,50 @@ export default function TgKanalPage() {
       {/* ── Sidebar (desktop only) ────────────────────── */}
       {!isMobile && sidebarCollapsed ? (
         <div style={{
-          width: 44, minWidth: 44,
+          width: 52, minWidth: 52,
           background: cv.bg,
           borderRight: `1px solid ${cv.border}`,
           display: "flex", flexDirection: "column", alignItems: "center",
-          padding: "16px 0",
+          height: "100vh", overflow: "hidden",
         }}>
-          <button
-            onClick={() => setSidebarCollapsed(false)}
-            title="Раскрыть сайдбар"
-            style={{
-              width: 32, height: 32,
-              display: "inline-flex", alignItems: "center", justifyContent: "center",
-              background: "transparent", border: "none", borderRadius: 7,
-              color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "rgba(38,38,51,0.05)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-          >{ic.arrowsRight}</button>
+          {/* Раскрыть */}
+          <div style={{ padding: "16px 0 8px" }}>
+            <RailBtn icon={ic.arrowsRight} label="Раскрыть сайдбар" onClick={() => setSidebarCollapsed(false)} />
+          </div>
+
+          {/* Главное меню */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <RailBtn icon={ic.home}  label="Главная"     active={currentPage === "home"}      onClick={() => navigate("home")} />
+            <RailBtn icon={ic.chat}  label="Чат Mary"    active={currentPage === "chat-mary"} onClick={() => navigate("chat-mary")} />
+            <RailBtn icon={ic.inbox} label="Входящие"    active={currentPage === "inbox"}     onClick={() => navigate("inbox")} badge={inboxUnreadCount > 0} />
+            <RailBtn icon={ic.staff} label="Сотрудники"  active={currentPage === "staff"}     onClick={() => navigate("staff")} />
+            <RailBtn icon={ic.people} label="Команда"    active={currentPage === "team"}      onClick={() => navigate("team")} />
+            <RailBtn icon={ic.tasks} label="Задачи"      active={currentPage === "tasks"}     onClick={() => navigate("tasks")} />
+            <RailBtn icon={ic.kb}    label="База знаний"  active={currentPage === "kb"}        onClick={() => navigate("kb")} />
+            <RailBtn icon={ic.integrations} label="Интеграции" active={currentPage === "integrations"} onClick={() => navigate("integrations")} />
+          </div>
+
+          {/* Отделы (скролл) */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 2, padding: "8px 0", marginTop: 4, borderTop: `1px solid ${cv.border}` }}>
+            {departments.map(d => (
+              <RailBtn key={d.id} icon={ic.paw} label={d.name} active={currentPage === "dept:" + d.id} onClick={() => navigate("dept:" + d.id)} />
+            ))}
+          </div>
+
+          {/* Низ */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "8px 0 14px", borderTop: `1px solid ${cv.border}`, width: "100%" }}>
+            <RailBtn icon={ic.settings} label="Настройки" active={currentPage === "settings"} onClick={() => navigate("settings")} />
+            <div
+              onClick={() => setSidebarCollapsed(false)}
+              title="Виктория Ахрамович"
+              style={{
+                width: 26, height: 26, borderRadius: "50%", flexShrink: 0, cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "linear-gradient(135deg,#6b6bff,#a36bff)",
+                color: "#fff", fontSize: 10.5, fontWeight: 600, letterSpacing: 0.2,
+              }}
+            >ВА</div>
+          </div>
         </div>
       ) : !isMobile ? (
       <aside style={{
