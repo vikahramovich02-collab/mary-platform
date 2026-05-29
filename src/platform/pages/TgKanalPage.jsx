@@ -1224,6 +1224,39 @@ export default function TgKanalPage() {
           <SideRow icon={ic.support}  label="Поддержка" active={currentPage === "support"} onClick={() => navigate("support")} />
           <SideRow icon={ic.settings} label="Настройки" active={currentPage === "settings"} onClick={() => navigate("settings")} />
         </div>
+
+        {/* Профиль пользователя */}
+        <div
+          onClick={() => navigate("settings")}
+          style={{
+            display: "flex", alignItems: "center", gap: 11,
+            padding: "12px 16px",
+            margin: "0 8px 8px",
+            borderRadius: 10,
+            borderTop: `1px solid ${cv.border}`,
+            cursor: "pointer",
+            transition: transition.fast,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = cv.hover; }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: "50%", flexShrink: 0,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(135deg,#6b6bff,#a36bff)",
+            color: "#fff", fontSize: 13.5, fontWeight: 600, letterSpacing: 0.2,
+          }}>ВА</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{
+              fontSize: 13.5, fontWeight: 550, color: cv.text, lineHeight: 1.2,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>Виктория Ахрамович</div>
+            <div style={{
+              fontSize: 11.5, color: cv.muted, lineHeight: 1.2, marginTop: 1,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>Администратор</div>
+          </div>
+        </div>
       </aside>
       ) : null}
 
