@@ -1273,7 +1273,7 @@ export default function TgKanalPage() {
                       style={{
                         display: "flex", alignItems: "center", gap: 9,
                         height: 30,
-                        padding: "0 10px 0 32px",
+                        padding: "0 10px 0 10px",
                         margin: "1px 8px",
                         borderRadius: 8,
                         background: chActive ? cv.userBubble : "transparent",
