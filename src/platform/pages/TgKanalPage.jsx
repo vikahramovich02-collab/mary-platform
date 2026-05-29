@@ -1221,7 +1221,7 @@ export default function TgKanalPage() {
           })}
         </div>
 
-        <div style={{ paddingBottom: 14, borderTop: "1px solid rgba(38,38,51,0.04)", paddingTop: 6 }}>
+        <div style={{ paddingBottom: 4, paddingTop: 6 }}>
           <SideRow icon={ic.help}     label="Помощь" active={currentPage === "help"} onClick={() => navigate("help")} />
           <SideRow icon={ic.support}  label="Поддержка" active={currentPage === "support"} onClick={() => navigate("support")} />
           <SideRow icon={ic.settings} label="Настройки" active={currentPage === "settings"} onClick={() => navigate("settings")} />
@@ -1245,10 +1245,10 @@ export default function TgKanalPage() {
           <div
             onClick={() => setProfileMenu(v => !v)}
             style={{
-              display: "flex", alignItems: "center", gap: 9,
-              padding: "7px 10px",
-              margin: "4px 8px 8px",
-              borderRadius: 9,
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "5px 8px",
+              margin: "2px 8px 8px",
+              borderRadius: 8,
               cursor: "pointer",
               transition: transition.fast,
               background: profileMenu ? cv.hover : "transparent",
@@ -1257,18 +1257,18 @@ export default function TgKanalPage() {
             onMouseLeave={e => { if (!profileMenu) e.currentTarget.style.background = "transparent"; }}
           >
             <div style={{
-              width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+              width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "linear-gradient(135deg,#6b6bff,#a36bff)",
-              color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: 0.2,
+              color: "#fff", fontSize: 10.5, fontWeight: 600, letterSpacing: 0.2,
             }}>ВА</div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{
-                fontSize: 12.5, fontWeight: 550, color: cv.text, lineHeight: 1.2,
+                fontSize: 12, fontWeight: 550, color: cv.text, lineHeight: 1.2,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>Виктория Ахрамович</div>
               <div style={{
-                fontSize: 10.5, color: cv.muted, lineHeight: 1.2, marginTop: 1,
+                fontSize: 10, color: cv.muted, lineHeight: 1.2, marginTop: 1,
                 overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
               }}>Администратор</div>
             </div>
