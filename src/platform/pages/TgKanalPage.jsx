@@ -69,12 +69,13 @@ const ic = {
   arrowsLeft:  <I d={<><path d="M11 17l-5-5 5-5" /><path d="M18 17l-5-5 5-5" /></>} size={17} stroke={1.8} />,
   arrowsRight: <I d={<><path d="M13 17l5-5-5-5" /><path d="M6 17l5-5-5-5" /></>} size={17} stroke={1.8} />,
   paw: (
-    <svg width={14} height={14} viewBox="0 0 24 24" fill="currentColor">
-      <ellipse cx="12" cy="15.8" rx="4.8" ry="4" />
-      <circle cx="5.8" cy="10.6" r="2" />
-      <circle cx="9.8" cy="6.9" r="2" />
-      <circle cx="14.2" cy="6.9" r="2" />
-      <circle cx="18.2" cy="10.6" r="2" />
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      <ellipse cx="12" cy="15.7" rx="4.6" ry="3.8" />
+      <ellipse cx="5.7" cy="10.5" rx="1.9" ry="2.3" />
+      <ellipse cx="9.9" cy="6.8" rx="1.9" ry="2.3" />
+      <ellipse cx="14.1" cy="6.8" rx="1.9" ry="2.3" />
+      <ellipse cx="18.3" cy="10.5" rx="1.9" ry="2.3" />
     </svg>
   ),
   // Робот для карточек агентов (цвет наследуется → меняется per-агент)
