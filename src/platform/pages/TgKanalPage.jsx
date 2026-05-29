@@ -157,20 +157,25 @@ const ic = {
 
 // Кнопка свёрнутого сайдбара (icon-rail)
 function RailBtn({ icon, label, active, onClick, badge }) {
-  const [h, setH] = useState(false);
+  const [tip, setTip] = useState(null);
+  const ref = useRef(null);
+  const show = () => {
+    const r = ref.current?.getBoundingClientRect();
+    if (r) setTip({ top: r.top + r.height / 2, left: r.right + 10 });
+  };
   return (
     <button
+      ref={ref}
       onClick={onClick}
-      title={label}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
+      onMouseEnter={show}
+      onMouseLeave={() => setTip(null)}
       style={{
         position: "relative",
         width: 36, height: 36, flexShrink: 0,
         display: "inline-flex", alignItems: "center", justifyContent: "center",
         border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit",
         color: cv.text,
-        background: active ? cv.userBubble : h ? cv.hover : "transparent",
+        background: active ? cv.userBubble : tip ? cv.hover : "transparent",
         transition: transition.fast,
       }}
     >
@@ -181,6 +186,15 @@ function RailBtn({ icon, label, active, onClick, badge }) {
           width: 7, height: 7, borderRadius: "50%", background: "#FF3B30",
           border: `1.5px solid ${cv.bg}`,
         }} />
+      )}
+      {tip && label && (
+        <span style={{
+          position: "fixed", top: tip.top, left: tip.left, transform: "translateY(-50%)",
+          background: "#8A8A94", color: "#fff",
+          fontSize: 11, fontWeight: 500, lineHeight: 1, whiteSpace: "nowrap",
+          padding: "4px 8px", borderRadius: 6,
+          pointerEvents: "none", zIndex: 1000,
+        }}>{label}</span>
       )}
     </button>
   );
