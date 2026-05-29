@@ -62,7 +62,7 @@ export function ChatWelcome({ onSuggest, children }) {
       <video
         src="/mary-hero.mp4"
         autoPlay loop muted playsInline
-        style={{ width: 140, height: 140, objectFit: "cover", borderRadius: 28, flexShrink: 0 }}
+        style={{ width: 240, height: 240, objectFit: "contain", flexShrink: 0, mixBlendMode: "multiply" }}
       />
       <div style={{
         textAlign: "center",
