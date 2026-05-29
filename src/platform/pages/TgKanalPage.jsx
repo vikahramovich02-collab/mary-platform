@@ -30,7 +30,7 @@ import { PeopleContent, ProfilePopup, SendMessagePopup, IntegrationsContent } fr
 import { AgentsContent, AgentDetail, KbPage, KbTreeRow, KbCard } from "./agents-content.jsx";
 import { RightRail, RailItem, RailDrawer, TasksContent, FilesContent } from "./rail-drawer.jsx";
 import { DepartmentOverviewPage } from "./dept-overview.jsx";
-import { CrmPage } from "./crm-page.jsx";
+import { StaffPage } from "./staff-page.jsx";
 
 // Реплика экрана Figma node 5522:2547 (file: o1syNp93H3v2dyA3JHp4em — Mary)
 // Сабпейдж "Тг-канал" в отделе "СММ".
@@ -47,7 +47,7 @@ const ic = {
   depts:        <I d={<><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></>} />,
   people:       <I d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>} />,
   tasks:        <I d={<><rect x="3" y="5" width="6" height="6" rx="1" /><path d="M3 17l2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></>} />,
-  crm:          <I d={<><path d="M3 13a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><path d="M9 9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" /><path d="M15 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z" /></>} />,
+  staff:        <I d={<><rect x="9" y="2" width="6" height="5" rx="1" /><rect x="2" y="16" width="6" height="5" rx="1" /><rect x="16" y="16" width="6" height="5" rx="1" /><path d="M12 7v4M5 16v-2h14v2M12 14v-3" /></>} />,
   kb:           <I d={<><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" /></>} />,
   integrations: <I d={<><path d="M12 22v-5" /><path d="M9 8V2" /><path d="M15 8V2" /><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z" /></>} />,
   hr:           <I d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></>} />,
@@ -1133,7 +1133,7 @@ export default function TgKanalPage() {
           ) : null} />
 
         <SectionHeader label="Компания" />
-        <SideRow icon={ic.crm}          label="CRM" active={currentPage === "crm"} onClick={() => navigate("crm")} />
+        <SideRow icon={ic.staff}        label="Сотрудники" active={currentPage === "staff"} onClick={() => navigate("staff")} />
         <SideRow icon={ic.people}       label="Команда" active={currentPage === "team"} onClick={() => navigate("team")} />
         <SideRow
           icon={ic.tasks}
@@ -1279,8 +1279,8 @@ export default function TgKanalPage() {
           <HomePage onNavigate={setCurrentPage} />
         ) : currentPage === "inbox" ? (
           <InboxPage onNavigate={setCurrentPage} />
-        ) : currentPage === "crm" ? (
-          <CrmPage />
+        ) : currentPage === "staff" ? (
+          <StaffPage />
         ) : currentPage === "team" ? (
           <TeamPage />
         ) : currentPage === "bizproc" ? (
