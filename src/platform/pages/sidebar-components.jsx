@@ -1,12 +1,27 @@
 import { useState, useEffect } from "react";
-import { color, transition, cv } from "../../ui/tokens.js";
+import { color, transition, cv, font } from "../../ui/tokens.js";
 import { ic } from "../icons.jsx";
 import { AGENTS, CARD_W, CARD_H } from "../agents-config.js";
 import { zoomBtn } from "../chat-panel.jsx";
 
-// ── Mary логотип (PNG из брендбука) ─────────────────────────
+// ── Mary логотип (inline SVG — чёткий на любом DPI) ─────────
 export function MaryLogo({ height = 22 }) {
-  return <img src="/brand_logo.png" alt="mary" style={{ height, width: "auto", display: "block" }} />;
+  const mark = height * 1.05;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: height * 0.34, height }}>
+      <svg width={mark} height={mark} viewBox="0 0 24 24" fill={cv.text} style={{ display: "block", flexShrink: 0 }}>
+        <ellipse cx="12" cy="15.6" rx="5" ry="4.2" />
+        <circle cx="5.6" cy="10.4" r="2.1" />
+        <circle cx="9.7" cy="6.7" r="2.1" />
+        <circle cx="14.3" cy="6.7" r="2.1" />
+        <circle cx="18.4" cy="10.4" r="2.1" />
+      </svg>
+      <span style={{
+        fontSize: height * 0.82, fontWeight: 700, letterSpacing: -0.4,
+        color: cv.text, lineHeight: 1, fontFamily: font,
+      }}>mary</span>
+    </div>
+  );
 }
 
 

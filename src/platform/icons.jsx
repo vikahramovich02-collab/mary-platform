@@ -42,7 +42,7 @@ export const ic = {
   chevronUp: <I d={<path d="M6 15l6-6 6 6" />} size={14} stroke={1.8} />,
   plus: <I d={<path d="M12 5v14M5 12h14" />} size={14} stroke={1.9} />,
   collapse: <P src="/icons/streamline-flex_layout-right-sidebar-remix.png" size={18} />,
-  panel: <I d={<><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /></>} size={15} stroke={1.7} />,
+  panel: <I d={<><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M9 3v18" /></>} size={15} stroke={2} />,
   agentBot: (
     <svg width={26} height={26} viewBox="0 0 24 24">
       <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor" />

@@ -1078,7 +1078,7 @@ export default function TgKanalPage() {
       {!isMobile && sidebarCollapsed ? (
         <div style={{
           width: 44, minWidth: 44,
-          background: cv.bgPage,
+          background: cv.bg,
           borderRight: `1px solid ${cv.border}`,
           display: "flex", flexDirection: "column", alignItems: "center",
           padding: "16px 0",
@@ -1099,7 +1099,7 @@ export default function TgKanalPage() {
       ) : !isMobile ? (
       <aside style={{
         width: SIDEBAR_W, minWidth: SIDEBAR_W,
-        background: cv.bgPage,
+        background: cv.bg,
         borderRight: `1px solid ${cv.border}`,
         display: "flex",
         flexDirection: "column",
