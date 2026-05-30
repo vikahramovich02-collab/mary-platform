@@ -491,13 +491,13 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
       onMouseLeave={() => setHover(false)}
     >
       <div style={{ minWidth: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 8 }}>
           <video
             src="/mary-typing.mp4"
             autoPlay loop muted playsInline
-            style={{ width: 34, height: 34, objectFit: "contain", flexShrink: 0, mixBlendMode: "multiply" }}
+            style={{ width: 52, height: 52, objectFit: "contain", flexShrink: 0, mixBlendMode: "multiply" }}
           />
-          <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500 }}>
+          <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, marginLeft: -6 }}>
             {m._streaming ? "Mary печатает.." : "Mary"}
           </span>
         </div>
