@@ -58,10 +58,11 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
     if (next) {
       const [kb, depts] = await Promise.all([
         fetch("/api/mary/kb/files").then(r => r.json()).catch(() => ({ files: [] })),
-        fetch("/api/mary/departments").then(r => r.json()).catch(() => []),
+        fetch("/api/mary/departments").then(r => r.json()).catch(() => ({ departments: [] })),
       ]);
       setAddKb(kb.files || []);
-      setAddDepts(Array.isArray(depts) ? depts : []);
+      const deptList = Array.isArray(depts) ? depts : (depts.departments || []);
+      setAddDepts(deptList);
     }
   };
   // открыть файл из БЗ прямо в панели-просмотрщике

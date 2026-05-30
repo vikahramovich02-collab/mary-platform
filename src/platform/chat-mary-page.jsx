@@ -785,10 +785,11 @@ export function ChatMaryPage({ dark, toggleDark }) {
     setPickerSearch("");
     const [kb, depts] = await Promise.all([
       fetch("/api/mary/kb/files").then(r => r.json()).catch(() => ({ files: [] })),
-      fetch("/api/mary/departments").then(r => r.json()).catch(() => []),
+      fetch("/api/mary/departments").then(r => r.json()).catch(() => ({ departments: [] })),
     ]);
     setPickerKb(kb.files || []);
-    setPickerDepts(Array.isArray(depts) ? depts : []);
+    const deptList = Array.isArray(depts) ? depts : (depts.departments || []);
+    setPickerDepts(deptList);
   };
   const attachResource = (label, content) => {
     const mention = content ? `[${label}]\n${content.slice(0, 1200)}\n` : `[${label}]`;
