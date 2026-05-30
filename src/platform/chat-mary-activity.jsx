@@ -188,7 +188,7 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 7,
             padding: "5px 6px 5px 10px", borderRadius: 8,
-            background: tab === "build" ? "rgba(38,38,51,0.05)" : "transparent",
+            background: "transparent",
           }}>
             <button onClick={() => setTab("build")}
               style={{
