@@ -191,7 +191,8 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 7,
             padding: "5px 6px 5px 10px", borderRadius: 8,
-            background: "transparent",
+            background: color.white, border: `1px solid ${cv.border}`,
+            boxShadow: "0 1px 2px rgba(38,38,51,0.04)",
           }}>
             <button onClick={() => setTab("build")}
               style={{
@@ -222,8 +223,9 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
           style={{
             display: "inline-flex", alignItems: "center", gap: 8,
             padding: "5px 10px",
-            background: "transparent",
-            border: "none", borderRadius: 8,
+            background: color.white,
+            border: `1px solid ${cv.border}`, borderRadius: 8,
+            boxShadow: "0 1px 2px rgba(38,38,51,0.04)",
             fontSize: 12.5, color: tab === "log" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
             cursor: "pointer", fontFamily: "inherit",
           }}
@@ -236,7 +238,8 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
             <div key={a.id} style={{
               display: "inline-flex", alignItems: "center", gap: 4,
               padding: "5px 4px 5px 10px",
-              background: active ? "rgba(38,38,51,0.05)" : "transparent",
+              background: color.white, border: `1px solid ${cv.border}`,
+              boxShadow: "0 1px 2px rgba(38,38,51,0.04)",
               borderRadius: 8,
             }}>
               <button onClick={() => setTab(`art:${a.id}`)}
