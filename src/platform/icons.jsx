@@ -37,7 +37,7 @@ export function deptIcon(d, size = 14) {
   if (has("разраб", "dev", "it", "продукт", "tech", "технич"))
     return <I size={size} d={<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></>} />;
   // fallback — портфель
-  return <I size={size} d={<><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></>} />;
+  return <I size={size} d={<><rect x="2" y="7" width="20" height="14" rx="4" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></>} />;
 }
 
 // Словарь иконок — используется везде в платформе
