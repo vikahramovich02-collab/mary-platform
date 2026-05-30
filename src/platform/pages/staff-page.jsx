@@ -232,14 +232,14 @@ const COL_ICON = {
   due:    sv(<><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>),
 };
 
-const GRID = "1.7fr 1.1fr 1.2fr 0.9fr 1.2fr 0.8fr 0.7fr 0.9fr";
+const GRID = "34px 2fr 1.2fr 1.4fr 1fr 0.7fr 0.8fr 1.15fr";
 
 function Chip({ dot, children }) {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 6,
-      maxWidth: "100%", padding: "2px 9px 2px 8px",
-      background: cv.bgCard, border: `1px solid ${cv.border}`, borderRadius: 6,
+      maxWidth: "100%", padding: "3px 10px",
+      background: cv.bgCard, borderRadius: 6,
       fontSize: 12.5, color: cv.text, whiteSpace: "nowrap",
       overflow: "hidden", textOverflow: "ellipsis",
     }}>
@@ -249,11 +249,26 @@ function Chip({ dot, children }) {
   );
 }
 
+function Check({ on, onClick, dim }) {
+  return (
+    <span onClick={onClick} style={{
+      width: 16, height: 16, borderRadius: 5, flexShrink: 0, cursor: "pointer",
+      display: "inline-flex", alignItems: "center", justifyContent: "center",
+      background: on ? "#262633" : "transparent",
+      border: on ? "none" : `1.5px solid ${dim ? cv.border : cv.borderStrong}`,
+      transition: transition.fast,
+    }}>
+      {on && (
+        <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>
+      )}
+    </span>
+  );
+}
+
 const COLS = [
   { id: "name",   label: "Имя" },
   { id: "dept",   label: "Отдел" },
   { id: "role",   label: "Должность" },
-  { id: "kind",   label: "Тип" },
   { id: "status", label: "Статус" },
   { id: "tasks",  label: "Задач" },
   { id: "overdue",label: "Просроч.", iconId: "tasks" },
@@ -262,14 +277,19 @@ const COLS = [
 
 function TableView({ onPick }) {
   const [sort, setSort] = useState({ col: "load", dir: "desc" });
+  const [sel, setSel] = useState(() => new Set());
   const toggleSort = (col) => setSort(s =>
     s.col === col ? { col, dir: s.dir === "asc" ? "desc" : "asc" } : { col, dir: "asc" });
+  const toggleSel = (id) => setSel(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
 
   const val = (p, col) => {
     if (col === "name") return p.name;
     if (col === "dept") return deptOf(p.dept).name;
     if (col === "role") return p.role;
-    if (col === "kind") return p.kind;
     if (col === "status") return p.status;
     if (col === "tasks") return p.active;
     if (col === "overdue") return p.overdue;
@@ -281,6 +301,8 @@ function TableView({ onPick }) {
     const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv), "ru");
     return sort.dir === "asc" ? cmp : -cmp;
   });
+  const allOn = sel.size === rows.length && rows.length > 0;
+  const toggleAll = () => setSel(allOn ? new Set() : new Set(rows.map(p => p.id)));
 
   const avgLoad = Math.round(STAFF.reduce((s, p) => s + p.load, 0) / STAFF.length);
   const totalActive = STAFF.reduce((s, p) => s + p.active, 0);
@@ -288,17 +310,19 @@ function TableView({ onPick }) {
   const aiCount = STAFF.filter(p => p.kind === "ai").length;
 
   return (
-    <div style={{ border: `1px solid ${cv.border}`, borderRadius: 12, overflow: "hidden", background: cv.bg }}>
+    <div style={{ border: `1px solid ${cv.border}`, borderRadius: 14, overflow: "hidden", background: cv.bg }}>
       {/* Бар вида */}
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "9px 14px", borderBottom: `1px solid ${cv.border}`,
+        padding: "10px 16px", borderBottom: `1px solid ${cv.border}`,
       }}>
         <span style={{ display: "inline-flex", color: cv.muted }}>
           {sv(<><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></>)}
         </span>
-        <span style={{ fontSize: 13.5, fontWeight: 600, color: cv.text }}>Все сотрудники</span>
-        <span style={{ fontSize: 12.5, color: cv.muted }}>· {STAFF.length}</span>
+        <span style={{ fontSize: 13.5, fontWeight: 600, color: cv.text }}>
+          {sel.size > 0 ? `Выбрано ${sel.size}` : "Все сотрудники"}
+        </span>
+        {sel.size === 0 && <span style={{ fontSize: 12.5, color: cv.muted }}>· {STAFF.length}</span>}
         <div style={{ flex: 1 }} />
         {[
           { id: "filter", label: "Фильтр", icon: <><path d="M3 4h18l-7 9v6l-4 2v-8z" /></> },
@@ -322,19 +346,21 @@ function TableView({ onPick }) {
       </div>
 
       <div style={{ overflowX: "auto" }}>
-      <div style={{ minWidth: 880 }}>
+      <div style={{ minWidth: 900 }}>
       {/* Шапка колонок */}
       <div style={{
         display: "grid", gridTemplateColumns: GRID,
-        padding: "0 16px", background: cv.bgCard, borderBottom: `1px solid ${cv.border}`,
+        padding: "0 16px", borderBottom: `1px solid ${cv.border}`,
+        alignItems: "center",
       }}>
+        <span><Check on={allOn} dim={sel.size === 0} onClick={toggleAll} /></span>
         {COLS.map(c => {
           const sorted = sort.col === c.id;
           return (
             <button key={c.id} onClick={() => toggleSort(c.id)}
               style={{
                 display: "inline-flex", alignItems: "center", gap: 7,
-                padding: "9px 0", background: "transparent", border: "none",
+                padding: "10px 0", background: "transparent", border: "none",
                 fontSize: 12, fontWeight: 600, color: sorted ? cv.text : cv.muted,
                 cursor: "pointer", fontFamily: "inherit", textAlign: "left",
                 minWidth: 0,
@@ -353,28 +379,29 @@ function TableView({ onPick }) {
       {/* Строки */}
       {rows.map((p, i) => {
         const d = deptOf(p.dept);
+        const on = sel.has(p.id);
         return (
           <div key={p.id} onClick={() => onPick(p.id)}
             style={{
               display: "grid", gridTemplateColumns: GRID,
-              padding: "8px 16px", alignItems: "center", cursor: "pointer",
+              padding: "10px 16px", alignItems: "center", cursor: "pointer",
               borderTop: i === 0 ? "none" : `1px solid ${cv.border}`,
+              background: on ? "rgba(63,149,255,0.06)" : "transparent",
               transition: transition.fast,
             }}
-            onMouseEnter={e => e.currentTarget.style.background = cv.hover}
-            onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            onMouseEnter={e => { if (!on) e.currentTarget.style.background = cv.hover; }}
+            onMouseLeave={e => { if (!on) e.currentTarget.style.background = "transparent"; }}
           >
+            <span><Check on={on} onClick={(e) => { e.stopPropagation(); toggleSel(p.id); }} /></span>
             <span style={{ display: "inline-flex", alignItems: "center", gap: 10, minWidth: 0 }}>
               <Avatar p={p} size={26} />
-              <span style={{ fontSize: 13, fontWeight: 500, color: cv.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+                <span style={{ fontSize: 13, fontWeight: 500, color: cv.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</span>
+                {p.kind === "ai" && <AiBadge />}
+              </span>
             </span>
             <span style={{ minWidth: 0 }}><Chip dot={d.color}>{d.name}</Chip></span>
-            <span style={{ fontSize: 12.5, color: cv.text, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.role}</span>
-            <span style={{ minWidth: 0 }}>
-              {p.kind === "ai"
-                ? <Chip dot="#8A38F5">AI-агент</Chip>
-                : <Chip dot={p.color}>Сотрудник</Chip>}
-            </span>
+            <span style={{ fontSize: 12.5, color: cv.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.role}</span>
             <span><StatusDot status={p.status} withLabel /></span>
             <span style={{ fontSize: 13, fontWeight: 600, color: cv.text }}>{p.active}</span>
             <span style={{ fontSize: 13, fontWeight: 600, color: p.overdue ? "#FF3B30" : cv.ghost }}>{p.overdue || "—"}</span>
@@ -386,13 +413,13 @@ function TableView({ onPick }) {
       {/* Calculate-футер */}
       <div style={{
         display: "grid", gridTemplateColumns: GRID,
-        padding: "10px 16px", borderTop: `1px solid ${cv.border}`,
-        background: cv.bgCard, fontSize: 12, color: cv.muted,
+        padding: "11px 16px", borderTop: `1px solid ${cv.border}`,
+        fontSize: 12, color: cv.muted, alignItems: "center",
       }}>
-        <span>Всего <b style={{ color: cv.text }}>{STAFF.length}</b></span>
+        <span />
+        <span>Всего <b style={{ color: cv.text }}>{STAFF.length}</b> · AI <b style={{ color: cv.text }}>{aiCount}</b></span>
         <span />
         <span />
-        <span>AI <b style={{ color: cv.text }}>{aiCount}</b></span>
         <span />
         <span>Σ <b style={{ color: cv.text }}>{totalActive}</b></span>
         <span style={{ color: totalOverdue ? "#FF3B30" : cv.muted }}>Σ <b>{totalOverdue}</b></span>

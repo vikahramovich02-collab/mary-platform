@@ -1210,26 +1210,6 @@ export function ChatMaryPage({ dark, toggleDark }) {
             {messages.length > 0 && (
             <div style={{ padding: isMobile ? "8px 16px 16px" : "12px 24px 18px" }}>
               <div style={{ maxWidth: 640, margin: "0 auto" }}>
-                {(() => {
-                  const lastMsg = messages[messages.length - 1];
-                  if (!lastMsg || lastMsg.role === "user" || lastMsg._streaming || lastMsg._toolStatus || lastMsg._quickActions) return null;
-                  const checklist = parseChecklistOptions(lastMsg.text || "");
-                  const numbered = !checklist.options ? parseNumberedOptions(lastMsg.text || "") : null;
-                  const opts = checklist.options || numbered?.options;
-                  if (!opts || opts.length < 2) return null;
-                  const multi = !!checklist.options || (lastMsg._highlights?.length > 1);
-                  return (
-                    <div style={{
-                      marginBottom: 10,
-                      background: color.white,
-                      border: "1px solid rgba(38,38,51,0.12)",
-                      borderRadius: 22,
-                      padding: "6px 8px",
-                    }}>
-                      <OptionsBlock options={opts} multi={multi} onPick={(opt) => send(opt)} highlights={lastMsg._highlights} noTopMargin />
-                    </div>
-                  );
-                })()}
                 <div style={{
                   background: color.white,
                   border: "1px solid rgba(38,38,51,0.12)",
@@ -1237,6 +1217,20 @@ export function ChatMaryPage({ dark, toggleDark }) {
                   padding: "10px 14px",
                   display: "flex", flexDirection: "column", gap: 8,
                 }}>
+                  {(() => {
+                    const lastMsg = messages[messages.length - 1];
+                    if (!lastMsg || lastMsg.role === "user" || lastMsg._streaming || lastMsg._toolStatus || lastMsg._quickActions) return null;
+                    const checklist = parseChecklistOptions(lastMsg.text || "");
+                    const numbered = !checklist.options ? parseNumberedOptions(lastMsg.text || "") : null;
+                    const opts = checklist.options || numbered?.options;
+                    if (!opts || opts.length < 2) return null;
+                    const multi = !!checklist.options || (lastMsg._highlights?.length > 1);
+                    return (
+                      <div style={{ borderBottom: "1px solid rgba(38,38,51,0.08)", paddingBottom: 4, marginBottom: 2 }}>
+                        <OptionsBlock options={opts} multi={multi} onPick={(opt) => send(opt)} highlights={lastMsg._highlights} noTopMargin />
+                      </div>
+                    );
+                  })()}
                   {/* Row 1: input */}
                   <input
                     data-testid="chat-mary-input"
