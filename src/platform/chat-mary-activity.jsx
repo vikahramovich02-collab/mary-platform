@@ -328,7 +328,10 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
       ) : tab.startsWith("art:") ? (
         <ArtifactView artifact={artifacts.find(a => `art:${a.id}` === tab)} />
       ) : tab === "build" && build ? (
-        <BuildCanvas build={build} activeAgentIds={activeAgentIds} />
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          <BuildCanvas build={build} activeAgentIds={activeAgentIds} />
+          <WorkflowLogs build={build} />
+        </div>
       ) : (
         <ActivityLog activity={activity} />
       )}
@@ -481,6 +484,125 @@ export function DocView({ doc, onClose }) {
         ) : (
           <div style={{ fontSize: 13, color: "rgba(38,38,51,0.45)" }}>Файл пустой или не удалось прочитать содержимое.</div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function jsonType(v) {
+  if (Array.isArray(v)) return "array";
+  if (v === null || v === undefined) return "null";
+  return typeof v; // object | string | number | boolean
+}
+
+function JsonTypeBadge({ t }) {
+  const map = {
+    object:  ["rgba(38,38,51,0.07)", "rgba(38,38,51,0.55)"],
+    array:   ["rgba(122,134,255,0.16)", "#7A86FF"],
+    string:  ["rgba(52,199,89,0.16)", "#2Fa84f"],
+    number:  ["rgba(63,149,255,0.16)", "#3F95FF"],
+    boolean: ["rgba(255,139,61,0.18)", "#FF8B3D"],
+    null:    ["rgba(38,38,51,0.07)", "rgba(38,38,51,0.4)"],
+  };
+  const [bg, fg] = map[t] || map.object;
+  return <span style={{ padding: "1px 7px", borderRadius: 999, background: bg, color: fg, fontSize: 10.5, fontWeight: 600 }}>{t}</span>;
+}
+
+function JsonRow({ k, value, depth }) {
+  const t = jsonType(value);
+  const isBranch = (t === "object" && value && Object.keys(value).length > 0) || (t === "array" && value.length > 0);
+  const [open, setOpen] = useState(depth < 1);
+  const entries = t === "array" ? value.map((it, i) => [String(i), it]) : (value ? Object.entries(value) : []);
+  return (
+    <div style={{ paddingLeft: depth ? 12 : 0 }}>
+      <div onClick={isBranch ? () => setOpen(o => !o) : undefined}
+        style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "6px 0",
+          cursor: isBranch ? "pointer" : "default",
+          borderLeft: depth ? "1px solid rgba(38,38,51,0.08)" : "none", paddingLeft: depth ? 10 : 0,
+        }}>
+        {isBranch ? (
+          <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
+            style={{ flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform .15s" }}>
+            <path d="m9 18 6-6-6-6" />
+          </svg>
+        ) : <span style={{ width: 12, flexShrink: 0 }} />}
+        <span style={{ fontSize: 13.5, fontWeight: 550, color: "#262633" }}>{k}</span>
+        <JsonTypeBadge t={t} />
+        {t === "array" && <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)" }}>{value.length} items</span>}
+        {!isBranch && t !== "object" && t !== "array" && (
+          <span style={{ fontSize: 12.5, color: "rgba(38,38,51,0.6)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 240 }}>
+            {String(value)}
+          </span>
+        )}
+      </div>
+      {isBranch && open && (
+        <div>{entries.map(([ck, cvv]) => <JsonRow key={ck} k={ck} value={cvv} depth={depth + 1} />)}</div>
+      )}
+    </div>
+  );
+}
+
+export function WorkflowLogs({ build }) {
+  const DURS = ["34.57s", "1m 3s", "1m 4s", "58s", "1m 12s", "47s"];
+  const steps = [
+    { name: "Start", kind: "start", dur: "24ms", color: "#3F95FF" },
+    ...build.agents.map((a, i) => ({ name: a.role, kind: "agent", dur: DURS[i % DURS.length], color: a.color || "#7A86FF", agent: a })),
+  ];
+  const [sel, setSel] = useState(steps.length - 1);
+  const [io, setIo] = useState("output");
+  const step = steps[Math.min(sel, steps.length - 1)] || steps[0];
+
+  const agentOutput = (a) => ({
+    result: { summary: `${a.role}: ${a.tasks || "шаг выполнен"}`, status: "ok" },
+    items: (a.tasks ? a.tasks.split(/[,;·]/).map(s => s.trim()).filter(Boolean) : ["шаг 1", "шаг 2", "шаг 3"]),
+    meta: { model: "claude-sonnet-4-6", tokens: 1240, retries: 0 },
+  });
+  const agentInput = (a) => ({
+    messages: `Ты — ${a.role}.`,
+    context: { department: build.name, channels: build.channels.length },
+    tools: "—",
+  });
+  const data = step.kind === "start"
+    ? (io === "output" ? { inputs: { company: "—", contact_name: "—" }, started_at: new Date().toISOString() } : { trigger: "manual" })
+    : (io === "output" ? agentOutput(step.agent) : agentInput(step.agent));
+
+  return (
+    <div style={{ height: 240, flexShrink: 0, borderTop: `1px solid ${cv.border}`, display: "flex", background: color.white, borderBottomLeftRadius: 15, borderBottomRightRadius: 15, overflow: "hidden" }}>
+      {/* Logs */}
+      <div style={{ width: "42%", minWidth: 180, borderRight: `1px solid ${cv.border}`, display: "flex", flexDirection: "column" }}>
+        <div style={{ padding: "10px 14px 6px", fontSize: 12.5, fontWeight: 600, color: "#262633" }}>Logs</div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 8px 8px" }}>
+          {steps.map((s, i) => (
+            <button key={i} onClick={() => setSel(i)}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "8px 8px",
+                background: i === sel ? "rgba(38,38,51,0.05)" : "transparent",
+                border: "none", borderRadius: 8, cursor: "pointer", fontFamily: "inherit", textAlign: "left",
+              }}>
+              <span style={{ width: 22, height: 22, borderRadius: 6, background: s.color + "26", color: s.color, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width={13} height={13} viewBox="0 0 24 24"><rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor" /><rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor" /><circle cx="9.3" cy="13" r="1.4" fill="white" /><circle cx="14.7" cy="13" r="1.4" fill="white" /></svg>
+              </span>
+              <span style={{ flex: 1, fontSize: 12.5, fontWeight: 500, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.name}</span>
+              <span style={{ fontSize: 11.5, color: "rgba(38,38,51,0.5)", flexShrink: 0 }}>{s.dur}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* Inspector */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 14px 6px" }}>
+          {["output", "input"].map(t => (
+            <button key={t} onClick={() => setIo(t)}
+              style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", fontFamily: "inherit",
+                fontSize: 12.5, fontWeight: 600, color: io === t ? "#262633" : "rgba(38,38,51,0.4)" }}>
+              {t === "output" ? "Output" : "Input"}
+            </button>
+          ))}
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "2px 14px 12px" }}>
+          {Object.entries(data).map(([k, v]) => <JsonRow key={k} k={k} value={v} depth={0} />)}
+        </div>
       </div>
     </div>
   );
