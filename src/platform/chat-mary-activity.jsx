@@ -3,7 +3,9 @@ import { color, cv } from "../ui/tokens.js";
 import { renderMarkdown } from "./markdown.jsx";
 import { BuildNode, AgentNodeExpanded } from "./build-nodes.jsx";
 
-export function ActivityPanel({ build, activity, currentTool, activeAgentIds, artifacts = [], onCloseArtifact, onClose, docRequest }) {
+export function ActivityPanel({ build: buildProp, activity, currentTool, activeAgentIds, artifacts = [], onCloseArtifact, onClose, docRequest }) {
+  const [localBuild, setLocalBuild] = useState(null); // воркфлоу, открытый из пикера "+"
+  const build = localBuild || buildProp;
   const [tab, setTab] = useState(build ? "build" : "log");
   useEffect(() => { if (build && tab === "log" && activity.length <= 2) setTab("build"); }, [build]);
   const lastArtId = artifacts[artifacts.length - 1]?.id;
@@ -78,7 +80,17 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
   }, [docRequest?.ts]);
   const pickAdd = async (kind, item) => {
     setAddOpen(false); setAddView(null); setAddSearch("");
-    if (kind === "wf") { window.__maryNavigate?.(`dept://${item.id}`); return; }
+    if (kind === "wf") {
+      setLocalBuild({
+        name: item.name,
+        color: item.color,
+        deptId: item.id,
+        channels: item.channels || [],
+        agents: item.agents || [],
+      });
+      setTab("build");
+      return;
+    }
     openKbDoc(item);
   };
   const railBtn = {
@@ -237,7 +249,7 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
               <span style={{ width: 8, height: 8, borderRadius: 2, background: build.color || "#7A86FF", flexShrink: 0 }} />
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{build.name}</span>
             </button>
-            <button onClick={() => setTab("log")} title="Закрыть воркфлоу"
+            <button onClick={() => { setTab("log"); setLocalBuild(null); }} title="Закрыть воркфлоу"
               style={{
                 width: 16, height: 16, padding: 0, flexShrink: 0,
                 background: "transparent", border: "none", borderRadius: 4,
