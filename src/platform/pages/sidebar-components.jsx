@@ -35,7 +35,7 @@ export function SideRow({ icon, label, active, indent = 0, trailing, onClick, we
         padding: `0 10px 0 ${10 + indent}px`,
         margin: "1px 8px",
         borderRadius: 12,
-        background: active ? cv.userBubble : h ? cv.hover : "transparent",
+        background: active ? cv.hover : h ? cv.hover : "transparent",
         color: cv.text,
         cursor: "pointer",
         transition: transition.fast,

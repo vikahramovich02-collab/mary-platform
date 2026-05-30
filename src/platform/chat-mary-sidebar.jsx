@@ -181,7 +181,7 @@ export function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, 
         position: "relative",
         display: "flex", alignItems: "center", gap: 6,
         height: 30, padding: "0 32px 0 10px",
-        background: active ? cv.userBubble : (hover ? cv.hover : "transparent"),
+        background: active ? cv.hover : (hover ? cv.hover : "transparent"),
         borderRadius: 8, cursor: renaming ? "text" : "pointer",
       }}
     >
