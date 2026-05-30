@@ -195,7 +195,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
             onMouseLeave={() => setHoveredIdx(null)}
             style={{
               display: "flex", alignItems: "center", gap: 14,
-              padding: "11px 12px", borderRadius: 10,
+              padding: "11px 12px 11px 0", borderRadius: 10,
               cursor: disabled ? "default" : "pointer",
               background: checked ? "rgba(38,38,51,0.05)" : hovered ? "rgba(38,38,51,0.035)" : "transparent",
               transition: "background 0.1s",
@@ -217,7 +217,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
       {!disabled && (
         <div style={{
           display: "flex", alignItems: "center", gap: 14,
-          padding: "11px 12px", borderRadius: 10,
+          padding: "11px 12px 11px 0", borderRadius: 10,
         }}>
           <svg
             onClick={!multi && freeText.trim() ? () => onPick(freeText.trim()) : undefined}
@@ -501,7 +501,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
             ref={el => { if (el && !m._streaming) { el.pause(); try { el.currentTime = 0; } catch {} } }}
             style={{ width: 64, height: 64, objectFit: "contain", flexShrink: 0, mixBlendMode: "multiply" }}
           />
-          <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, marginLeft: -8 }}>
+          <span style={{ fontSize: 14, color: "rgba(38,38,51,0.5)", fontWeight: 500, marginLeft: -8 }}>
             {m._streaming ? "Mary печатает.." : "Mary"}
           </span>
         </div>
