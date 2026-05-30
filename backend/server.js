@@ -2262,6 +2262,20 @@ const MARY_TOOLS = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "get_weather",
+      description: "Узнать текущую погоду в городе (температура, ощущается как, ветер, осадки). Бесплатно через open-meteo, без ключей. Используй когда юзер спрашивает «какая погода в …», «сколько градусов в …».",
+      parameters: {
+        type: "object",
+        properties: {
+          city: { type: "string", description: "Название города на любом языке, например «Москва» или «Таганрог»" },
+        },
+        required: ["city"],
+      },
+    },
+  },
 ];
 
 const MARY_SYSTEM_AGENT = `Ты — Mary, AI-оркестратор отдела СММ платформы Mary.app.
@@ -2674,6 +2688,37 @@ const TOOL_HANDLERS = {
         status: args.status || "backlog",
       });
       return { ok: true, task: t };
+    } catch (e) { return { error: e.message }; }
+  },
+  async get_weather(args = {}) {
+    const city = String(args.city || "").trim();
+    if (!city) return { error: "city required" };
+    try {
+      const geoR = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ru&format=json`);
+      const geo = await geoR.json();
+      const place = geo.results?.[0];
+      if (!place) return { error: `не нашёл город «${city}»` };
+      const wR = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,wind_speed_10m,weather_code`);
+      const w = await wR.json();
+      const c = w.current || {};
+      const codes = {
+        0: "ясно", 1: "в основном ясно", 2: "переменная облачность", 3: "пасмурно",
+        45: "туман", 48: "изморозь", 51: "морось", 53: "морось", 55: "сильная морось",
+        61: "небольшой дождь", 63: "дождь", 65: "сильный дождь", 71: "небольшой снег",
+        73: "снег", 75: "сильный снег", 80: "ливень", 81: "ливень", 82: "сильный ливень",
+        95: "гроза", 96: "гроза с градом", 99: "гроза с градом",
+      };
+      return {
+        ok: true,
+        city: `${place.name}${place.country ? ", " + place.country : ""}`,
+        temperature: c.temperature_2m,
+        feelsLike: c.apparent_temperature,
+        humidity: c.relative_humidity_2m,
+        precipitation: c.precipitation,
+        windSpeed: c.wind_speed_10m,
+        condition: codes[c.weather_code] ?? "—",
+        units: { temperature: "°C", windSpeed: "км/ч", humidity: "%", precipitation: "мм" },
+      };
     } catch (e) { return { error: e.message }; }
   },
   async kb_list() {
