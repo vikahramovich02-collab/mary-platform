@@ -21,7 +21,6 @@ function WfChip({ active, color: dot, name, onOpen, onClose }) {
       display: "inline-flex", alignItems: "center", gap: 7,
       padding: "7px 6px 7px 11px", borderRadius: 11,
       background: active ? color.white : "transparent",
-      boxShadow: active ? "0 1px 4px rgba(38,38,51,0.1)" : "none",
       transition: "background 0.15s",
     }}>
       <button onClick={onOpen} style={{
@@ -364,9 +363,9 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
           return (
             <div key={a.id} style={{
               display: "inline-flex", alignItems: "center", gap: 4,
-              padding: "5px 4px 5px 10px",
-              background: color.white, border: `1px solid ${cv.border}`,
-              borderRadius: 8,
+              padding: "7px 6px 7px 11px", borderRadius: 11,
+              background: active ? color.white : "transparent",
+              transition: "background 0.15s",
             }}>
               <button onClick={() => setTab(`art:${a.id}`)}
                 style={{
@@ -399,9 +398,9 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
         {openDoc && (
           <div style={{
             display: "inline-flex", alignItems: "center", gap: 4,
-            padding: "5px 4px 5px 10px",
-            background: color.white, border: `1px solid ${cv.border}`,
-            borderRadius: 8,
+            padding: "7px 6px 7px 11px", borderRadius: 11,
+            background: tab === "doc" ? color.white : "transparent",
+            transition: "background 0.15s",
           }}>
             <button onClick={() => setTab("doc")}
               style={{
