@@ -1219,7 +1219,13 @@ export function ChatMaryPage({ dark, toggleDark }) {
                   if (!opts || opts.length < 2) return null;
                   const multi = !!checklist.options || (lastMsg._highlights?.length > 1);
                   return (
-                    <div style={{ marginBottom: 10 }}>
+                    <div style={{
+                      marginBottom: 10,
+                      background: color.white,
+                      border: "1px solid rgba(38,38,51,0.12)",
+                      borderRadius: 22,
+                      padding: "6px 8px",
+                    }}>
                       <OptionsBlock options={opts} multi={multi} onPick={(opt) => send(opt)} highlights={lastMsg._highlights} noTopMargin />
                     </div>
                   );
