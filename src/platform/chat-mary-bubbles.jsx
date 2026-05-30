@@ -492,7 +492,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
     >
       <div style={{ minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-          <div style={{ width: 46, height: 46, marginLeft: -4, position: "relative", overflow: "hidden", flexShrink: 0 }}>
+          <div style={{ width: 38, height: 38, marginLeft: -3, position: "relative", overflow: "hidden", flexShrink: 0 }}>
             <video
               key={m._streaming ? "live" : "static"}
               src="/mary-typing.mp4"
@@ -500,7 +500,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
               loop={!!m._streaming}
               muted playsInline preload="auto"
               ref={el => { if (el && !m._streaming) { el.pause(); try { el.currentTime = 0; } catch {} } }}
-              style={{ position: "absolute", left: -21, top: -20, width: 88, height: 88, mixBlendMode: "multiply" }}
+              style={{ position: "absolute", left: -17, top: -16, width: 73, height: 73, mixBlendMode: "multiply" }}
             />
           </div>
           <span style={{ fontSize: 14, color: "rgba(38,38,51,0.5)", fontWeight: 500 }}>

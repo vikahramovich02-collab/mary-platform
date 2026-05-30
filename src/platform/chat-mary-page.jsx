@@ -771,6 +771,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
   const [pickerKb, setPickerKb] = useState([]);
   const [pickerDepts, setPickerDepts] = useState([]);
   const [pickerView, setPickerView] = useState(null); // null | "kb" | "workflows"
+  const [docRequest, setDocRequest] = useState(null); // { name, ts } — запрос на открытие файла в панели
   const pickerRef = useRef(null);
   useEffect(() => {
     if (!pickerOpen) return;
@@ -792,6 +793,12 @@ export function ChatMaryPage({ dark, toggleDark }) {
   const attachResource = (label, content) => {
     const mention = content ? `[${label}]\n${content.slice(0, 1200)}\n` : `[${label}]`;
     setText(prev => (prev ? prev + "\n" + mention : mention));
+    setPickerOpen(false); setPickerView(null); setPickerSearch("");
+  };
+  // открыть файл из БЗ в панели-просмотрщике (как артефакт Claude)
+  const openResourceInPanel = (name) => {
+    setShowActivity(true);
+    setDocRequest({ name, ts: Date.now() });
     setPickerOpen(false); setPickerView(null); setPickerSearch("");
   };
 
@@ -1322,10 +1329,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
                                 ? <div style={{ fontSize: 12, color: "rgba(38,38,51,0.4)", padding: "8px 10px" }}>Нет файлов</div>
                                 : pickerKb.filter(f => !pickerSearch || f.toLowerCase().includes(pickerSearch.toLowerCase())).map(f => (
                                   <button key={f}
-                                    onClick={async () => {
-                                      const d = await fetch(`/api/mary/kb/file?name=${encodeURIComponent(f)}`).then(r => r.json()).catch(() => ({}));
-                                      attachResource(f, d.content);
-                                    }}
+                                    onClick={() => openResourceInPanel(f)}
                                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
                                     onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
                                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}
@@ -1444,6 +1448,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
             return runningTool ? { name: runningTool.name, args: runningTool.args } : null;
           })()}
           onClose={() => setShowActivity(false)}
+          docRequest={docRequest}
         />
       )}
     </div>

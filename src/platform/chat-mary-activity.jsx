@@ -3,7 +3,7 @@ import { color, cv } from "../ui/tokens.js";
 import { renderMarkdown } from "./markdown.jsx";
 import { BuildNode, AgentNodeExpanded } from "./build-nodes.jsx";
 
-export function ActivityPanel({ build, activity, currentTool, activeAgentIds, artifacts = [], onCloseArtifact, onClose }) {
+export function ActivityPanel({ build, activity, currentTool, activeAgentIds, artifacts = [], onCloseArtifact, onClose, docRequest }) {
   const [tab, setTab] = useState(build ? "build" : "log");
   useEffect(() => { if (build && tab === "log" && activity.length <= 2) setTab("build"); }, [build]);
   const lastArtId = artifacts[artifacts.length - 1]?.id;
@@ -64,14 +64,21 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
       setAddDepts(Array.isArray(depts) ? depts : []);
     }
   };
+  // открыть файл из БЗ прямо в панели-просмотрщике
+  const openKbDoc = async (name) => {
+    setOpenDoc({ name, content: "", loading: true });
+    setTab("doc");
+    const d = await fetch(`/api/mary/kb/file?name=${encodeURIComponent(name)}`).then(r => r.json()).catch(() => ({}));
+    setOpenDoc({ name, content: d.content || "", loading: false });
+  };
+  // запрос на открытие файла, пришедший из чата (через проп docRequest)
+  useEffect(() => {
+    if (docRequest?.name) openKbDoc(docRequest.name);
+  }, [docRequest?.ts]);
   const pickAdd = async (kind, item) => {
     setAddOpen(false); setAddView(null); setAddSearch("");
     if (kind === "wf") { window.__maryNavigate?.(`dept://${item.id}`); return; }
-    // файл из базы знаний — открываем прямо в панели
-    setOpenDoc({ name: item, content: "", loading: true });
-    setTab("doc");
-    const d = await fetch(`/api/mary/kb/file?name=${encodeURIComponent(item)}`).then(r => r.json()).catch(() => ({}));
-    setOpenDoc({ name: item, content: d.content || "", loading: false });
+    openKbDoc(item);
   };
   const railBtn = {
     width: 28, height: 28, padding: 0, flexShrink: 0,
