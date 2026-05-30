@@ -68,6 +68,7 @@ export function ChatWelcome({ onSuggest, onDemo, children }) {
         textAlign: "center",
         fontSize: 32, fontWeight: 600, color: cv.text,
         letterSpacing: "-0.02em",
+        marginTop: -40,
       }}>
         Что сделаем, Виктория?
       </div>
