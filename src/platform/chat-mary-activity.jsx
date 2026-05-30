@@ -93,9 +93,9 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
       <div style={{
         flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
         backgroundColor: cv.bgCard,
-        backgroundImage: "radial-gradient(var(--dot) 0.8px, transparent 0.8px), radial-gradient(var(--dot) 0.8px, transparent 0.8px), radial-gradient(var(--dot) 0.8px, transparent 0.8px)",
-        backgroundSize: "37px 37px, 53px 53px, 71px 71px",
-        backgroundPosition: "0 0, 13px 19px, 29px 7px",
+        backgroundImage: "radial-gradient(var(--dot) 0.9px, transparent 0.9px), radial-gradient(var(--dot) 0.9px, transparent 0.9px), radial-gradient(var(--dot) 0.9px, transparent 0.9px), radial-gradient(var(--dot) 0.9px, transparent 0.9px), radial-gradient(var(--dot) 0.9px, transparent 0.9px)",
+        backgroundSize: "23px 23px, 31px 31px, 41px 41px, 53px 53px, 67px 67px",
+        backgroundPosition: "0 0, 11px 17px, 27px 5px, 7px 33px, 39px 23px",
         border: `1px solid ${cv.border}`,
         borderRadius: 16,
         overflow: "hidden",
@@ -713,14 +713,6 @@ export function BuildCanvas({ build, activeAgentIds }) {
       background: "transparent",
     }}>
         <div style={{ position: "relative", width: totalW, minHeight: canvasH, margin: "0 auto" }}>
-          {channelsCount > 0 && (
-            <div style={{
-              position: "absolute", left: (totalW - rowWidth(channelsCount)) / 2, top: 16,
-              fontSize: 10.5, color: "rgba(38,38,51,0.5)", fontWeight: 600,
-              textTransform: "uppercase", letterSpacing: "0.05em",
-            }}>Каналы · {channelsCount}</div>
-          )}
-
           <svg width={totalW} height={canvasH} style={{
             position: "absolute", left: 0, top: 0, pointerEvents: "none", overflow: "visible",
           }}>
