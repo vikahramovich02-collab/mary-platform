@@ -551,7 +551,28 @@ export function WorkflowLogs({ build }) {
   ];
   const [sel, setSel] = useState(steps.length - 1);
   const [io, setIo] = useState("output");
+  const [collapsed, setCollapsed] = useState(false);
   const step = steps[Math.min(sel, steps.length - 1)] || steps[0];
+
+  if (collapsed) {
+    return (
+      <div style={{
+        height: 38, flexShrink: 0, borderTop: `1px solid ${cv.border}`,
+        display: "flex", alignItems: "center", gap: 8, padding: "0 14px",
+        background: color.white, borderBottomLeftRadius: 15, borderBottomRightRadius: 15,
+      }}>
+        <span style={{ fontSize: 12.5, fontWeight: 600, color: "#262633" }}>Logs</span>
+        <div style={{ flex: 1 }} />
+        <button onClick={() => setCollapsed(false)} title="Показать логи"
+          style={{ width: 26, height: 26, padding: 0, background: "transparent", border: "none", borderRadius: 6,
+            color: "rgba(38,38,51,0.5)", cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="m18 15-6-6-6 6" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
 
   const agentOutput = (a) => ({
     result: { summary: `${a.role}: ${a.tasks || "шаг выполнен"}`, status: "ok" },
@@ -599,6 +620,12 @@ export function WorkflowLogs({ build }) {
               {t === "output" ? "Output" : "Input"}
             </button>
           ))}
+          <div style={{ flex: 1 }} />
+          <button onClick={() => setCollapsed(true)} title="Скрыть логи"
+            style={{ background: "transparent", border: "none", padding: 4, cursor: "pointer",
+              display: "inline-flex", alignItems: "center", color: "rgba(38,38,51,0.45)" }}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+          </button>
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "2px 14px 12px" }}>
           {Object.entries(data).map(([k, v]) => <JsonRow key={k} k={k} value={v} depth={0} />)}
