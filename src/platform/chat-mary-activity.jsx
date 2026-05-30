@@ -92,7 +92,6 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
       <div style={{
         display: "flex", alignItems: "center", gap: 3,
         padding: "8px 10px",
-        borderBottom: `1px solid ${cv.border}`,
       }}>
         {/* свернуть панель */}
         <button onClick={onClose} title="Свернуть панель" style={railBtn}
