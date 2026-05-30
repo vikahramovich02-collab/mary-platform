@@ -1159,7 +1159,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
                 {!showActivity && !isMobile && (
                   <button
                     onClick={() => setShowActivity(true)}
-                    title="Что делает Mary"
+                    title="Открыть панель с файлами и воркфлоу"
                     style={{
                       position: "relative",
                       display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -1174,8 +1174,8 @@ export function ChatMaryPage({ dark, toggleDark }) {
                     onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = cv.muted; }}
                   >
                     <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <path d="M15 3v18" />
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <path d="M14 2v6h6" />
                     </svg>
                   </button>
                 )}

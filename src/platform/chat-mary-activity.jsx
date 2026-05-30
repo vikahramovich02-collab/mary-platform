@@ -191,12 +191,12 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
         display: "flex", alignItems: "center", gap: 3,
         padding: "6px 10px",
       }}>
-        {/* свернуть панель */}
+        {/* свернуть панель (иконка файла) */}
         <button onClick={onClose} title="Свернуть панель" style={railBtn}
           onMouseEnter={e => e.currentTarget.style.background = cv.hover}
           onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
           <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M15 4v16" /><path d="m10 10-2 2 2 2" />
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" />
           </svg>
         </button>
         {/* + добавить файл/воркфлоу из базы знаний */}
