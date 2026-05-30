@@ -428,40 +428,53 @@ export function ArtifactView({ artifact }) {
 
 export function DocView({ doc, onClose }) {
   const [copied, setCopied] = useState(false);
+  const [mode, setMode] = useState("preview"); // preview | code
   const ext = (doc.name.split(".").pop() || "").toUpperCase();
   const onCopy = () => {
     navigator.clipboard?.writeText(doc.content || "");
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+  const segBtn = (active) => ({
+    width: 28, height: 26, padding: 0, flexShrink: 0,
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    background: active ? color.white : "transparent",
+    color: active ? "#262633" : "rgba(38,38,51,0.45)",
+    border: "none", borderRadius: 6, cursor: "pointer", fontFamily: "inherit",
+    boxShadow: active ? "0 1px 2px rgba(38,38,51,0.12)" : "none",
+  });
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, background: cv.bgCard }}>
+      {/* шапка как у артефакта Claude: переключатель Превью/Код · название · MD · Copy · закрыть */}
       <div style={{
-        padding: "14px 18px",
+        padding: "10px 14px",
         borderBottom: "1px solid rgba(38,38,51,0.06)",
-        display: "flex", alignItems: "center", gap: 10,
+        display: "flex", alignItems: "center", gap: 12,
       }}>
         <div style={{
-          width: 30, height: 30, borderRadius: 8,
-          background: "rgba(63,149,255,0.12)", color: "#3F95FF",
-          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          display: "inline-flex", alignItems: "center", gap: 2, flexShrink: 0,
+          background: "rgba(38,38,51,0.05)", borderRadius: 8, padding: 2,
         }}>
-          <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+          <button onClick={() => setMode("preview")} title="Превью" style={segBtn(mode === "preview")}>
+            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+          </button>
+          <button onClick={() => setMode("code")} title="Исходник" style={segBtn(mode === "code")}>
+            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6" /></svg>
+          </button>
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {doc.name}
-          </div>
-          <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
-            Файл из базы знаний{ext ? ` · ${ext}` : ""}
-          </div>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "baseline", gap: 7 }}>
+          <span style={{ fontSize: 13.5, fontWeight: 600, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {doc.name.replace(/\.[^.]+$/, "")}
+          </span>
+          {ext && <span style={{ fontSize: 11.5, fontWeight: 600, color: "rgba(38,38,51,0.4)", flexShrink: 0 }}>· {ext}</span>}
         </div>
         <button onClick={onCopy} title="Копировать"
-          style={{ padding: "5px 11px", fontSize: 12, fontWeight: 500,
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 11px", fontSize: 12, fontWeight: 500,
             background: copied ? "rgba(52,199,89,0.12)" : "transparent",
             color: copied ? "#34C759" : "#262633",
             border: "1px solid rgba(38,38,51,0.18)", borderRadius: 7,
-            cursor: "pointer", fontFamily: "inherit" }}>
+            cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+          {!copied && <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>}
           {copied ? "✓ Скопировано" : "Копировать"}
         </button>
         <button onClick={onClose} title="Закрыть"
@@ -474,13 +487,21 @@ export function DocView({ doc, onClose }) {
           </svg>
         </button>
       </div>
-      <div style={{ flex: 1, overflow: "auto", padding: "18px 22px" }}>
+      <div style={{ flex: 1, overflow: "auto", padding: mode === "code" ? "14px 18px" : "18px 22px" }}>
         {doc.loading ? (
           <div style={{ fontSize: 13, color: "rgba(38,38,51,0.45)" }}>Загрузка файла…</div>
         ) : doc.content ? (
-          <div style={{ fontSize: 14, color: "#262633", lineHeight: 1.6 }}>
-            {renderMarkdown(doc.content)}
-          </div>
+          mode === "code" ? (
+            <pre style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6, color: "#262633",
+              fontFamily: "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
+              whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              {doc.content}
+            </pre>
+          ) : (
+            <div style={{ fontSize: 14, color: "#262633", lineHeight: 1.6 }}>
+              {renderMarkdown(doc.content)}
+            </div>
+          )
         ) : (
           <div style={{ fontSize: 13, color: "rgba(38,38,51,0.45)" }}>Файл пустой или не удалось прочитать содержимое.</div>
         )}
