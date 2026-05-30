@@ -64,9 +64,9 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
             style={{
               display: "inline-flex", alignItems: "center", gap: 8,
               padding: "5px 12px",
-              background: tab === "build" ? "rgba(38,38,51,0.05)" : "transparent",
+              background: "transparent",
               border: "none", borderRadius: 8,
-              fontSize: 12.5, color: "#262633", fontWeight: 500,
+              fontSize: 12.5, color: tab === "build" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
               cursor: "pointer", fontFamily: "inherit",
             }}
           >
@@ -79,9 +79,9 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
           style={{
             display: "inline-flex", alignItems: "center", gap: 8,
             padding: "5px 12px",
-            background: tab === "log" ? "rgba(38,38,51,0.05)" : "transparent",
+            background: "transparent",
             border: "none", borderRadius: 8,
-            fontSize: 12.5, color: "#262633", fontWeight: 500,
+            fontSize: 12.5, color: tab === "log" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
             cursor: "pointer", fontFamily: "inherit",
           }}
         >
