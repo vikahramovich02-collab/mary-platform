@@ -1143,7 +1143,6 @@ export default function TgKanalPage() {
             <RailBtn icon={ic.chat}  label="Чат Mary"    active={currentPage === "chat-mary"} onClick={() => navigate("chat-mary")} />
             <RailBtn icon={ic.inbox} label="Входящие"    active={currentPage === "inbox"}     onClick={() => navigate("inbox")} badge={inboxUnreadCount > 0} />
             <RailBtn icon={ic.staff} label="Сотрудники"  active={currentPage === "staff"}     onClick={() => navigate("staff")} />
-            <RailBtn icon={ic.people} label="Команда"    active={currentPage === "team"}      onClick={() => navigate("team")} />
             <RailBtn icon={ic.tasks} label="Задачи"      active={currentPage === "tasks"}     onClick={() => navigate("tasks")} />
             <RailBtn icon={ic.kb}    label="База знаний"  active={currentPage === "kb"}        onClick={() => navigate("kb")} />
             <RailBtn icon={ic.integrations} label="Интеграции" active={currentPage === "integrations"} onClick={() => navigate("integrations")} />
@@ -1219,7 +1218,6 @@ export default function TgKanalPage() {
 
         <SectionHeader label="Компания" />
         <SideRow icon={ic.staff}        label="Сотрудники" active={currentPage === "staff"} onClick={() => navigate("staff")} />
-        <SideRow icon={ic.people}       label="Команда" active={currentPage === "team"} onClick={() => navigate("team")} />
         <SideRow
           icon={ic.tasks}
           label="Задачи"
