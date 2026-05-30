@@ -1190,7 +1190,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
                   />
                 </ChatWelcome>
               ) : (
-                <div style={{ maxWidth: 640, width: "100%", margin: "auto auto 0", padding: isMobile ? "0 16px" : "0 24px", overflowX: "hidden" }}>
+                <div style={{ maxWidth: 640, width: "100%", margin: "0 auto", padding: isMobile ? "0 16px" : "0 24px", overflowX: "hidden" }}>
                   {messages.map((m, i) => (
                     <ChatBubble
                       key={i}

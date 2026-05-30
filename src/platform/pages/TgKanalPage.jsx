@@ -1081,7 +1081,7 @@ export default function TgKanalPage() {
       display: "flex",
       width: "100vw",
       height: "100vh",
-      background: cv.bgPage,
+      background: cv.bg,
       fontFamily: font,
       color: cv.text,
       gap: isMobile ? 0 : 8,
