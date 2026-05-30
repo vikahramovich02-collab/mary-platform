@@ -491,6 +491,13 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
       onMouseLeave={() => setHover(false)}
     >
       <div style={{ minWidth: 0 }}>
+        {m._streaming && (
+          <video
+            src="/mary-typing.mp4"
+            autoPlay loop muted playsInline
+            style={{ width: 72, height: 72, objectFit: "contain", display: "block", marginBottom: 4, mixBlendMode: "multiply" }}
+          />
+        )}
         {m._tools && m._tools.length > 0 && (
           <ToolsTrail tools={m._tools} />
         )}
