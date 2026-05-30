@@ -2,7 +2,7 @@
 // Использование: import { I, P, ic } from "../icons.jsx";
 
 // SVG-иконка с stroke по currentColor
-export function I({ d, size = 14, stroke = 2, fill = "none" }) {
+export function I({ d, size = 14, stroke = 2.3, fill = "none" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke="currentColor"
          strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
