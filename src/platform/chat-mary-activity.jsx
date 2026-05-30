@@ -44,6 +44,7 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
   const [addSearch, setAddSearch] = useState("");
   const [addKb, setAddKb] = useState([]);
   const [addDepts, setAddDepts] = useState([]);
+  const [openDoc, setOpenDoc] = useState(null); // { name, content, loading } — открытый файл из БЗ
   const addRef = useRef(null);
   useEffect(() => {
     if (!addOpen) return;
@@ -63,10 +64,14 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
       setAddDepts(Array.isArray(depts) ? depts : []);
     }
   };
-  const pickAdd = (kind, item) => {
+  const pickAdd = async (kind, item) => {
     setAddOpen(false); setAddView(null); setAddSearch("");
-    if (kind === "wf") window.__maryNavigate?.(`dept://${item.id}`);
-    else window.__maryNavigate?.(`page://kb`);
+    if (kind === "wf") { window.__maryNavigate?.(`dept://${item.id}`); return; }
+    // файл из базы знаний — открываем прямо в панели
+    setOpenDoc({ name: item, content: "", loading: true });
+    setTab("doc");
+    const d = await fetch(`/api/mary/kb/file?name=${encodeURIComponent(item)}`).then(r => r.json()).catch(() => ({}));
+    setOpenDoc({ name: item, content: d.content || "", loading: false });
   };
   const railBtn = {
     width: 28, height: 28, padding: 0, flexShrink: 0,
@@ -274,6 +279,37 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
             </div>
           );
         })}
+        {openDoc && (
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 4,
+            padding: "5px 4px 5px 10px",
+            background: color.white, border: `1px solid ${cv.border}`,
+            borderRadius: 8,
+          }}>
+            <button onClick={() => setTab("doc")}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                background: "transparent", border: "none",
+                fontSize: 12.5, color: tab === "doc" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
+                cursor: "pointer", fontFamily: "inherit", padding: 0,
+                maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{openDoc.name}</span>
+            </button>
+            <button onClick={() => { setOpenDoc(null); if (tab === "doc") setTab(build ? "build" : "log"); }} title="Закрыть файл"
+              style={{
+                width: 16, height: 16, padding: 0, flexShrink: 0,
+                background: "transparent", border: "none", borderRadius: 4,
+                color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+              }}>
+              <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
         <div style={{ flex: 1 }} />
         {build && (
           <button onClick={() => window.__maryNavigate?.(`dept://${build.deptId}`)} title="Развернуть воркфлоу в полном виде"
@@ -287,7 +323,9 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
         )}
       </div>
 
-      {tab.startsWith("art:") ? (
+      {tab === "doc" && openDoc ? (
+        <DocView doc={openDoc} onClose={() => { setOpenDoc(null); setTab(build ? "build" : "log"); }} />
+      ) : tab.startsWith("art:") ? (
         <ArtifactView artifact={artifacts.find(a => `art:${a.id}` === tab)} />
       ) : tab === "build" && build ? (
         <BuildCanvas build={build} activeAgentIds={activeAgentIds} />
@@ -385,6 +423,69 @@ export function ArtifactView({ artifact }) {
   );
 }
 
+export function DocView({ doc, onClose }) {
+  const [copied, setCopied] = useState(false);
+  const ext = (doc.name.split(".").pop() || "").toUpperCase();
+  const onCopy = () => {
+    navigator.clipboard?.writeText(doc.content || "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, background: cv.bgCard }}>
+      <div style={{
+        padding: "14px 18px",
+        borderBottom: "1px solid rgba(38,38,51,0.06)",
+        display: "flex", alignItems: "center", gap: 10,
+      }}>
+        <div style={{
+          width: 30, height: 30, borderRadius: 8,
+          background: "rgba(63,149,255,0.12)", color: "#3F95FF",
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+        }}>
+          <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 600, color: "#262633", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            {doc.name}
+          </div>
+          <div style={{ fontSize: 11.5, color: "rgba(38,38,51,0.55)", marginTop: 1 }}>
+            Файл из базы знаний{ext ? ` · ${ext}` : ""}
+          </div>
+        </div>
+        <button onClick={onCopy} title="Копировать"
+          style={{ padding: "5px 11px", fontSize: 12, fontWeight: 500,
+            background: copied ? "rgba(52,199,89,0.12)" : "transparent",
+            color: copied ? "#34C759" : "#262633",
+            border: "1px solid rgba(38,38,51,0.18)", borderRadius: 7,
+            cursor: "pointer", fontFamily: "inherit" }}>
+          {copied ? "✓ Скопировано" : "Копировать"}
+        </button>
+        <button onClick={onClose} title="Закрыть"
+          style={{ width: 30, height: 30, padding: 0, flexShrink: 0,
+            background: "transparent", border: "1px solid rgba(38,38,51,0.18)", borderRadius: 7,
+            color: "#262633", cursor: "pointer", fontFamily: "inherit",
+            display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div style={{ flex: 1, overflow: "auto", padding: "18px 22px" }}>
+        {doc.loading ? (
+          <div style={{ fontSize: 13, color: "rgba(38,38,51,0.45)" }}>Загрузка файла…</div>
+        ) : doc.content ? (
+          <div style={{ fontSize: 14, color: "#262633", lineHeight: 1.6 }}>
+            {renderMarkdown(doc.content)}
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: "rgba(38,38,51,0.45)" }}>Файл пустой или не удалось прочитать содержимое.</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ActivityLog({ activity }) {
   if (activity.length === 0) {
     return (
@@ -455,7 +556,6 @@ export function ActivityLog({ activity }) {
 }
 
 export function BuildCanvas({ build, activeAgentIds }) {
-  const accent = build.color || "#7A86FF";
   const [expandedAgentIdx, setExpandedAgentIdx] = useState(null);
   const activeSet = activeAgentIds instanceof Set ? activeAgentIds : new Set();
 
@@ -469,8 +569,7 @@ export function BuildCanvas({ build, activeAgentIds }) {
   const totalW = maxRowW + PAD_X * 2;
 
   const yChannels = PAD_TOP;
-  const yDept     = yChannels + NODE_H + ROW_GAP;
-  const yAgents   = yDept + NODE_H + ROW_GAP;
+  const yAgents   = yChannels + NODE_H + ROW_GAP * 2 + 20;
   const expandH   = expandedAgentIdx !== null ? 200 : 0;
   const canvasH   = yAgents + NODE_H + PAD_BOTTOM + expandH;
 
@@ -478,7 +577,8 @@ export function BuildCanvas({ build, activeAgentIds }) {
     const startX = (totalW - rowWidth(n)) / 2;
     return startX + i * (NODE_W + GAP_X);
   };
-  const deptX = (totalW - NODE_W) / 2;
+  const hubX = totalW / 2;
+  const hubY = (yChannels + NODE_H + yAgents) / 2;
 
   const vpath = (x1, y1, x2, y2) => {
     const dy = Math.max(28, (y2 - y1) * 0.5);
@@ -506,7 +606,7 @@ export function BuildCanvas({ build, activeAgentIds }) {
               <path key={`ch-${i}`}
                 d={vpath(
                   xFor(channelsCount, i) + NODE_W / 2, yChannels + NODE_H,
-                  deptX + NODE_W / 2, yDept,
+                  hubX, hubY,
                 )}
                 stroke="rgba(38,38,51,0.18)" strokeWidth="1.4" fill="none"
               />
@@ -514,12 +614,13 @@ export function BuildCanvas({ build, activeAgentIds }) {
             {build.agents.map((_, i) => (
               <path key={`ag-${i}`}
                 d={vpath(
-                  deptX + NODE_W / 2, yDept + NODE_H,
+                  hubX, hubY,
                   xFor(agentsCount, i) + NODE_W / 2, yAgents,
                 )}
                 stroke="rgba(38,38,51,0.18)" strokeWidth="1.4" fill="none"
               />
             ))}
+            <circle cx={hubX} cy={hubY} r="3.5" fill="rgba(38,38,51,0.25)" />
           </svg>
 
           {build.channels.map((c, i) => (
@@ -531,14 +632,6 @@ export function BuildCanvas({ build, activeAgentIds }) {
               animate={i === channelsCount - 1}
             />
           ))}
-
-          <BuildNode
-            x={deptX} y={yDept}
-            w={NODE_W} h={NODE_H}
-            icon="dept" iconBg={accent + "26"} iconColor={accent}
-            title={build.name} sub="отдел"
-            isMain
-          />
 
           {build.agents.map((a, i) => (
             <BuildNode key={a.id || i}
