@@ -55,9 +55,9 @@ export function ChatWelcome({ onSuggest, onDemo, children }) {
   return (
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center", gap: 18,
+      alignItems: "center", justifyContent: "flex-start", gap: 18,
       width: "100%", maxWidth: 760, margin: "0 auto",
-      padding: "20px 24px",
+      padding: "48px 24px 20px",
     }}>
       <video
         src="/mary-hero.mp4"
