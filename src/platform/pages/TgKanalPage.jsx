@@ -35,7 +35,7 @@ import { StaffPage } from "./staff-page.jsx";
 // Реплика экрана Figma node 5522:2547 (file: o1syNp93H3v2dyA3JHp4em — Mary)
 // Сабпейдж "Тг-канал" в отделе "СММ".
 
-const SIDEBAR_W = 220;
+const SIDEBAR_W = 196;
 const RIGHT_W = 64;
 
 // ── Иконки (14px по умолчанию для меню) ─────────────────────
@@ -1129,8 +1129,6 @@ export default function TgKanalPage() {
         <div style={{
           width: 52, minWidth: 52,
           background: cv.bg,
-          border: `1px solid ${cv.border}`,
-          borderRadius: 14,
           display: "flex", flexDirection: "column", alignItems: "center",
           height: "100%", overflow: "hidden",
         }}>
@@ -1177,8 +1175,6 @@ export default function TgKanalPage() {
       <aside style={{
         width: SIDEBAR_W, minWidth: SIDEBAR_W,
         background: cv.bg,
-        border: `1px solid ${cv.border}`,
-        borderRadius: 14,
         display: "flex",
         flexDirection: "column",
         height: "100%",
