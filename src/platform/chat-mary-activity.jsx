@@ -214,8 +214,8 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
               style={{
                 position: "absolute", left: 0, top: "calc(100% + 6px)",
                 width: 256, zIndex: 50,
-                background: color.white, border: "1px solid rgba(38,38,51,0.1)",
-                borderRadius: 14, boxShadow: "0 12px 32px rgba(38,38,51,0.14)",
+                background: color.white, border: "none",
+                borderRadius: 14, boxShadow: "none",
                 padding: 6, display: "flex", flexDirection: "column", gap: 2,
               }}>
               <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 8px", marginBottom: 2 }}>
