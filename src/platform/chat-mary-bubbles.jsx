@@ -493,11 +493,15 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
       <div style={{ minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 8 }}>
           <video
+            key={m._streaming ? "live" : "static"}
             src="/mary-typing.mp4"
-            autoPlay loop muted playsInline
-            style={{ width: 52, height: 52, objectFit: "contain", flexShrink: 0, mixBlendMode: "multiply" }}
+            autoPlay={!!m._streaming}
+            loop={!!m._streaming}
+            muted playsInline preload="auto"
+            ref={el => { if (el && !m._streaming) { el.pause(); try { el.currentTime = 0; } catch {} } }}
+            style={{ width: 64, height: 64, objectFit: "contain", flexShrink: 0, mixBlendMode: "multiply" }}
           />
-          <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, marginLeft: -6 }}>
+          <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500, marginLeft: -8 }}>
             {m._streaming ? "Mary печатает.." : "Mary"}
           </span>
         </div>
