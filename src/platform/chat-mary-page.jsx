@@ -6,6 +6,7 @@ import { zoomBtn } from "./chat-panel.jsx";
 import { ActivityPanel, ArtifactView, ActivityLog, BuildCanvas } from "./chat-mary-activity.jsx";
 import { ChatWelcome, ChatItem } from "./chat-mary-sidebar.jsx";
 import { OptionsBlock, AgentChatBubble, ChatBubble, ActionBar } from "./chat-mary-bubbles.jsx";
+import { parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
 
 // ─── Demo flow script ────────────────────────────────────────────────────────
 const DEMO_SCRIPT = [
@@ -1209,6 +1210,20 @@ export function ChatMaryPage({ dark, toggleDark }) {
             {messages.length > 0 && (
             <div style={{ padding: isMobile ? "8px 16px 16px" : "12px 24px 18px" }}>
               <div style={{ maxWidth: 640, margin: "0 auto" }}>
+                {(() => {
+                  const lastMsg = messages[messages.length - 1];
+                  if (!lastMsg || lastMsg.role === "user" || lastMsg._streaming || lastMsg._toolStatus || lastMsg._quickActions) return null;
+                  const checklist = parseChecklistOptions(lastMsg.text || "");
+                  const numbered = !checklist.options ? parseNumberedOptions(lastMsg.text || "") : null;
+                  const opts = checklist.options || numbered?.options;
+                  if (!opts || opts.length < 2) return null;
+                  const multi = !!checklist.options || (lastMsg._highlights?.length > 1);
+                  return (
+                    <div style={{ marginBottom: 10 }}>
+                      <OptionsBlock options={opts} multi={multi} onPick={(opt) => send(opt)} highlights={lastMsg._highlights} noTopMargin />
+                    </div>
+                  );
+                })()}
                 <div style={{
                   background: color.white,
                   border: "1px solid rgba(38,38,51,0.12)",

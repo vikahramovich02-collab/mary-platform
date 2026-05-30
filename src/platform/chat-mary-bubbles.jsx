@@ -456,7 +456,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         <div style={{
           background: cv.userBubble, color: cv.text,
           padding: "10px 14px", borderRadius: 16,
-          maxWidth: "80%", fontSize: 14, lineHeight: 1.45, whiteSpace: "pre-wrap",
+          maxWidth: "80%", fontSize: 15, lineHeight: 1.45, whiteSpace: "pre-wrap",
         }}>{m.text}</div>
         <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 8 }}>
           {onEdit && index !== undefined && (
@@ -527,7 +527,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
             )}
           </div>
         )}
-        {options && options.length >= 2 && (
+        {options && options.length >= 2 && !isLast && (
           <OptionsBlock options={options} multi={multi} onPick={onPickOption} highlights={m._highlights} disabled={!canInteract} />
         )}
         {m._quickActions && isLast && (
