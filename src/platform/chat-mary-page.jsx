@@ -1041,7 +1041,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
                           onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(38,38,51,0.04)"; }}
                           onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
                         >
-                          <span style={{ display: "flex", color: d.color, flexShrink: 0 }}>
+                          <span style={{ display: "flex", color: "#262633", flexShrink: 0 }}>
                             {deptIcon({ name: d.title, id: d.deptId }, 13)}
                           </span>
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{d.title}</span>
