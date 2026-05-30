@@ -945,9 +945,7 @@ function ToolOpt({ icon, label, active, onClick }) {
 export default function TgKanalPage() {
   const { dark, toggle: toggleDark } = useTheme();
   const [smmOpen, setSmmOpen] = useState(true);
-  const [currentPage, setCurrentPage] = useState(
-    typeof window !== "undefined" && new URLSearchParams(window.location.search).get("page") || "chat-mary"
-  ); // "tg-kanal" | "kb" | "integrations" | "tasks" | "chat-mary" | "home" | "inbox" | "team" | "bizproc" | "settings"
+  const [currentPage, setCurrentPage] = useState("chat-mary"); // "tg-kanal" | "kb" | "integrations" | "tasks" | "chat-mary" | "home" | "inbox" | "team" | "bizproc" | "settings"
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileMenu, setProfileMenu] = useState(false);
   const [notif, setNotif] = useState(true);
