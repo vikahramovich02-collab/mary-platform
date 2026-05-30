@@ -491,13 +491,16 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
       onMouseLeave={() => setHover(false)}
     >
       <div style={{ minWidth: 0 }}>
-        {m._streaming && (
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
           <video
             src="/mary-typing.mp4"
             autoPlay loop muted playsInline
-            style={{ width: 72, height: 72, objectFit: "contain", display: "block", marginBottom: 4, mixBlendMode: "multiply" }}
+            style={{ width: 34, height: 34, objectFit: "contain", flexShrink: 0, mixBlendMode: "multiply" }}
           />
-        )}
+          <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500 }}>
+            {m._streaming ? "Mary печатает.." : "Mary"}
+          </span>
+        </div>
         {m._tools && m._tools.length > 0 && (
           <ToolsTrail tools={m._tools} />
         )}
@@ -527,25 +530,6 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         )}
         {!m._streaming && body && body.trim().length > 0 && (
           <ActionBar text={body} />
-        )}
-      </div>
-      {/* Avatar + label + hover actions at the bottom */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
-        <img src="/icons/mary-puppy.png" alt="" style={{ width: 18, height: 18, objectFit: "contain", flexShrink: 0 }} />
-        <span style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", fontWeight: 500 }}>
-          {m._streaming ? "Mary работает" : "Mary"}
-        </span>
-        {m._streaming && (
-          <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
-            {[0,1,2].map(i => (
-              <span key={i} style={{
-                width: 3, height: 3, borderRadius: "50%",
-                background: "rgba(38,38,51,0.4)",
-                display: "inline-block",
-                animation: `marypulse 1.4s ease-in-out infinite ${i * 0.18}s`,
-              }} />
-            ))}
-          </span>
         )}
       </div>
     </div>
