@@ -235,12 +235,12 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
                       style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 8px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, fontWeight: 550, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
                       onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-                      <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
-                        style={{ transform: addView === id ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>
-                        <path d="m9 6 6 6-6 6" />
-                      </svg>
                       <span style={{ flex: 1 }}>{label}</span>
                       <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>{count}</span>
+                      <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
+                        style={{ transform: addView === id ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}>
+                        <path d="m9 6 6 6-6 6" />
+                      </svg>
                     </button>
                     {addView === id && (
                       <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingBottom: 2 }}>{children}</div>
@@ -271,13 +271,13 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
                               style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 8px 7px 26px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
                               onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
                               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                              <span style={{ display: "inline-flex", color: d.color || "#7A86FF", flexShrink: 0 }}>{deptIcon({ name: d.name || d.id, id: d.id }, 14)}</span>
+                              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name || d.id}</span>
+                              <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>{flows.length}</span>
                               <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
                                 style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}>
                                 <path d="m9 6 6 6-6 6" />
                               </svg>
-                              <span style={{ display: "inline-flex", color: d.color || "#7A86FF", flexShrink: 0 }}>{deptIcon({ name: d.name || d.id, id: d.id }, 14)}</span>
-                              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name || d.id}</span>
-                              <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>{flows.length}</span>
                             </button>
                             {open && flows.map(fl => (
                               <button key={fl.id} onClick={() => pickAdd("wf", d)}
@@ -320,13 +320,13 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
                               style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 8px 7px 26px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
                               onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
                               onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" /></svg>
+                              <span style={{ flex: 1 }}>{g.label}</span>
+                              <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>{g.files.length}</span>
                               <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
                                 style={{ transform: openKbFolder === g.id ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}>
                                 <path d="m9 6 6 6-6 6" />
                               </svg>
-                              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z" /></svg>
-                              <span style={{ flex: 1 }}>{g.label}</span>
-                              <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>{g.files.length}</span>
                             </button>
                             {openKbFolder === g.id && g.files.map((f, i) => (
                               <button key={i} onClick={() => pickAdd("kb", f.name)}
