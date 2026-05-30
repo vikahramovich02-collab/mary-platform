@@ -165,7 +165,7 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
               {(() => {
                 const q = addSearch.trim().toLowerCase();
                 const wf = (addDepts || []).filter(d => !q || (d.name || d.id || "").toLowerCase().includes(q));
-                const kb = (addKb || []).filter(f => !q || (f || "").toLowerCase().includes(q));
+                const kb = (addKb || []).filter(f => !q || (f.name || "").toLowerCase().includes(q));
                 const Section = ({ id, label, count, children }) => (
                   <>
                     <button onClick={() => setAddView(v => v === id ? null : id)}
@@ -210,7 +210,7 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
                         : kb.map((f, i) => (
                           <Item key={i}
                             icon={<svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>}
-                            label={f} onClick={() => pickAdd("kb", f)} />
+                            label={f.name} onClick={() => pickAdd("kb", f.name)} />
                         ))}
                     </Section>
                   </>

@@ -1325,17 +1325,17 @@ export function ChatMaryPage({ dark, toggleDark }) {
                           ) : pickerView === "kb" ? (
                             <>
                               <button onClick={() => setPickerView(null)} style={{ background: "none", border: "none", fontSize: 12, color: "rgba(38,38,51,0.5)", cursor: "pointer", padding: "2px 4px", marginBottom: 4, fontFamily: "inherit" }}>← Назад</button>
-                              {pickerKb.filter(f => !pickerSearch || f.toLowerCase().includes(pickerSearch.toLowerCase())).length === 0
+                              {pickerKb.filter(f => !pickerSearch || f.name.toLowerCase().includes(pickerSearch.toLowerCase())).length === 0
                                 ? <div style={{ fontSize: 12, color: "rgba(38,38,51,0.4)", padding: "8px 10px" }}>Нет файлов</div>
-                                : pickerKb.filter(f => !pickerSearch || f.toLowerCase().includes(pickerSearch.toLowerCase())).map(f => (
-                                  <button key={f}
-                                    onClick={() => openResourceInPanel(f)}
+                                : pickerKb.filter(f => !pickerSearch || f.name.toLowerCase().includes(pickerSearch.toLowerCase())).map(f => (
+                                  <button key={f.name}
+                                    onClick={() => openResourceInPanel(f.name)}
                                     style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
                                     onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.05)"}
                                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                                   >
                                     <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.4)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                                    {f}
+                                    {f.name}
                                   </button>
                                 ))}
                             </>
