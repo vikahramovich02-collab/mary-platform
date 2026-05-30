@@ -56,7 +56,7 @@ export function ChatWelcome({ onSuggest, onDemo, children }) {
     <div style={{
       flex: 1, display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "flex-start", gap: 18,
-      width: "100%", maxWidth: 760, margin: "0 auto",
+      width: "100%", maxWidth: 640, margin: "0 auto",
       padding: "48px 24px 20px",
     }}>
       <video
