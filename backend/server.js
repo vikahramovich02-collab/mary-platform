@@ -1064,11 +1064,14 @@ async function autoTitleConversation(id) {
         "Без слов «чат», «диалог», «вопрос». Верни ТОЛЬКО заголовок.",
       user: dialog,
       temperature: 0.3,
-      maxTokens: 24,
+      maxTokens: 400, // запас под reasoning-токены GLM, иначе content приходит пустым
       jsonMode: false,
       label: "auto-title",
     });
-    let title = (raw || "").trim().replace(/^["'«»\s]+|["'«».\s]+$/g, "").split("\n")[0];
+    // У reasoning-моделей финальный заголовок — последняя непустая строка
+    let title = (raw || "").trim().replace(/^["'«»\s]+|["'«».\s]+$/g, "");
+    const lines = title.split("\n").map(s => s.trim()).filter(Boolean);
+    title = (lines[lines.length - 1] || "").replace(/^["'«»\s]+|["'«».\s]+$/g, "");
     if (!title) return;
     if (title.length > 60) title = title.slice(0, 60).trim();
     // Перечитываем — за время LLM могли переименовать руками
