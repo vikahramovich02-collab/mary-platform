@@ -596,48 +596,6 @@ export function BuildCanvas({ build, activeAgentIds }) {
           )}
         </div>
 
-        {build.integrations.length > 0 && (
-          <div style={{
-            position: "absolute", left: 0, right: 0, bottom: 0,
-            padding: "12px 18px",
-            background: "linear-gradient(to top, rgba(255,255,255,0.95), rgba(255,255,255,0.8))",
-            borderTop: "1px solid rgba(38,38,51,0.06)",
-            zIndex: 1,
-          }}>
-            <div style={{ fontSize: 10.5, color: "rgba(38,38,51,0.5)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
-              Интеграции · {build.integrations.length}
-            </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-              {build.integrations.map((it, i) => (
-                <span key={i} style={{
-                  padding: "5px 12px",
-                  background: "rgba(63,149,255,0.1)",
-                  color: "#3F95FF",
-                  fontSize: 12, fontWeight: 500,
-                  borderRadius: 999,
-                  animation: i === build.integrations.length - 1 ? "build-pop 0.4s ease" : "none",
-                }}>{it}</span>
-              ))}
-            </div>
-            <button
-              onClick={() => window.__maryNavigate?.(`dept://${build.deptId}`)}
-              style={{
-                marginTop: 10,
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "8px 14px",
-                background: "#262633", color: color.white,
-                border: "none", borderRadius: 8,
-                fontSize: 12.5, fontWeight: 500, fontFamily: "inherit",
-                cursor: "pointer",
-              }}>
-              Открыть {build.name} в полном виде
-              <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
-          </div>
-        )}
-
       <style>{`
         @keyframes build-pop {
           0%   { opacity: 0; transform: scale(0.85); }

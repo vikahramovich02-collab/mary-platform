@@ -520,11 +520,6 @@ export function StaffPage() {
   const [activeId, setActiveId] = useState(null);
   const active = STAFF.find(p => p.id === activeId);
 
-  const total = STAFF.length;
-  const online = STAFF.filter(p => p.status === "online").length;
-  const ai = STAFF.filter(p => p.kind === "ai").length;
-  const overdue = STAFF.reduce((s, p) => s + (p.overdue || 0), 0);
-
   return (
     <div style={{ display: "flex", flex: 1, minHeight: 0, background: cv.bg, overflow: "hidden" }}>
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto" }}>
@@ -536,21 +531,6 @@ export function StaffPage() {
           </div>
 
           <h1 style={{ fontSize: 26, fontWeight: 600, color: cv.text, margin: "0 0 18px", letterSpacing: "-0.01em" }}>Сотрудники</h1>
-
-          {/* summary */}
-          <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
-            {[
-              { n: total,   l: "Всего в команде", c: cv.text },
-              { n: online,  l: "В сети сейчас",    c: "#34C759" },
-              { n: ai,      l: "AI-агентов",       c: "#8A38F5" },
-              { n: overdue, l: "Просроч. задач",   c: overdue ? "#FF3B30" : cv.text },
-            ].map((s, i) => (
-              <div key={i} style={{ flex: 1, padding: "14px 16px", borderRadius: 12, background: cv.bgCard, border: `1px solid ${cv.border}` }}>
-                <div style={{ fontSize: 24, fontWeight: 700, color: s.c, letterSpacing: "-0.02em" }}>{s.n}</div>
-                <div style={{ fontSize: 12.5, color: cv.muted, marginTop: 3 }}>{s.l}</div>
-              </div>
-            ))}
-          </div>
 
           {/* tabs */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 22 }}>

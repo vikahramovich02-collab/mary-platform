@@ -178,6 +178,12 @@ export function ChatMaryPage({ dark, toggleDark }) {
   const [messages, setMessages] = useState([]);     // сообщения активного чата
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);    // отправка
+  const scrollRef = useRef(null);                   // лента сообщений (скролл)
+  const [atBottom, setAtBottom] = useState(true);   // у низа ленты?
+  const onMsgScroll = (e) => {
+    const el = e.currentTarget;
+    setAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 120);
+  };
   const [draftId, setDraftId] = useState(null);     // id draft-сообщения Mary в стриме
   // Live-визуализатор того что Mary сейчас собирает — персистентный через localStorage
   const [build, setBuildRaw] = useState(() => {
@@ -1167,9 +1173,10 @@ export function ChatMaryPage({ dark, toggleDark }) {
             )}
 
             {/* Сообщения */}
-            <div style={{
+            <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div ref={scrollRef} onScroll={onMsgScroll} className="chat-noscroll" style={{
               flex: 1, overflowY: "auto", padding: "16px 0 4px",
-              display: "flex", flexDirection: "column",
+              display: "flex", flexDirection: "column", scrollbarWidth: "none",
               backgroundImage: "radial-gradient(var(--dot) 0.8px, transparent 0.8px), radial-gradient(var(--dot) 0.8px, transparent 0.8px), radial-gradient(var(--dot) 0.8px, transparent 0.8px)",
               backgroundSize: "37px 37px, 53px 53px, 71px 71px",
               backgroundPosition: "0 0, 13px 19px, 29px 7px",
@@ -1203,6 +1210,26 @@ export function ChatMaryPage({ dark, toggleDark }) {
                   ))}
                 </div>
               )}
+            </div>
+            {messages.length > 0 && !atBottom && (
+              <button
+                onClick={() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })}
+                title="К последнему сообщению"
+                style={{
+                  position: "absolute", left: "50%", bottom: 16, transform: "translateX(-50%)",
+                  width: 36, height: 36, borderRadius: "50%",
+                  background: color.white, border: `1px solid ${cv.border}`,
+                  boxShadow: "0 4px 14px rgba(38,38,51,0.16)", cursor: "pointer",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  color: cv.text, zIndex: 5,
+                }}
+              >
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12l7 7 7-7" />
+                </svg>
+              </button>
+            )}
             </div>
 
             {/* Input внизу — только когда есть переписка. На welcome он внутри центра экрана. */}
