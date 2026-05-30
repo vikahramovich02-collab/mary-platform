@@ -5,6 +5,17 @@ import { zoomBtn } from "../chat-panel.jsx";
 import { AGENTS } from "../agents-config.js";
 import { usePeople, MOCK_PEOPLE } from "../people.js";
 import { KbPopup, AddKbPopup, TextViewerPopup, UserItemThumb, UserItemKindBadge, KIND_META } from "./kb-content.jsx";
+import { DocView } from "../chat-mary-activity.jsx";
+
+// Расширение файла из общего хранилища БЗ → категория-папка
+function kbFileKind(name = "") {
+  const ext = (name.split(".").pop() || "").toLowerCase();
+  if (/^(png|jpe?g|gif|webp|svg|heic)$/.test(ext)) return "image";
+  if (/^(mp4|mov|webm|mkv)$/.test(ext))            return "video";
+  if (/^(mp3|wav|m4a|ogg)$/.test(ext))             return "audio";
+  if (/^(md|txt)$/.test(ext))                      return "text";
+  return "file"; // pdf, doc(x), xls(x), csv и пр.
+}
 
 const drawerRow = {
   display: "flex", alignItems: "center", gap: 10,
@@ -638,6 +649,21 @@ export function KbPage({ kbUserItems = [], setKbUserItems, onOpenChat }) {
   const [opened, setOpened] = useState(null);
   const [textView, setTextView] = useState(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [storeFiles, setStoreFiles] = useState([]); // общий бэкенд-стор БЗ (/api/mary/kb/files)
+  const [storeDoc, setStoreDoc] = useState(null);    // открытый файл из стора { name, content, loading }
+
+  useEffect(() => {
+    fetch("/api/mary/kb/files")
+      .then(r => r.json())
+      .then(d => setStoreFiles(Array.isArray(d.files) ? d.files : []))
+      .catch(() => setStoreFiles([]));
+  }, []);
+
+  const openStoreFile = async (name) => {
+    setStoreDoc({ name, content: "", loading: true });
+    const d = await fetch(`/api/mary/kb/file?name=${encodeURIComponent(name)}`).then(r => r.json()).catch(() => ({}));
+    setStoreDoc({ name, content: d.content || "", loading: false });
+  };
 
   const agentItems = AGENTS.flatMap(a => {
     const inputs  = (a.kb?.inputs  || []).map(it => ({ ...it, agent: a, source: "input"  }));
@@ -645,9 +671,17 @@ export function KbPage({ kbUserItems = [], setKbUserItems, onOpenChat }) {
     return [...inputs, ...outputs];
   });
   const userItems = kbUserItems.map(it => ({ ...it, source: "user" }));
-  const all = [...userItems, ...agentItems];
+  const storeItems = storeFiles.map(f => ({
+    name: f.name,
+    kind: kbFileKind(f.name),
+    source: "user",
+    store: true,
+    meta: (f.name.split(".").pop() || "файл").toUpperCase(),
+  }));
+  const all = [...storeItems, ...userItems, ...agentItems];
 
   function matchScope(it) {
+    if (it.store)                 return true; // общий стор БЗ виден в любом отделе
     if (scope === "company")      return true;
     if (scope === "smm")          return true;
     if (scope === "smm/tg-kanal") return true;
@@ -893,6 +927,7 @@ export function KbPage({ kbUserItems = [], setKbUserItems, onOpenChat }) {
                 key={`${it.source}-${i}`}
                 it={it}
                 onOpen={() => {
+                  if (it.store) { openStoreFile(it.name); return; }
                   if (it.source === "user") {
                     if (it.kind === "link") { window.open(it.name, "_blank"); return; }
                     if (it.kind === "image" && it.data) { window.open(it.data, "_blank"); return; }
@@ -936,6 +971,28 @@ export function KbPage({ kbUserItems = [], setKbUserItems, onOpenChat }) {
       {opened && <KbPopup item={opened} onClose={() => setOpened(null)} />}
       {textView && <TextViewerPopup item={textView} onClose={() => setTextView(null)} />}
       {addOpen && <AddKbPopup onAdd={addUserItem} onClose={() => setAddOpen(false)} />}
+      {storeDoc && (
+        <div
+          onClick={() => setStoreDoc(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(38,38,51,0.35)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 100, padding: 20,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: 760, maxWidth: "100%", height: "82vh",
+              background: color.white, borderRadius: 18,
+              boxShadow: "0 20px 60px rgba(38,38,51,0.25)",
+              display: "flex", flexDirection: "column", overflow: "hidden",
+            }}
+          >
+            <DocView doc={storeDoc} onClose={() => setStoreDoc(null)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
