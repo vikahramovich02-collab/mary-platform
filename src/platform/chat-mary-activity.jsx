@@ -443,6 +443,17 @@ export function DocView({ doc, onClose }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+  const onDownload = () => {
+    const blob = new Blob([doc.content || ""], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = doc.name || "файл.txt";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
   const segBtn = (active) => ({
     width: 28, height: 26, padding: 0, flexShrink: 0,
     display: "inline-flex", alignItems: "center", justifyContent: "center",
@@ -484,6 +495,14 @@ export function DocView({ doc, onClose }) {
             cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
           {!copied && <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>}
           {copied ? "✓ Скопировано" : "Копировать"}
+        </button>
+        <button onClick={onDownload} title="Скачать файл"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 11px", fontSize: 12, fontWeight: 500,
+            background: "transparent", color: "#262633",
+            border: "1px solid rgba(38,38,51,0.18)", borderRadius: 7,
+            cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M7 10l5 5 5-5" /><path d="M12 15V3" /></svg>
+          Скачать
         </button>
         <button onClick={onClose} title="Закрыть"
           style={{ width: 30, height: 30, padding: 0, flexShrink: 0,
