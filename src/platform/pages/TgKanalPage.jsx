@@ -1374,7 +1374,7 @@ export default function TgKanalPage() {
         flexDirection: "column",
         background: cv.bg,
         border: isMobile ? "none" : `1px solid ${cv.border}`,
-        borderRadius: isMobile ? 0 : 14,
+        borderRadius: isMobile ? 0 : 20,
         overflow: "hidden",
         ...((() => {
           const isCanvas = currentPage === "tg-kanal" || departments.some(d => (d.channels||[]).some(c=>c.page===currentPage));
