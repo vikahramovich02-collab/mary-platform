@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { color, cv } from "../ui/tokens.js";
-import { ic } from "./icons.jsx";
 import { renderMarkdown } from "./markdown.jsx";
 import { BuildNode, AgentNodeExpanded } from "./build-nodes.jsx";
-import { zoomBtn } from "./chat-panel.jsx";
 
 export function ActivityPanel({ build, activity, currentTool, activeAgentIds, artifacts = [], onCloseArtifact, onClose }) {
   const [tab, setTab] = useState(build ? "build" : "log");
@@ -22,6 +20,44 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
     add_pipeline_node: (a) => `добавляет шаг «${a?.title || "…"}»`,
   };
   const toolLabel = currentTool ? (TOOL_LABELS[currentTool.name]?.(currentTool.args) || `выполняет ${currentTool.name}`) : null;
+
+  // "+" — добавить файл или воркфлоу из базы знаний
+  const [addOpen, setAddOpen] = useState(false);
+  const [addView, setAddView] = useState(null); // null | "wf" | "kb"
+  const [addSearch, setAddSearch] = useState("");
+  const [addKb, setAddKb] = useState([]);
+  const [addDepts, setAddDepts] = useState([]);
+  const addRef = useRef(null);
+  useEffect(() => {
+    if (!addOpen) return;
+    const onDoc = (e) => { if (!addRef.current?.contains(e.target)) { setAddOpen(false); setAddView(null); setAddSearch(""); } };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [addOpen]);
+  const toggleAdd = async () => {
+    const next = !addOpen;
+    setAddOpen(next); setAddView(null); setAddSearch("");
+    if (next) {
+      const [kb, depts] = await Promise.all([
+        fetch("/api/mary/kb/files").then(r => r.json()).catch(() => ({ files: [] })),
+        fetch("/api/mary/departments").then(r => r.json()).catch(() => []),
+      ]);
+      setAddKb(kb.files || []);
+      setAddDepts(Array.isArray(depts) ? depts : []);
+    }
+  };
+  const pickAdd = (kind, item) => {
+    setAddOpen(false); setAddView(null); setAddSearch("");
+    if (kind === "wf") window.__maryNavigate?.(`dept://${item.id}`);
+    else window.__maryNavigate?.(`page://kb`);
+  };
+  const railBtn = {
+    width: 28, height: 28, padding: 0, flexShrink: 0,
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    background: "transparent", border: "none", borderRadius: 7,
+    color: "rgba(38,38,51,0.55)", cursor: "pointer", fontFamily: "inherit",
+  };
+
   return (
     <aside style={{
       width: width + 20, minWidth: width + 20,
@@ -54,31 +90,136 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
       )}
 
       <div style={{
-        display: "flex", alignItems: "center", gap: 4,
-        padding: "10px 12px",
+        display: "flex", alignItems: "center", gap: 3,
+        padding: "8px 10px",
         borderBottom: `1px solid ${cv.border}`,
       }}>
-        {build && (
-          <button
-            onClick={() => setTab("build")}
-            style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              padding: "5px 12px",
-              background: "transparent",
-              border: "none", borderRadius: 8,
-              fontSize: 12.5, color: tab === "build" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
-              cursor: "pointer", fontFamily: "inherit",
-            }}
-          >
-            <span style={{ width: 8, height: 8, borderRadius: 2, background: build.color || "#7A86FF" }} />
-            Workflow: {build.name}
+        {/* свернуть панель */}
+        <button onClick={onClose} title="Свернуть панель" style={railBtn}
+          onMouseEnter={e => e.currentTarget.style.background = cv.hover}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+          <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="4" width="18" height="16" rx="2" /><path d="M15 4v16" /><path d="m10 10-2 2 2 2" />
+          </svg>
+        </button>
+        {/* + добавить файл/воркфлоу из базы знаний */}
+        <div style={{ position: "relative" }} ref={addRef}>
+          <button onClick={toggleAdd} title="Добавить файл или воркфлоу из базы знаний"
+            style={{ ...railBtn, background: addOpen ? cv.hover : "transparent" }}
+            onMouseEnter={e => e.currentTarget.style.background = cv.hover}
+            onMouseLeave={e => { if (!addOpen) e.currentTarget.style.background = "transparent"; }}>
+            <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
           </button>
+          {addOpen && (
+            <div onClick={e => e.stopPropagation()}
+              style={{
+                position: "absolute", left: 0, top: "calc(100% + 6px)",
+                width: 256, zIndex: 50,
+                background: color.white, border: "1px solid rgba(38,38,51,0.1)",
+                borderRadius: 14, boxShadow: "0 12px 32px rgba(38,38,51,0.14)",
+                padding: 6, display: "flex", flexDirection: "column", gap: 2,
+              }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 8px", marginBottom: 2 }}>
+                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.4)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+                </svg>
+                <input autoFocus value={addSearch} onChange={e => setAddSearch(e.target.value)} placeholder="Поиск ресурсов..."
+                  style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontSize: 12.5, color: "#262633", fontFamily: "inherit", padding: 0 }} />
+              </div>
+              {(() => {
+                const q = addSearch.trim().toLowerCase();
+                const wf = (addDepts || []).filter(d => !q || (d.name || d.id || "").toLowerCase().includes(q));
+                const kb = (addKb || []).filter(f => !q || (f || "").toLowerCase().includes(q));
+                const Section = ({ id, label, count, children }) => (
+                  <>
+                    <button onClick={() => setAddView(v => v === id ? null : id)}
+                      style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "8px 8px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, fontWeight: 550, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+                      onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
+                      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                      <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
+                        style={{ transform: addView === id ? "rotate(90deg)" : "none", transition: "transform 0.15s" }}>
+                        <path d="m9 6 6 6-6 6" />
+                      </svg>
+                      <span style={{ flex: 1 }}>{label}</span>
+                      <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>{count}</span>
+                    </button>
+                    {addView === id && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 1, paddingBottom: 2 }}>{children}</div>
+                    )}
+                  </>
+                );
+                const Item = ({ icon, label, onClick }) => (
+                  <button onClick={onClick}
+                    style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "7px 8px 7px 26px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                    <span style={{ display: "inline-flex", color: "rgba(38,38,51,0.45)", flexShrink: 0 }}>{icon}</span>
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{label}</span>
+                  </button>
+                );
+                return (
+                  <>
+                    <Section id="wf" label="Воркфлоу" count={wf.length}>
+                      {wf.length === 0
+                        ? <div style={{ padding: "6px 8px 6px 26px", fontSize: 12, color: "rgba(38,38,51,0.4)" }}>Пусто</div>
+                        : wf.map(d => (
+                          <Item key={d.id}
+                            icon={<svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><path d="M6.5 10v4M6.5 14h7.5" /></svg>}
+                            label={d.name || d.id} onClick={() => pickAdd("wf", d)} />
+                        ))}
+                    </Section>
+                    <Section id="kb" label="База знаний" count={kb.length}>
+                      {kb.length === 0
+                        ? <div style={{ padding: "6px 8px 6px 26px", fontSize: 12, color: "rgba(38,38,51,0.4)" }}>Пусто</div>
+                        : kb.map((f, i) => (
+                          <Item key={i}
+                            icon={<svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>}
+                            label={f} onClick={() => pickAdd("kb", f)} />
+                        ))}
+                    </Section>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+        {build && (
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 7,
+            padding: "5px 6px 5px 10px", borderRadius: 8,
+            background: tab === "build" ? "rgba(38,38,51,0.05)" : "transparent",
+          }}>
+            <button onClick={() => setTab("build")}
+              style={{
+                display: "inline-flex", alignItems: "center", gap: 7,
+                background: "transparent", border: "none", padding: 0,
+                fontSize: 12.5, color: tab === "build" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
+                cursor: "pointer", fontFamily: "inherit",
+                maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+              <span style={{ width: 8, height: 8, borderRadius: 2, background: build.color || "#7A86FF", flexShrink: 0 }} />
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{build.name}</span>
+            </button>
+            <button onClick={() => setTab("log")} title="Закрыть воркфлоу"
+              style={{
+                width: 16, height: 16, padding: 0, flexShrink: 0,
+                background: "transparent", border: "none", borderRadius: 4,
+                color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+              }}>
+              <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         )}
         <button
           onClick={() => setTab("log")}
           style={{
             display: "inline-flex", alignItems: "center", gap: 8,
-            padding: "5px 12px",
+            padding: "5px 10px",
             background: "transparent",
             border: "none", borderRadius: 8,
             fontSize: 12.5, color: tab === "log" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
@@ -125,9 +266,16 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
           );
         })}
         <div style={{ flex: 1 }} />
-        <button onClick={onClose} title="Свернуть" style={{
-          ...zoomBtn, color: "rgba(38,38,51,0.5)", padding: 6,
-        }}>{ic.close}</button>
+        {build && (
+          <button onClick={() => window.__maryNavigate?.(`dept://${build.deptId}`)} title="Развернуть воркфлоу в полном виде"
+            style={railBtn}
+            onMouseEnter={e => e.currentTarget.style.background = cv.hover}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 17 17 7M9 7h8v8" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {tab.startsWith("art:") ? (
@@ -144,8 +292,26 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
         fontSize: 11.5, color: "rgba(38,38,51,0.55)",
         display: "flex", alignItems: "center", gap: 8,
       }}>
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34C759" }} />
+        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34C759", flexShrink: 0 }} />
         <span>Mary онлайн</span>
+        <div style={{ flex: 1 }} />
+        {build?.integrations?.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center" }} title={`Интеграции: ${build.integrations.join(", ")}`}>
+            {build.integrations.map((it, i) => {
+              const colors = ["#3F95FF", "#34C759", "#FF8B3D", "#7A86FF", "#FF3B30", "#FFB800"];
+              return (
+                <span key={i} style={{
+                  width: 20, height: 20, borderRadius: "50%",
+                  marginLeft: i === 0 ? 0 : -6,
+                  background: colors[i % colors.length],
+                  border: "1.5px solid #fff", boxShadow: "0 1px 3px rgba(38,38,51,0.18)",
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 9.5, fontWeight: 700, color: "#fff", textTransform: "uppercase",
+                }}>{(it || "?").slice(0, 1)}</span>
+              );
+            })}
+          </div>
+        )}
       </div>
       </div>
     </aside>
