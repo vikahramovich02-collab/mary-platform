@@ -3275,8 +3275,9 @@ app.post("/webhook/mary/agent/stream", async (req, res) => {
   const { message = "", history = [], conversationId, deptId } = req.body || {};
   if (!OPENROUTER_API_KEY) return res.status(503).json({ error: "LLM not configured" });
 
-  // Если передан conversationId — берём историю с бэка (а не из request body)
-  // Пользовательское сообщение уже сохранено фронтом через POST /conversations/:id/messages
+  // Если передан conversationId — берём историю с бэка (а не из request body).
+  // actualHistory строим ДО сохранения текущего сообщения, чтобы оно не задвоилось
+  // (его передаём отдельным полем `message` в runAgentStream).
   let actualHistory = history;
   if (conversationId) {
     const conv = convGet(conversationId);
@@ -3286,6 +3287,9 @@ app.post("/webhook/mary/agent/stream", async (req, res) => {
         text: m.text || "",
       }));
     }
+    // Персистим user-сообщение в тред (фронт его отдельно не сохраняет).
+    // Это и наполняет историю реальными вопросами юзера, и даёт авто-заголовку контекст.
+    if (message) convAppend(conversationId, { role: "user", text: message });
   }
 
   // SSE setup
