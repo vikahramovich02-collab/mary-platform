@@ -15,17 +15,51 @@ function kbFolderOf(name = "") {
   return (KB_FOLDERS.find(f => f.match.test(name)) || KB_FOLDERS[KB_FOLDERS.length - 1]).id;
 }
 
+function WfChip({ active, color: dot, name, onOpen, onClose }) {
+  return (
+    <div style={{
+      display: "inline-flex", alignItems: "center", gap: 7,
+      padding: "7px 6px 7px 11px", borderRadius: 11,
+      background: active ? color.white : "transparent",
+      boxShadow: active ? "0 1px 4px rgba(38,38,51,0.1)" : "none",
+      transition: "background 0.15s",
+    }}>
+      <button onClick={onOpen} style={{
+        display: "inline-flex", alignItems: "center", gap: 7,
+        background: "transparent", border: "none", padding: 0,
+        fontSize: 12.5, color: active ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
+        cursor: "pointer", fontFamily: "inherit",
+        maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+      }}>
+        <span style={{ width: 8, height: 8, borderRadius: 2, background: dot || "#7A86FF", flexShrink: 0 }} />
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
+      </button>
+      <button onClick={onClose} title="Закрыть воркфлоу" style={{
+        width: 16, height: 16, padding: 0, flexShrink: 0,
+        background: "transparent", border: "none", borderRadius: 5,
+        color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
+      </button>
+    </div>
+  );
+}
+
 export function ActivityPanel({ build: buildProp, activity, currentTool, activeAgentIds, artifacts = [], onCloseArtifact, onClose, docRequest }) {
-  const [localBuild, setLocalBuild] = useState(null); // воркфлоу, открытый из пикера "+"
-  const build = localBuild || buildProp;
-  const [tab, setTab] = useState(build ? "build" : "log");
-  useEffect(() => { if (build && tab === "log" && activity.length <= 2) setTab("build"); }, [build]);
+  const [localBuilds, setLocalBuilds] = useState([]); // воркфлоу, открытые из пикера "+" (вкладки)
+  const [tab, setTab] = useState(buildProp ? "build" : "log");
+  // воркфлоу, который сейчас показан на канве (проп-сборка или одна из открытых вкладок)
+  const buildTab = tab === "build" ? buildProp
+    : tab.startsWith("wf:") ? localBuilds.find(b => `wf:${b.deptId}` === tab)
+    : null;
+  useEffect(() => { if (buildProp && tab === "log" && activity.length <= 2) setTab("build"); }, [buildProp]);
   const lastArtId = artifacts[artifacts.length - 1]?.id;
   useEffect(() => {
     if (lastArtId) setTab(`art:${lastArtId}`);
   }, [lastArtId]);
   const isArtifactTab = tab.startsWith("art:");
-  const autoWidth = isArtifactTab ? 720 : ((build?.agents?.length || 0) >= 3 ? 620 : 540);
+  const autoWidth = isArtifactTab ? 720 : ((buildTab?.agents?.length || 0) >= 3 ? 620 : 540);
   const [userWidth, setUserWidth] = useState(null);
   const [isResizing, setIsResizing] = useState(false);
   const width = userWidth ?? autoWidth;
@@ -60,6 +94,7 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
   const [addDepts, setAddDepts] = useState([]);
   const [openDoc, setOpenDoc] = useState(null); // { name, content, loading } — открытый файл из БЗ
   const [openKbFolder, setOpenKbFolder] = useState(null); // раскрытая папка БЗ в пикере
+  const [openWfDept, setOpenWfDept] = useState(null);     // раскрытый отдел в пикере воркфлоу
   const addRef = useRef(null);
   useEffect(() => {
     if (!addOpen) return;
@@ -94,14 +129,14 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
   const pickAdd = async (kind, item) => {
     setAddOpen(false); setAddView(null); setAddSearch("");
     if (kind === "wf") {
-      setLocalBuild({
+      setLocalBuilds(prev => prev.some(b => b.deptId === item.id) ? prev : [...prev, {
         name: item.name,
         color: item.color,
         deptId: item.id,
         channels: item.channels || [],
         agents: item.agents || [],
-      });
-      setTab("build");
+      }]);
+      setTab(`wf:${item.id}`);
       return;
     }
     openKbDoc(item);
@@ -222,13 +257,40 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
                 return (
                   <>
                     <Section id="wf" label="Воркфлоу" count={wf.length}>
-                      {wf.length === 0
-                        ? <div style={{ padding: "6px 8px 6px 26px", fontSize: 12, color: "rgba(38,38,51,0.4)" }}>Пусто</div>
-                        : wf.map(d => (
-                          <Item key={d.id}
-                            icon={<svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><path d="M6.5 10v4M6.5 14h7.5" /></svg>}
-                            label={d.name || d.id} onClick={() => pickAdd("wf", d)} />
-                        ))}
+                      {wf.length === 0 ? (
+                        <div style={{ padding: "6px 8px 6px 26px", fontSize: 12, color: "rgba(38,38,51,0.4)" }}>Пусто</div>
+                      ) : wf.map(d => {
+                        // воркфлоу отдела: пока один основной поток (каналы → агенты)
+                        const flows = [{ id: "main", name: "Основной поток" }];
+                        const open = openWfDept === d.id;
+                        return (
+                          <div key={d.id} style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                            <button onClick={() => setOpenWfDept(v => v === d.id ? null : d.id)}
+                              style={{ display: "flex", alignItems: "center", gap: 8, width: "100%", padding: "7px 8px 7px 26px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+                              onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
+                              onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                              <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
+                                style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}>
+                                <path d="m9 6 6 6-6 6" />
+                              </svg>
+                              <span style={{ width: 8, height: 8, borderRadius: 2, background: d.color || "#7A86FF", flexShrink: 0 }} />
+                              <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name || d.id}</span>
+                              <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>{flows.length}</span>
+                            </button>
+                            {open && flows.map(fl => (
+                              <button key={fl.id} onClick={() => pickAdd("wf", d)}
+                                style={{ display: "flex", alignItems: "center", gap: 9, width: "100%", padding: "7px 8px 7px 44px", background: "transparent", border: "none", borderRadius: 8, fontSize: 12.5, color: "#262633", cursor: "pointer", fontFamily: "inherit", textAlign: "left" }}
+                                onMouseEnter={e => e.currentTarget.style.background = "rgba(38,38,51,0.04)"}
+                                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                                <span style={{ display: "inline-flex", color: "rgba(38,38,51,0.45)", flexShrink: 0 }}>
+                                  <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><path d="M6.5 10v4M6.5 14h7.5" /></svg>
+                                </span>
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fl.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        );
+                      })}
                     </Section>
                     <Section id="kb" label="База знаний" count={kb.length}>
                       {kb.length === 0 ? (
@@ -285,36 +347,18 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
             </div>
           )}
         </div>
-        {build && (
-          <div style={{
-            display: "inline-flex", alignItems: "center", gap: 7,
-            padding: "5px 6px 5px 10px", borderRadius: 8,
-            background: color.white, border: `1px solid ${cv.border}`,
-          }}>
-            <button onClick={() => setTab("build")}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 7,
-                background: "transparent", border: "none", padding: 0,
-                fontSize: 12.5, color: tab === "build" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
-                cursor: "pointer", fontFamily: "inherit",
-                maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-              }}>
-              <span style={{ width: 8, height: 8, borderRadius: 2, background: build.color || "#7A86FF", flexShrink: 0 }} />
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{build.name}</span>
-            </button>
-            <button onClick={() => { setTab("log"); setLocalBuild(null); }} title="Закрыть воркфлоу"
-              style={{
-                width: 16, height: 16, padding: 0, flexShrink: 0,
-                background: "transparent", border: "none", borderRadius: 4,
-                color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
-                display: "inline-flex", alignItems: "center", justifyContent: "center",
-              }}>
-              <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+        {buildProp && (
+          <WfChip active={tab === "build"} color={buildProp.color} name={buildProp.name}
+            onOpen={() => setTab("build")} onClose={() => setTab("log")} />
         )}
+        {localBuilds.map(b => (
+          <WfChip key={b.deptId} active={tab === `wf:${b.deptId}`} color={b.color} name={b.name}
+            onOpen={() => setTab(`wf:${b.deptId}`)}
+            onClose={() => {
+              setLocalBuilds(prev => prev.filter(x => x.deptId !== b.deptId));
+              if (tab === `wf:${b.deptId}`) setTab(buildProp ? "build" : "log");
+            }} />
+        ))}
         {artifacts.map(a => {
           const active = tab === `art:${a.id}`;
           return (
@@ -337,7 +381,7 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
               </button>
               <button onClick={() => {
                 onCloseArtifact?.(a.id);
-                if (active) setTab(build ? "build" : "log");
+                if (active) setTab(buildProp ? "build" : "log");
               }} title="Закрыть"
                 style={{
                   width: 16, height: 16, padding: 0,
@@ -370,7 +414,7 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
               <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.5)" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
               <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{openDoc.name}</span>
             </button>
-            <button onClick={() => { setOpenDoc(null); if (tab === "doc") setTab(build ? "build" : "log"); }} title="Закрыть файл"
+            <button onClick={() => { setOpenDoc(null); if (tab === "doc") setTab(buildProp ? "build" : "log"); }} title="Закрыть файл"
               style={{
                 width: 16, height: 16, padding: 0, flexShrink: 0,
                 background: "transparent", border: "none", borderRadius: 4,
@@ -384,8 +428,8 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
           </div>
         )}
         <div style={{ flex: 1 }} />
-        {build && (
-          <button onClick={() => window.__maryNavigate?.(`dept://${build.deptId}`)} title="Развернуть воркфлоу в полном виде"
+        {buildTab && (
+          <button onClick={() => window.__maryNavigate?.(`dept://${buildTab.deptId}`)} title="Развернуть воркфлоу в полном виде"
             style={railBtn}
             onMouseEnter={e => e.currentTarget.style.background = cv.hover}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
@@ -397,13 +441,13 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
       </div>
 
       {tab === "doc" && openDoc ? (
-        <DocView doc={openDoc} onClose={() => { setOpenDoc(null); setTab(build ? "build" : "log"); }} />
+        <DocView doc={openDoc} onClose={() => { setOpenDoc(null); setTab(buildProp ? "build" : "log"); }} />
       ) : tab.startsWith("art:") ? (
         <ArtifactView artifact={artifacts.find(a => `art:${a.id}` === tab)} />
-      ) : tab === "build" && build ? (
+      ) : buildTab ? (
         <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-          <BuildCanvas build={build} activeAgentIds={activeAgentIds} />
-          <WorkflowLogs build={build} />
+          <BuildCanvas build={buildTab} activeAgentIds={activeAgentIds} />
+          <WorkflowLogs build={buildTab} />
         </div>
       ) : (
         <ActivityLog activity={activity} />
