@@ -195,7 +195,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
             onMouseLeave={() => setHoveredIdx(null)}
             style={{
               display: "flex", alignItems: "center", gap: 14,
-              padding: "11px 12px 11px 0", borderRadius: 10,
+              padding: "11px 12px", borderRadius: 10,
               cursor: disabled ? "default" : "pointer",
               background: checked ? "rgba(38,38,51,0.05)" : hovered ? "rgba(38,38,51,0.035)" : "transparent",
               transition: "background 0.1s",
@@ -217,7 +217,7 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
       {!disabled && (
         <div style={{
           display: "flex", alignItems: "center", gap: 14,
-          padding: "11px 12px 11px 0", borderRadius: 10,
+          padding: "11px 12px", borderRadius: 10,
         }}>
           <svg
             onClick={!multi && freeText.trim() ? () => onPick(freeText.trim()) : undefined}
