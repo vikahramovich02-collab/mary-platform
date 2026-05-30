@@ -294,24 +294,6 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
       }}>
         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34C759", flexShrink: 0 }} />
         <span>Mary онлайн</span>
-        <div style={{ flex: 1 }} />
-        {build?.integrations?.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center" }} title={`Интеграции: ${build.integrations.join(", ")}`}>
-            {build.integrations.map((it, i) => {
-              const colors = ["#3F95FF", "#34C759", "#FF8B3D", "#7A86FF", "#FF3B30", "#FFB800"];
-              return (
-                <span key={i} style={{
-                  width: 20, height: 20, borderRadius: "50%",
-                  marginLeft: i === 0 ? 0 : -6,
-                  background: colors[i % colors.length],
-                  border: "1.5px solid #fff", boxShadow: "0 1px 3px rgba(38,38,51,0.18)",
-                  display: "inline-flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 9.5, fontWeight: 700, color: "#fff", textTransform: "uppercase",
-                }}>{(it || "?").slice(0, 1)}</span>
-              );
-            })}
-          </div>
-        )}
       </div>
       </div>
     </aside>
