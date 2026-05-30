@@ -1001,9 +1001,11 @@ function convAppend(id, msg) {
   conv.messages.push({ ...msg, ts: new Date().toISOString() });
   conv.updatedAt = new Date().toISOString();
   // Авто-генерация title из первого user-сообщения (если только дефолтный «Чат DD.MM · HH:MM» или «Новый чат»)
+  // Это лишь мгновенный фолбэк — позже autoTitleConversation() заменит его на осмысленный LLM-заголовок.
   const isDefault = /^(Новый чат|Чат \d{1,2}\.\d{2} · \d{2}:\d{2})$/.test(conv.title || "");
   if (isDefault && msg.role === "user" && msg.text) {
     conv.title = msg.text.slice(0, 60).trim();
+    conv.titleAuto = true;
   }
   saveConversations(data);
   return conv;
@@ -1030,9 +1032,58 @@ function convRename(id, title) {
   const conv = data.conversations.find(c => c.id === id);
   if (!conv) return null;
   conv.title = title || conv.title;
+  conv.titleAuto = false; // ручное переименование фиксируем — автозаголовок больше не трогает
   conv.updatedAt = new Date().toISOString();
   saveConversations(data);
   return conv;
+}
+
+// ── Авто-заголовок чата по контексту первых сообщений ──────────
+// Вызывается fire-and-forget после первого ответа Mary. Берёт первый
+// обмен (вопрос юзера + ответ Mary) и просит LLM сделать короткий
+// осмысленный заголовок (2-5 слов). Не трогает чаты, переименованные руками.
+const _titlingInFlight = new Set();
+async function autoTitleConversation(id) {
+  if (!OPENROUTER_API_KEY || _titlingInFlight.has(id)) return;
+  const conv = convGet(id);
+  if (!conv) return;
+  // Только если заголовок ещё авто-сгенерён (или дефолтный) — ручные не трогаем
+  const isDefault = /^(Новый чат|Чат \d{1,2}\.\d{2} · \d{2}:\d{2})$/.test(conv.title || "");
+  if (conv.titleAuto === false && !isDefault) return;
+  const userMsgs = (conv.messages || []).filter(m => m.role === "user" && m.text);
+  const maryMsgs = (conv.messages || []).filter(m => m.role === "mary" && m.text);
+  if (!userMsgs.length || !maryMsgs.length) return; // ждём первый полный обмен
+  _titlingInFlight.add(id);
+  try {
+    const dialog =
+      `Пользователь: ${userMsgs[0].text.slice(0, 500)}\n` +
+      `Mary: ${maryMsgs[0].text.slice(0, 500)}`;
+    const raw = await callLLM({
+      system: "Ты придумываешь короткий заголовок для чата на русском по его началу. " +
+        "Только суть темы: 2-5 слов, без кавычек, без точки в конце, с заглавной буквы. " +
+        "Без слов «чат», «диалог», «вопрос». Верни ТОЛЬКО заголовок.",
+      user: dialog,
+      temperature: 0.3,
+      maxTokens: 24,
+      jsonMode: false,
+      label: "auto-title",
+    });
+    let title = (raw || "").trim().replace(/^["'«»\s]+|["'«».\s]+$/g, "").split("\n")[0];
+    if (!title) return;
+    if (title.length > 60) title = title.slice(0, 60).trim();
+    // Перечитываем — за время LLM могли переименовать руками
+    const fresh = convGet(id);
+    if (!fresh || (fresh.titleAuto === false && !/^(Новый чат|Чат )/.test(fresh.title || ""))) return;
+    convRename(id, title);
+    // convRename ставит titleAuto=false — возвращаем true, чтобы можно было обновить позже при желании
+    const data = loadConversations();
+    const c2 = data.conversations.find(c => c.id === id);
+    if (c2) { c2.titleAuto = true; saveConversations(data); }
+  } catch (e) {
+    console.error("[auto-title] error:", e.message);
+  } finally {
+    _titlingInFlight.delete(id);
+  }
 }
 
 // ── KB файловая система (общая, без юзеров пока) ──────────
@@ -3253,11 +3304,14 @@ app.post("/webhook/mary/agent/stream", async (req, res) => {
   try {
     const result = await runAgentStream({ message, history: actualHistory, emit, deptId: deptId || null });
     if (conversationId) {
-      convAppend(conversationId, {
+      const updated = convAppend(conversationId, {
         role: "mary",
         text: result.text || "",
         trace: result.trace || [],
       });
+      // Авто-заголовок по контексту первого обмена (fire-and-forget, не блокирует ответ)
+      const maryCount = (updated?.messages || []).filter(m => m.role === "mary").length;
+      if (maryCount <= 2) autoTitleConversation(conversationId).catch(() => {});
     }
     emit("done", {
       text: result.text,

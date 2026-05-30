@@ -637,6 +637,8 @@ export function ChatMaryPage({ dark, toggleDark }) {
       }
       // Обновим список чатов чтобы title обновился
       refreshList();
+      // Авто-заголовок генерится на бэке асинхронно (LLM ~1-2с) — подхватим его
+      setTimeout(refreshList, 2500);
     } catch (e) {
       // Stop-кнопка → AbortError. Не показываем как ошибку, мягко закрываем.
       if (e.name === "AbortError") {

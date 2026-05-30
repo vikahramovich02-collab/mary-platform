@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { color, cv } from "../ui/tokens.js";
 import { renderMarkdown } from "./markdown.jsx";
 import { BuildNode, AgentNodeExpanded } from "./build-nodes.jsx";
+import { deptIcon } from "./icons.jsx";
 
 // папки базы знаний по типу файла (порядок = порядок показа)
 const KB_FOLDERS = [
@@ -30,7 +31,7 @@ function WfChip({ active, color: dot, name, onOpen, onClose }) {
         cursor: "pointer", fontFamily: "inherit",
         maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
       }}>
-        <span style={{ width: 8, height: 8, borderRadius: 2, background: dot || "#7A86FF", flexShrink: 0 }} />
+        <span style={{ display: "inline-flex", color: dot || "#7A86FF", flexShrink: 0 }}>{deptIcon({ name }, 14)}</span>
         <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
       </button>
       <button onClick={onClose} title="Закрыть воркфлоу" style={{
@@ -128,7 +129,9 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
   const pickAdd = async (kind, item) => {
     setAddOpen(false); setAddView(null); setAddSearch("");
     if (kind === "wf") {
-      setLocalBuilds(prev => prev.some(b => b.deptId === item.id) ? prev : [...prev, {
+      // если этот воркфлоу уже открыт как авто-сборка — просто переключаемся на неё
+      if (buildProp && (buildProp.deptId === item.id || buildProp.name === item.name)) { setTab("build"); return; }
+      setLocalBuilds(prev => prev.some(b => b.deptId === item.id || b.name === item.name) ? prev : [...prev, {
         name: item.name,
         color: item.color,
         deptId: item.id,
@@ -160,9 +163,9 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
       <div style={{
         flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
         backgroundColor: cv.bgCard,
-        backgroundImage: "radial-gradient(var(--dot) 0.9px, transparent 0.9px), radial-gradient(var(--dot) 0.9px, transparent 0.9px), radial-gradient(var(--dot) 0.9px, transparent 0.9px), radial-gradient(var(--dot) 0.9px, transparent 0.9px), radial-gradient(var(--dot) 0.9px, transparent 0.9px)",
-        backgroundSize: "23px 23px, 31px 31px, 41px 41px, 53px 53px, 67px 67px",
-        backgroundPosition: "0 0, 11px 17px, 27px 5px, 7px 33px, 39px 23px",
+        backgroundImage: "radial-gradient(var(--dot) 1px, transparent 1px)",
+        backgroundSize: "22px 22px",
+        backgroundPosition: "0 0",
         border: `1px solid ${cv.border}`,
         borderRadius: 16,
         overflow: "hidden",
@@ -272,7 +275,7 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
                                 style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }}>
                                 <path d="m9 6 6 6-6 6" />
                               </svg>
-                              <span style={{ width: 8, height: 8, borderRadius: 2, background: d.color || "#7A86FF", flexShrink: 0 }} />
+                              <span style={{ display: "inline-flex", color: d.color || "#7A86FF", flexShrink: 0 }}>{deptIcon({ name: d.name || d.id, id: d.id }, 14)}</span>
                               <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.name || d.id}</span>
                               <span style={{ fontSize: 11, color: "rgba(38,38,51,0.4)", fontWeight: 500 }}>{flows.length}</span>
                             </button>
