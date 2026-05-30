@@ -10,9 +10,9 @@ export function MaryInputBox({ text, setText, send, loading, onStop, placeholder
     <div style={{
       background: cv.bg,
       border: `1px solid ${cv.borderStrong}`,
-      borderRadius: 16,
-      padding: "12px 14px",
-      display: "flex", flexDirection: "column", gap: 10,
+      borderRadius: 22,
+      padding: "10px 14px",
+      display: "flex", flexDirection: "column", gap: 8,
     }}>
       <input
         data-testid="chat-mary-input"

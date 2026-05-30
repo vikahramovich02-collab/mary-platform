@@ -1212,9 +1212,9 @@ export function ChatMaryPage({ dark, toggleDark }) {
                 <div style={{
                   background: color.white,
                   border: "1px solid rgba(38,38,51,0.12)",
-                  borderRadius: 16,
-                  padding: "12px 14px",
-                  display: "flex", flexDirection: "column", gap: 10,
+                  borderRadius: 22,
+                  padding: "10px 14px",
+                  display: "flex", flexDirection: "column", gap: 8,
                 }}>
                   {/* Row 1: input */}
                   <input
