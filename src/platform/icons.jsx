@@ -16,6 +16,30 @@ export function P({ src, size = 14 }) {
   return <img src={src} alt="" style={{ width: size, height: size, objectFit: "contain", display: "block" }} />;
 }
 
+// Иконка отдела по смыслу (по названию/id), вместо лапки. Line-style.
+export function deptIcon(d, size = 14) {
+  const n = ((d?.name || "") + " " + (d?.id || "")).toLowerCase();
+  const has = (...ks) => ks.some(k => n.includes(k));
+  if (has("смм", "smm", "контент", "маркет", "social", "соц"))
+    return <I size={size} d={<><path d="M3 11l18-5v12L3 14v-3z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></>} />;
+  if (has("продаж", "sales", "сбыт", "клиент"))
+    return <I size={size} d={<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></>} />;
+  if (has("отч", "report", "аналит", "метр", "data", "данны"))
+    return <I size={size} d={<><line x1="12" y1="20" x2="12" y2="10" /><line x1="18" y1="20" x2="18" y2="4" /><line x1="6" y1="20" x2="6" y2="16" /></>} />;
+  if (has("поддерж", "support", "помощ", "забот"))
+    return <I size={size} d={<><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="4" /><path d="M4.93 4.93l4.24 4.24" /><path d="M14.83 9.17l4.24-4.24" /><path d="M14.83 14.83l4.24 4.24" /><path d="M9.17 14.83l-4.24 4.24" /></>} />;
+  if (has("hr", "кадр", "персонал", "найм", "рекрут"))
+    return <I size={size} d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>} />;
+  if (has("финанс", "бухгалт", "finance", "затрат", "деньг"))
+    return <I size={size} d={<><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4z" /></>} />;
+  if (has("дизайн", "design", "креатив", "бренд"))
+    return <I size={size} d={<><circle cx="13.5" cy="6.5" r="1" /><circle cx="17.5" cy="10.5" r="1" /><circle cx="6.5" cy="12.5" r="1" /><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.9 0 1.6-.7 1.6-1.7 0-.4-.2-.8-.4-1.1-.3-.3-.4-.6-.4-1.1 0-.9.7-1.6 1.6-1.6H18c2.2 0 4-1.8 4-4C22 6 17.5 2 12 2z" /></>} />;
+  if (has("разраб", "dev", "it", "продукт", "tech", "технич"))
+    return <I size={size} d={<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></>} />;
+  // fallback — портфель
+  return <I size={size} d={<><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></>} />;
+}
+
 // Словарь иконок — используется везде в платформе
 export const ic = {
   home: <I d={<path d="M3.5 10.8 12 3.5l8.5 7.3V20a1 1 0 0 1-1 1h-4v-6h-7v6h-4a1 1 0 0 1-1-1v-9.2z" />} />,

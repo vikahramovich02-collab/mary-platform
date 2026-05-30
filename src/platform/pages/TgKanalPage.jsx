@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { color, transition, font, cv } from "../../ui/tokens.js";
 import { useTheme } from "../../ui/theme.js";
-import { I, P } from "../icons.jsx";
+import { I, P, deptIcon } from "../icons.jsx";
 import { usePeople, MOCK_PEOPLE } from "../people.js";
 import { renderMarkdown, parseNumberedOptions, parseChecklistOptions } from "../markdown.jsx";
 import { AGENTS, EDGES, CARD_W, CARD_H, INSTAGRAM_AGENTS, INSTAGRAM_EDGES } from "../agents-config.js";
@@ -1150,7 +1150,7 @@ export default function TgKanalPage() {
           {/* Отделы (скролл) */}
           <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", gap: 2, padding: "8px 0", marginTop: 4, borderTop: `1px solid ${cv.border}` }}>
             {departments.map(d => (
-              <RailBtn key={d.id} icon={ic.paw} label={d.name} active={currentPage === "dept:" + d.id} onClick={() => navigate("dept:" + d.id)} />
+              <RailBtn key={d.id} icon={deptIcon(d)} label={d.name} active={currentPage === "dept:" + d.id} onClick={() => navigate("dept:" + d.id)} />
             ))}
           </div>
 
@@ -1265,7 +1265,7 @@ export default function TgKanalPage() {
                 <SideRow
                   icon={
                     <span style={{ display: "flex", color: cv.text }}>
-                      {ic.paw}
+                      {deptIcon(d)}
                     </span>
                   }
                   label={d.name}

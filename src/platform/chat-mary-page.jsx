@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { color, transition, cv } from "../ui/tokens.js";
-import { ic } from "./icons.jsx";
+import { ic, deptIcon } from "./icons.jsx";
 import { MaryInputBox, useTypewriterPlaceholder } from "./chat-input.jsx";
 import { zoomBtn } from "./chat-panel.jsx";
 import { ActivityPanel, ArtifactView, ActivityLog, BuildCanvas } from "./chat-mary-activity.jsx";
@@ -1040,13 +1040,9 @@ export function ChatMaryPage({ dark, toggleDark }) {
                           onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(38,38,51,0.04)"; }}
                           onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
                         >
-                          <svg width={13} height={13} viewBox="0 0 24 24" fill={d.color} style={{ flexShrink: 0 }}>
-                            <ellipse cx="12" cy="15.7" rx="4.6" ry="3.8" />
-                            <ellipse cx="5.7" cy="10.5" rx="1.9" ry="2.3" />
-                            <ellipse cx="9.9" cy="6.8" rx="1.9" ry="2.3" />
-                            <ellipse cx="14.1" cy="6.8" rx="1.9" ry="2.3" />
-                            <ellipse cx="18.3" cy="10.5" rx="1.9" ry="2.3" />
-                          </svg>
+                          <span style={{ display: "flex", color: d.color, flexShrink: 0 }}>
+                            {deptIcon({ name: d.title, id: d.deptId }, 13)}
+                          </span>
                           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{d.title}</span>
                         </div>
                       );
