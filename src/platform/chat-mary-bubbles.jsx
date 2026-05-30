@@ -194,29 +194,28 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
             onMouseEnter={() => { if (!disabled) setHoveredIdx(idx); }}
             onMouseLeave={() => setHoveredIdx(null)}
             style={{
-              display: "flex", alignItems: "center", gap: 12,
-              padding: "8px 2px",
-              borderTop: idx > 0 ? "1px solid rgba(38,38,51,0.07)" : "none",
+              display: "flex", alignItems: "center", gap: 14,
+              padding: "11px 12px", borderRadius: 10,
               cursor: disabled ? "default" : "pointer",
-              background: checked ? "rgba(38,38,51,0.04)" : hovered ? "rgba(38,38,51,0.03)" : "transparent",
+              background: checked ? "rgba(38,38,51,0.05)" : hovered ? "rgba(38,38,51,0.035)" : "transparent",
               transition: "background 0.1s",
             }}>
             <span style={{
-              width: 20, textAlign: "right", flexShrink: 0,
-              fontSize: 13, color: "rgba(38,38,51,0.35)",
+              width: 18, textAlign: "right", flexShrink: 0,
+              fontSize: 14, color: "rgba(38,38,51,0.35)",
               fontVariantNumeric: "tabular-nums",
             }}>
               {checked
-                ? <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
+                ? <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="rgba(38,38,51,0.45)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7"/></svg>
                 : idx + 1}
             </span>
             {hl && !checked && (
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#262633", flexShrink: 0, marginLeft: -6 }} />
+              <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#262633", flexShrink: 0, marginLeft: -8 }} />
             )}
-            <span style={{ flex: 1, fontSize: 14, color: "#262633", lineHeight: 1.4 }}>{opt}</span>
-            <svg width={14} height={14} viewBox="0 0 24 24" fill="none"
-              stroke="rgba(38,38,51,0.25)"
-              strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+            <span style={{ flex: 1, fontSize: 15, fontWeight: 450, color: "#262633", lineHeight: 1.4 }}>{opt}</span>
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none"
+              stroke="rgba(38,38,51,0.3)"
+              strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"
               style={{ flexShrink: 0 }}>
               <path d="M5 12h14M13 6l6 6-6 6"/>
             </svg>
@@ -227,13 +226,12 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
       {/* Свой вариант */}
       {!disabled && (
         <div style={{
-          display: "flex", alignItems: "center", gap: 12,
-          padding: "8px 2px",
-          borderTop: "1px solid rgba(38,38,51,0.07)",
+          display: "flex", alignItems: "center", gap: 14,
+          padding: "11px 12px", borderRadius: 10,
         }}>
           <span style={{
-            width: 20, textAlign: "right", flexShrink: 0,
-            fontSize: 13, color: "rgba(38,38,51,0.25)",
+            width: 18, textAlign: "right", flexShrink: 0,
+            fontSize: 14, color: "rgba(38,38,51,0.25)",
             fontVariantNumeric: "tabular-nums",
           }}>{options.length + 1}</span>
           <input
@@ -245,13 +243,13 @@ export function OptionsBlock({ options, multi, onPick, highlights, disabled, noT
             placeholder="Свой вариант…"
             style={{
               flex: 1, border: "none", outline: "none",
-              fontSize: 14, color: "#262633", background: "transparent",
+              fontSize: 15, color: "#262633", background: "transparent",
               fontFamily: "inherit", padding: 0,
             }}
           />
           <svg
             onClick={!multi && freeText.trim() ? () => onPick(freeText.trim()) : undefined}
-            width={14} height={14} viewBox="0 0 24 24" fill="none"
+            width={16} height={16} viewBox="0 0 24 24" fill="none"
             stroke={freeText.trim() ? "#262633" : "rgba(38,38,51,0.25)"}
             strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
             style={{ flexShrink: 0, cursor: !multi && freeText.trim() ? "pointer" : "default", transition: "stroke 0.1s" }}
