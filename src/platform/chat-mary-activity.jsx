@@ -67,7 +67,10 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
     }}>
       <div style={{
         flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
-        background: cv.bgCard,
+        backgroundColor: cv.bgCard,
+        backgroundImage: "radial-gradient(var(--dot) 0.8px, transparent 0.8px), radial-gradient(var(--dot) 0.8px, transparent 0.8px), radial-gradient(var(--dot) 0.8px, transparent 0.8px)",
+        backgroundSize: "37px 37px, 53px 53px, 71px 71px",
+        backgroundPosition: "0 0, 13px 19px, 29px 7px",
         border: `1px solid ${cv.border}`,
         borderRadius: 16,
         overflow: "hidden",
@@ -478,10 +481,7 @@ export function BuildCanvas({ build, activeAgentIds }) {
   return (
     <div style={{
       flex: 1, position: "relative", overflow: "auto",
-      background: cv.bgCard,
-      backgroundImage: "radial-gradient(rgba(38,38,51,0.12) 1px, transparent 1px)",
-      backgroundSize: "20px 20px",
-      backgroundPosition: "10px 10px",
+      background: "transparent",
     }}>
         <div style={{ position: "relative", width: totalW, minHeight: canvasH, padding: "0 0" }}>
           {channelsCount > 0 && (
