@@ -185,7 +185,7 @@ export function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, 
     >
       {!renaming && (
         <span style={{ display: "flex", color: cv.muted, flexShrink: 0 }}>
-          <I d={<path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z" />} size={13} stroke={1.7} />
+          <I d={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />} size={13} stroke={1.7} />
         </span>
       )}
       {pinned && !renaming && (
