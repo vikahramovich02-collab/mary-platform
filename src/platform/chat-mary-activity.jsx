@@ -11,7 +11,24 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
     if (lastArtId) setTab(`art:${lastArtId}`);
   }, [lastArtId]);
   const isArtifactTab = tab.startsWith("art:");
-  const width = isArtifactTab ? 720 : ((build?.agents?.length || 0) >= 3 ? 620 : 540);
+  const autoWidth = isArtifactTab ? 720 : ((build?.agents?.length || 0) >= 3 ? 620 : 540);
+  const [userWidth, setUserWidth] = useState(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const width = userWidth ?? autoWidth;
+  const startResize = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = width;
+    setIsResizing(true);
+    const onMove = (ev) => setUserWidth(Math.max(360, Math.min(920, startW + (startX - ev.clientX))));
+    const onUp = () => {
+      setIsResizing(false);
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  };
   const TOOL_LABELS = {
     create_department: (a) => `создаёт отдел «${a?.name || "…"}»`,
     add_channel:       (a) => `добавляет канал «${a?.name || "…"}»`,
@@ -62,9 +79,12 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
     <aside style={{
       width: width + 20, minWidth: width + 20,
       display: "flex", flexDirection: "column",
-      padding: "10px",
-      transition: "width 0.2s ease",
+      padding: "6px 10px 10px",
+      position: "relative",
+      transition: isResizing ? "none" : "width 0.2s ease",
     }}>
+      <div onMouseDown={startResize} title="Потяните, чтобы изменить ширину"
+        style={{ position: "absolute", left: 0, top: 8, bottom: 8, width: 8, cursor: "ew-resize", zIndex: 30 }} />
       <div style={{
         flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
         backgroundColor: cv.bgCard,
@@ -94,7 +114,7 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
 
       <div style={{
         display: "flex", alignItems: "center", gap: 3,
-        padding: "8px 10px",
+        padding: "6px 10px",
       }}>
         {/* свернуть панель */}
         <button onClick={onClose} title="Свернуть панель" style={railBtn}
@@ -192,7 +212,6 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
             display: "inline-flex", alignItems: "center", gap: 7,
             padding: "5px 6px 5px 10px", borderRadius: 8,
             background: color.white, border: `1px solid ${cv.border}`,
-            boxShadow: "0 1px 2px rgba(38,38,51,0.04)",
           }}>
             <button onClick={() => setTab("build")}
               style={{
@@ -218,20 +237,6 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
             </button>
           </div>
         )}
-        <button
-          onClick={() => setTab("log")}
-          style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            padding: "5px 10px",
-            background: color.white,
-            border: `1px solid ${cv.border}`, borderRadius: 8,
-            boxShadow: "0 1px 2px rgba(38,38,51,0.04)",
-            fontSize: 12.5, color: tab === "log" ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
-            cursor: "pointer", fontFamily: "inherit",
-          }}
-        >
-          Активность <span style={{ color: "rgba(38,38,51,0.4)", marginLeft: 4 }}>{activity.length}</span>
-        </button>
         {artifacts.map(a => {
           const active = tab === `art:${a.id}`;
           return (
@@ -239,7 +244,6 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
               display: "inline-flex", alignItems: "center", gap: 4,
               padding: "5px 4px 5px 10px",
               background: color.white, border: `1px solid ${cv.border}`,
-              boxShadow: "0 1px 2px rgba(38,38,51,0.04)",
               borderRadius: 8,
             }}>
               <button onClick={() => setTab(`art:${a.id}`)}
@@ -455,30 +459,30 @@ export function BuildCanvas({ build, activeAgentIds }) {
   const [expandedAgentIdx, setExpandedAgentIdx] = useState(null);
   const activeSet = activeAgentIds instanceof Set ? activeAgentIds : new Set();
 
-  const NODE_W = 200, NODE_H = 56, GAP_Y = 14, COL_GAP = 110;
+  const NODE_W = 200, NODE_H = 56, GAP_X = 24, ROW_GAP = 64;
   const channelsCount = build.channels.length;
   const agentsCount   = build.agents.length;
-  const maxCount = Math.max(channelsCount, agentsCount, 1);
-  const colHeight = maxCount * (NODE_H + GAP_Y) - GAP_Y;
-  const canvasH = Math.max(colHeight, NODE_H) + 80;
 
-  const COL_X = {
-    channels: 30,
-    dept:     30 + NODE_W + COL_GAP,
-    agents:   30 + NODE_W + COL_GAP + NODE_W + COL_GAP,
+  const rowWidth = (n) => n > 0 ? n * NODE_W + (n - 1) * GAP_X : NODE_W;
+  const maxRowW = Math.max(rowWidth(channelsCount), NODE_W, rowWidth(agentsCount));
+  const PAD_X = 30, PAD_TOP = 44, PAD_BOTTOM = 40;
+  const totalW = maxRowW + PAD_X * 2;
+
+  const yChannels = PAD_TOP;
+  const yDept     = yChannels + NODE_H + ROW_GAP;
+  const yAgents   = yDept + NODE_H + ROW_GAP;
+  const expandH   = expandedAgentIdx !== null ? 200 : 0;
+  const canvasH   = yAgents + NODE_H + PAD_BOTTOM + expandH;
+
+  const xFor = (n, i) => {
+    const startX = (totalW - rowWidth(n)) / 2;
+    return startX + i * (NODE_W + GAP_X);
   };
-  const totalW = COL_X.agents + NODE_W + 30 + (expandedAgentIdx !== null ? 310 : 0);
+  const deptX = (totalW - NODE_W) / 2;
 
-  const yFor = (count, idx) => {
-    const colH = count * (NODE_H + GAP_Y) - GAP_Y;
-    const offset = (canvasH - colH) / 2;
-    return offset + idx * (NODE_H + GAP_Y);
-  };
-  const deptY = (canvasH - NODE_H) / 2;
-
-  const path = (x1, y1, x2, y2) => {
-    const dx = Math.max(40, (x2 - x1) * 0.5);
-    return `M ${x1} ${y1} C ${x1 + dx} ${y1}, ${x2 - dx} ${y2}, ${x2} ${y2}`;
+  const vpath = (x1, y1, x2, y2) => {
+    const dy = Math.max(28, (y2 - y1) * 0.5);
+    return `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`;
   };
 
   return (
@@ -486,43 +490,32 @@ export function BuildCanvas({ build, activeAgentIds }) {
       flex: 1, position: "relative", overflow: "auto",
       background: "transparent",
     }}>
-        <div style={{ position: "relative", width: totalW, minHeight: canvasH, padding: "0 0" }}>
+        <div style={{ position: "relative", width: totalW, minHeight: canvasH, margin: "0 auto" }}>
           {channelsCount > 0 && (
             <div style={{
-              position: "absolute", left: COL_X.channels, top: 12, width: NODE_W,
+              position: "absolute", left: (totalW - rowWidth(channelsCount)) / 2, top: 16,
               fontSize: 10.5, color: "rgba(38,38,51,0.5)", fontWeight: 600,
               textTransform: "uppercase", letterSpacing: "0.05em",
             }}>Каналы · {channelsCount}</div>
           )}
-          {agentsCount > 0 && (
-            <div style={{
-              position: "absolute", left: COL_X.agents, top: 12, width: NODE_W,
-              fontSize: 10.5, color: "rgba(38,38,51,0.5)", fontWeight: 600,
-              textTransform: "uppercase", letterSpacing: "0.05em",
-            }}>Агенты · {agentsCount}</div>
-          )}
 
           <svg width={totalW} height={canvasH} style={{
-            position: "absolute", left: 0, top: 36, pointerEvents: "none", overflow: "visible",
+            position: "absolute", left: 0, top: 0, pointerEvents: "none", overflow: "visible",
           }}>
-            {build.channels.map((_, i) => path && (
+            {build.channels.map((_, i) => (
               <path key={`ch-${i}`}
-                d={path(
-                  COL_X.channels + NODE_W,
-                  yFor(channelsCount, i) + NODE_H / 2,
-                  COL_X.dept,
-                  deptY + NODE_H / 2,
+                d={vpath(
+                  xFor(channelsCount, i) + NODE_W / 2, yChannels + NODE_H,
+                  deptX + NODE_W / 2, yDept,
                 )}
                 stroke="rgba(38,38,51,0.18)" strokeWidth="1.4" fill="none"
               />
             ))}
             {build.agents.map((_, i) => (
               <path key={`ag-${i}`}
-                d={path(
-                  COL_X.dept + NODE_W,
-                  deptY + NODE_H / 2,
-                  COL_X.agents,
-                  yFor(agentsCount, i) + NODE_H / 2,
+                d={vpath(
+                  deptX + NODE_W / 2, yDept + NODE_H,
+                  xFor(agentsCount, i) + NODE_W / 2, yAgents,
                 )}
                 stroke="rgba(38,38,51,0.18)" strokeWidth="1.4" fill="none"
               />
@@ -531,7 +524,7 @@ export function BuildCanvas({ build, activeAgentIds }) {
 
           {build.channels.map((c, i) => (
             <BuildNode key={c.id || i}
-              x={COL_X.channels} y={yFor(channelsCount, i) + 36}
+              x={xFor(channelsCount, i)} y={yChannels}
               w={NODE_W} h={NODE_H}
               icon="ch" iconBg="#FFF4D1" iconColor="#FFB800"
               title={c.name} sub={c.type || "канал"}
@@ -540,7 +533,7 @@ export function BuildCanvas({ build, activeAgentIds }) {
           ))}
 
           <BuildNode
-            x={COL_X.dept} y={deptY + 36}
+            x={deptX} y={yDept}
             w={NODE_W} h={NODE_H}
             icon="dept" iconBg={accent + "26"} iconColor={accent}
             title={build.name} sub="отдел"
@@ -549,7 +542,7 @@ export function BuildCanvas({ build, activeAgentIds }) {
 
           {build.agents.map((a, i) => (
             <BuildNode key={a.id || i}
-              x={COL_X.agents} y={yFor(agentsCount, i) + 36}
+              x={xFor(agentsCount, i)} y={yAgents}
               w={NODE_W} h={NODE_H}
               icon="agent" iconBg={(a.color || "#7A86FF") + "26"} iconColor={a.color || "#7A86FF"}
               title={a.role} sub={a.tasks || "AI-агент"}
@@ -563,8 +556,8 @@ export function BuildCanvas({ build, activeAgentIds }) {
           {expandedAgentIdx !== null && build.agents[expandedAgentIdx] && (
             <AgentNodeExpanded
               agent={build.agents[expandedAgentIdx]}
-              x={COL_X.agents + NODE_W + 16}
-              y={yFor(agentsCount, expandedAgentIdx) + 36}
+              x={Math.max(PAD_X, Math.min(xFor(agentsCount, expandedAgentIdx) + NODE_W / 2 - 140, totalW - PAD_X - 280))}
+              y={yAgents + NODE_H + 16}
               w={280}
               onClose={() => setExpandedAgentIdx(null)}
             />
