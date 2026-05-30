@@ -174,7 +174,7 @@ export function ArtifactView({ artifact }) {
   };
   const initial = (artifact.agentRole || "?").trim().slice(0, 2).toUpperCase();
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, background: color.white }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, background: cv.bgCard }}>
       <div style={{
         padding: "14px 18px",
         borderBottom: "1px solid rgba(38,38,51,0.06)",
@@ -340,7 +340,7 @@ export function BuildCanvas({ build, activeAgentIds }) {
   return (
     <div style={{
       flex: 1, position: "relative", overflow: "auto",
-      background: color.white,
+      background: cv.bgCard,
       backgroundImage: "radial-gradient(rgba(38,38,51,0.12) 1px, transparent 1px)",
       backgroundSize: "20px 20px",
       backgroundPosition: "10px 10px",
