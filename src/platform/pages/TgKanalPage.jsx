@@ -1081,9 +1081,12 @@ export default function TgKanalPage() {
       display: "flex",
       width: "100vw",
       height: "100vh",
-      background: cv.bg,
+      background: cv.bgPage,
       fontFamily: font,
       color: cv.text,
+      gap: isMobile ? 0 : 8,
+      padding: isMobile ? 0 : 8,
+      boxSizing: "border-box",
     }}>
       {/* Mobile bottom nav */}
       {isMobile && (() => {
@@ -1126,9 +1129,10 @@ export default function TgKanalPage() {
         <div style={{
           width: 52, minWidth: 52,
           background: cv.bg,
-          borderRight: `1px solid ${cv.border}`,
+          border: `1px solid ${cv.border}`,
+          borderRadius: 14,
           display: "flex", flexDirection: "column", alignItems: "center",
-          height: "100vh", overflow: "hidden",
+          height: "100%", overflow: "hidden",
         }}>
           {/* Раскрыть */}
           <div style={{ padding: "16px 0 8px" }}>
@@ -1173,10 +1177,11 @@ export default function TgKanalPage() {
       <aside style={{
         width: SIDEBAR_W, minWidth: SIDEBAR_W,
         background: cv.bg,
-        borderRight: `1px solid ${cv.border}`,
+        border: `1px solid ${cv.border}`,
+        borderRadius: 14,
         display: "flex",
         flexDirection: "column",
-        height: "100vh",
+        height: "100%",
         overflow: "hidden",
       }}>
         {/* Logo + collapse */}
@@ -1372,6 +1377,9 @@ export default function TgKanalPage() {
         display: "flex",
         flexDirection: "column",
         background: cv.bg,
+        border: isMobile ? "none" : `1px solid ${cv.border}`,
+        borderRadius: isMobile ? 0 : 14,
+        overflow: "hidden",
         ...((() => {
           const isCanvas = currentPage === "tg-kanal" || departments.some(d => (d.channels||[]).some(c=>c.page===currentPage));
           return isCanvas ? { padding: 16, paddingBottom: isMobile ? 56 : 16 } : { paddingBottom: isMobile ? 56 : 0 };

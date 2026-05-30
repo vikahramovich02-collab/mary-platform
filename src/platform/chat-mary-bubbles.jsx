@@ -514,7 +514,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         )}
         {(body || (m._streaming && m.text)) && (
           <div style={{
-            fontSize: 14, color: cv.text, lineHeight: 1.55,
+            fontSize: 15, color: cv.text, lineHeight: 1.55,
             marginTop: (m._tools && m._tools.length > 0) ? 10 : (m._buildLog !== undefined && body ? 10 : 0),
           }}>
             {renderMarkdown(body)}

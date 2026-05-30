@@ -95,7 +95,7 @@ export function ChatWelcome({ onSuggest, onDemo, children }) {
                 height: 36, padding: "0 14px",
                 background: active ? cv.hover : "transparent",
                 border: "none", borderRadius: 18,
-                fontSize: 14, fontWeight: active ? 600 : 500,
+                fontSize: 14, fontWeight: 500,
                 color: active ? cv.text : cv.muted,
                 cursor: "pointer", fontFamily: "inherit", transition: transition.fast,
               }}
