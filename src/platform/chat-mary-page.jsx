@@ -5,8 +5,7 @@ import { MaryInputBox, useTypewriterPlaceholder } from "./chat-input.jsx";
 import { zoomBtn } from "./chat-panel.jsx";
 import { ActivityPanel, ArtifactView, ActivityLog, BuildCanvas } from "./chat-mary-activity.jsx";
 import { ChatWelcome, ChatItem } from "./chat-mary-sidebar.jsx";
-import { OptionsBlock, AgentChatBubble, ChatBubble, ActionBar } from "./chat-mary-bubbles.jsx";
-import { parseNumberedOptions, parseChecklistOptions } from "./markdown.jsx";
+import { AgentChatBubble, ChatBubble, ActionBar } from "./chat-mary-bubbles.jsx";
 
 // ─── Demo flow script ────────────────────────────────────────────────────────
 const DEMO_SCRIPT = [
@@ -1217,20 +1216,6 @@ export function ChatMaryPage({ dark, toggleDark }) {
                   padding: "10px 14px",
                   display: "flex", flexDirection: "column", gap: 8,
                 }}>
-                  {(() => {
-                    const lastMsg = messages[messages.length - 1];
-                    if (!lastMsg || lastMsg.role === "user" || lastMsg._streaming || lastMsg._toolStatus || lastMsg._quickActions) return null;
-                    const checklist = parseChecklistOptions(lastMsg.text || "");
-                    const numbered = !checklist.options ? parseNumberedOptions(lastMsg.text || "") : null;
-                    const opts = checklist.options || numbered?.options;
-                    if (!opts || opts.length < 2) return null;
-                    const multi = !!checklist.options || (lastMsg._highlights?.length > 1);
-                    return (
-                      <div style={{ borderBottom: "1px solid rgba(38,38,51,0.08)", paddingBottom: 4, marginBottom: 2 }}>
-                        <OptionsBlock options={opts} multi={multi} onPick={(opt) => send(opt)} highlights={lastMsg._highlights} noTopMargin />
-                      </div>
-                    );
-                  })()}
                   {/* Row 1: input */}
                   <input
                     data-testid="chat-mary-input"

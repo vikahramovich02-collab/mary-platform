@@ -512,7 +512,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
             )}
           </div>
         )}
-        {options && options.length >= 2 && !isLast && (
+        {options && options.length >= 2 && (
           <OptionsBlock options={options} multi={multi} onPick={onPickOption} highlights={m._highlights} disabled={!canInteract} />
         )}
         {m._quickActions && isLast && (
