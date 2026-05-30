@@ -286,15 +286,6 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
         <ActivityLog activity={activity} />
       )}
 
-      <div style={{
-        padding: "10px 14px",
-        borderTop: `1px solid ${cv.border}`,
-        fontSize: 11.5, color: "rgba(38,38,51,0.55)",
-        display: "flex", alignItems: "center", gap: 8,
-      }}>
-        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34C759", flexShrink: 0 }} />
-        <span>Mary онлайн</span>
-      </div>
       </div>
     </aside>
   );
