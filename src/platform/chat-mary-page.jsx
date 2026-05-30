@@ -1093,7 +1093,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
             {/* Шапка */}
             {messages.length > 0 && (
               <div style={{
-                padding: "12px 20px",
+                padding: "8px 20px",
                 display: "flex", alignItems: "center", gap: 8,
               }}>
                 {(isMobile || chatsCollapsed) && (
