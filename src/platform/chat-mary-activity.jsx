@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { color } from "../ui/tokens.js";
+import { color, cv } from "../ui/tokens.js";
 import { ic } from "./icons.jsx";
 import { renderMarkdown } from "./markdown.jsx";
 import { BuildNode, AgentNodeExpanded } from "./build-nodes.jsx";
@@ -24,12 +24,18 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
   const toolLabel = currentTool ? (TOOL_LABELS[currentTool.name]?.(currentTool.args) || `выполняет ${currentTool.name}`) : null;
   return (
     <aside style={{
-      width: width, minWidth: width,
-      borderLeft: "1px solid rgba(38,38,51,0.06)",
+      width: width + 20, minWidth: width + 20,
       display: "flex", flexDirection: "column",
-      background: color.white,
+      padding: "10px",
       transition: "width 0.2s ease",
     }}>
+      <div style={{
+        flex: 1, minHeight: 0, display: "flex", flexDirection: "column",
+        background: cv.bgCard,
+        border: `1px solid ${cv.border}`,
+        borderRadius: 16,
+        overflow: "hidden",
+      }}>
       {toolLabel && (
         <div style={{
           padding: "8px 14px",
@@ -50,8 +56,7 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
       <div style={{
         display: "flex", alignItems: "center", gap: 4,
         padding: "10px 12px",
-        borderBottom: "1px solid rgba(38,38,51,0.06)",
-        background: color.white,
+        borderBottom: `1px solid ${cv.border}`,
       }}>
         {build && (
           <button
@@ -135,13 +140,13 @@ export function ActivityPanel({ build, activity, currentTool, activeAgentIds, ar
 
       <div style={{
         padding: "10px 14px",
-        borderTop: "1px solid rgba(38,38,51,0.06)",
-        background: color.white,
+        borderTop: `1px solid ${cv.border}`,
         fontSize: 11.5, color: "rgba(38,38,51,0.55)",
         display: "flex", alignItems: "center", gap: 8,
       }}>
         <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34C759" }} />
         <span>Mary онлайн</span>
+      </div>
       </div>
     </aside>
   );
@@ -275,7 +280,8 @@ export function ActivityLog({ activity }) {
             <div key={i} style={{
               display: "flex", alignItems: "flex-start", gap: 10,
               padding: "10px 12px",
-              background: "rgba(38,38,51,0.025)",
+              background: color.white,
+              border: `1px solid ${cv.border}`,
               borderRadius: 10,
               animation: i === 0 ? "build-pop 0.4s ease" : "none",
             }}>
