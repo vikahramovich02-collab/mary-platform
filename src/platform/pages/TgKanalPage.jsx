@@ -1163,7 +1163,7 @@ export default function TgKanalPage() {
               style={{
                 width: 26, height: 26, borderRadius: "50%", flexShrink: 0, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                background: "linear-gradient(135deg,#6b6bff,#a36bff)",
+                background: "linear-gradient(135deg,#A0A4AE,#82858F)",
                 color: "#fff", fontSize: 10.5, fontWeight: 600, letterSpacing: 0.2,
               }}
             >ВА</div>
@@ -1335,8 +1335,8 @@ export default function TgKanalPage() {
             style={{
               display: "flex", alignItems: "center", gap: 8,
               padding: "5px 8px",
-              margin: "2px 8px 8px",
-              borderRadius: 8,
+              margin: "2px 8px 18px",
+              borderRadius: 10,
               cursor: "pointer",
               transition: transition.fast,
               background: profileMenu ? cv.hover : "transparent",
@@ -1347,7 +1347,7 @@ export default function TgKanalPage() {
             <div style={{
               width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
-              background: "linear-gradient(135deg,#6b6bff,#a36bff)",
+              background: "linear-gradient(135deg,#A0A4AE,#82858F)",
               color: "#fff", fontSize: 10.5, fontWeight: 600, letterSpacing: 0.2,
             }}>ВА</div>
             <div style={{ minWidth: 0, flex: 1 }}>

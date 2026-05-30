@@ -34,7 +34,7 @@ export function SideRow({ icon, label, active, indent = 0, trailing, onClick, we
         height: 40,
         padding: `0 10px 0 ${10 + indent}px`,
         margin: "1px 8px",
-        borderRadius: 8,
+        borderRadius: 12,
         background: active ? cv.userBubble : h ? cv.hover : "transparent",
         color: cv.text,
         cursor: "pointer",
@@ -79,7 +79,7 @@ export function ProfileMenu({ dark, toggleDark, notif, setNotif, onSettings, onH
         <div style={{
           width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
           display: "flex", alignItems: "center", justifyContent: "center",
-          background: "linear-gradient(135deg,#6b6bff,#a36bff)",
+          background: "linear-gradient(135deg,#A0A4AE,#82858F)",
           color: "#fff", fontSize: 12.5, fontWeight: 600,
         }}>ВА</div>
         <div style={{ minWidth: 0 }}>
