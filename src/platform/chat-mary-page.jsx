@@ -763,6 +763,10 @@ export function ChatMaryPage({ dark, toggleDark }) {
   useEffect(() => {
     try { localStorage.setItem("mary_pinned_chats", JSON.stringify(pinnedChats)); } catch {}
   }, [pinnedChats]);
+  // Группы чатов: сколько показывать по умолчанию + какие группы раскрыты
+  const GROUP_LIMIT = 5;
+  const [expandedGroups, setExpandedGroups] = useState({});
+  const [hoverGroup, setHoverGroup] = useState(null);
   // AbortController для прерывания текущего стрима через Stop-кнопку
   const abortRef = useRef(null);
   function stopStream() { abortRef.current?.abort(); }
@@ -1074,15 +1078,45 @@ export function ChatMaryPage({ dark, toggleDark }) {
                     {pinnedItems.map(renderItem)}
                   </div>
                 )}
-                {groupsClean.map(g => (
-                  <div key={g.id} style={{ marginBottom: 10 }}>
-                    <div style={{
-                      fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 510,
-                      padding: "4px 10px 4px",
-                    }}>{g.label}</div>
-                    {g.items.map(renderItem)}
-                  </div>
-                ))}
+                {groupsClean.map(g => {
+                  const expanded = !!expandedGroups[g.id];
+                  const hasMore = g.items.length > GROUP_LIMIT;
+                  const shown = expanded || !hasMore ? g.items : g.items.slice(0, GROUP_LIMIT);
+                  const toggle = () => setExpandedGroups(p => ({ ...p, [g.id]: !p[g.id] }));
+                  const showCta = hasMore && (hoverGroup === g.id || expanded);
+                  return (
+                    <div key={g.id} style={{ marginBottom: 10 }}>
+                      <div
+                        onMouseEnter={() => setHoverGroup(g.id)}
+                        onMouseLeave={() => setHoverGroup(null)}
+                        onClick={hasMore ? toggle : undefined}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 4,
+                          fontSize: 11, color: "rgba(38,38,51,0.5)", fontWeight: 510,
+                          padding: "4px 10px 4px", userSelect: "none",
+                          cursor: hasMore ? "pointer" : "default",
+                        }}>
+                        <span>{g.label}</span>
+                        {hasMore && (hoverGroup === g.id || expanded) && (
+                          <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"
+                            style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
+                            <path d="m6 9 6 6 6-6" />
+                          </svg>
+                        )}
+                        <div style={{ flex: 1 }} />
+                        {showCta && (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 2, color: "rgba(38,38,51,0.45)" }}>
+                            {expanded ? "Свернуть" : "Показать все"}
+                            <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                              <path d="m9 18 6-6-6-6" />
+                            </svg>
+                          </span>
+                        )}
+                      </div>
+                      {shown.map(renderItem)}
+                    </div>
+                  );
+                })}
               </>
             );
           })()}
