@@ -1159,7 +1159,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
                     onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                   >{ic.panel}</button>
                 )}
-                <span style={{ fontSize: 14, fontWeight: 510, color: cv.text }}>
+                <span style={{ fontSize: 14, fontWeight: 400, color: cv.text }}>
                   {demoMode
                     ? "Демо автоматизация отдела"
                     : (conversations.find(c => c.id === activeId)?.title || "Чат")}
