@@ -561,7 +561,7 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
         position: "relative",
         flex: 1,
         minHeight: 0,
-        background: "#ECEDEF",
+        background: "#F7F7F7",
         backgroundImage: "radial-gradient(circle, #FFFFFF 1.4px, transparent 1.4px)",
         backgroundSize: "20px 20px",
         backgroundPosition: "10px 10px",
