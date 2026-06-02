@@ -251,7 +251,7 @@ export function AgentCard({ a, expanded, selected, active, dragging, onMouseDown
           <span style={{ color: a.color, display: "flex" }}>{ic.agentBot}</span>
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 14, fontWeight: 510, color: "#262633", lineHeight: 1.1 }}>{a.label}</div>
+          <div style={{ fontSize: 14, fontWeight: 450, color: "#262633", lineHeight: 1.1 }}>{a.label}</div>
           <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", marginTop: 3 }}>Агент</div>
         </div>
       </div>

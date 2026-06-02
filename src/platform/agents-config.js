@@ -568,3 +568,97 @@ export const INSTAGRAM_EDGES = [
   ["marketer",    "designer"],
   ["marketer",    "analyst"],
 ];
+
+// ── Отдел продаж: граф агентов-менеджеров ───────────────────
+// Самоведущая воронка. Лид-квалификатор размечает обращение → First-touch
+// пишет первым → дальше Фоллоу-ап (нудж/реактивация), Детектор горячих
+// (отдаёт человеку) и Подготовка КП. Консистентно с СММ-графом.
+export const SALES_AGENTS = [
+  {
+    id: "lead-qual", label: "Лид-квалификатор", color: "#0794FF", x: 60, y: 250, hasUpdate: true, unread: 3,
+    role: "Классифицирует входящий лид: тип запроса (заказ / поддержка / спам) и категорию клиента (новый / повторный / ВИП / фотограф)",
+    skills: ["Классификация обращений", "Категоризация клиента", "Скоринг лида", "Проставление источника"],
+    tools: ["База знаний", "Открытые линии"],
+    stats: { week: 412, label: "лидов" },
+    flow: {
+      nodes: [
+        { id: "in-msg",    kind: "input",      title: "Входящее обращение", sub: "TG / WA / IG / форма", ox: -520, oy: -120 },
+        { id: "in-hist",   kind: "input",      title: "История клиента",    sub: "если есть в CRM",       ox: -520, oy:   40 },
+        { id: "s1-class",  kind: "llm-step",   title: "Классификатор",      sub: "тип запроса · LLM",     ox: -220, oy:  -60 },
+        { id: "s2-score",  kind: "llm-step",   title: "Скоринг",            sub: "категория · приоритет", ox:   60, oy:  -60 },
+        { id: "out-touch", kind: "next-agent", title: "Размеченный лид",    sub: "→ First-touch",         ox:  520, oy: -120 },
+        { id: "out-kb",    kind: "output-kb",  title: "Источник + тег",     sub: "→ CRM / База знаний",   ox:  520, oy:   40 },
+      ],
+      edges: [["in-msg","s1-class"],["in-hist","s1-class"],["s1-class","s2-score"],["s2-score","out-touch"],["s2-score","out-kb"]],
+    },
+  },
+  {
+    id: "first-touch", label: "First-touch", color: "#FF8B3D", x: 360, y: 250, hasUpdate: true, unread: 5,
+    role: "Пишет первым через 5 минут после заявки: приветствие с именем менеджера по одобренному шаблону",
+    skills: ["Персонализация приветствия", "Подстановка имени и заказа", "Тон бренда", "Отправка в канал"],
+    tools: ["Открытые линии", "База знаний"],
+    stats: { week: 388, label: "касаний" },
+    flow: {
+      nodes: [
+        { id: "in-lead",   kind: "input",      title: "Размеченный лид",   sub: "от Лид-квалификатора", ox: -520, oy: -60 },
+        { id: "s1-gen",    kind: "llm-step",   title: "Генератор приветствия", sub: "шаблон + имя · LLM", ox: -200, oy: -60 },
+        { id: "out-send",  kind: "output-kb",  title: "Отправка в канал",  sub: "TG / WA / IG",         ox:  520, oy: -120 },
+        { id: "out-next",  kind: "next-agent", title: "Нет ответа?",       sub: "→ Фоллоу-ап",          ox:  520, oy:   40 },
+      ],
+      edges: [["in-lead","s1-gen"],["s1-gen","out-send"],["s1-gen","out-next"]],
+    },
+  },
+  {
+    id: "followup", label: "Фоллоу-ап", color: "#8A38F5", x: 680, y: 110, hasUpdate: false, unread: 0,
+    role: "Нудж и реактивация по SLA: напоминает молчащим, реактивирует «ждунов», закрывает протухшие сделки",
+    skills: ["Нудж через 1ч / 24ч", "Реактивация на 7 / 30 день", "Автозакрытие по дате акции"],
+    tools: ["Открытые линии", "CRM"],
+    stats: { week: 1839, label: "фоллоу-апов" },
+    flow: {
+      nodes: [
+        { id: "in-silent", kind: "input",     title: "Клиент молчит",   sub: "1ч / 24ч / 7д / 30д", ox: -520, oy: -40 },
+        { id: "s1-pick",   kind: "llm-step",  title: "Выбор шаблона",   sub: "нудж / реактивация",  ox: -200, oy: -40 },
+        { id: "out-send",  kind: "output-kb", title: "Сообщение",       sub: "в тот же канал",      ox:  520, oy: -120 },
+        { id: "out-close", kind: "output-kb", title: "Автозакрытие",    sub: "если протухло",       ox:  520, oy:   40 },
+      ],
+      edges: [["in-silent","s1-pick"],["s1-pick","out-send"],["s1-pick","out-close"]],
+    },
+  },
+  {
+    id: "hot-detector", label: "Детектор горячих", color: "#FF4D00", x: 680, y: 250, hasUpdate: true, unread: 2,
+    role: "Ловит горячие сделки по тексту переписки («когда смогу оплатить», «нужно срочно») и отдаёт человеку",
+    skills: ["Анализ намерения", "Сигналы готовности к оплате", "Передача человеку", "Тег «горячий»"],
+    tools: ["Открытые линии"],
+    stats: { week: 96, label: "горячих" },
+    flow: {
+      nodes: [
+        { id: "in-chat",   kind: "input",      title: "Переписка",      sub: "live-сообщения",   ox: -520, oy: -40 },
+        { id: "s1-intent", kind: "llm-step",   title: "Анализ намерения", sub: "ключевые фразы · LLM", ox: -200, oy: -40 },
+        { id: "out-human", kind: "next-agent", title: "Менеджеру",      sub: "→ человек + тег «горячий»", ox: 520, oy: -40 },
+      ],
+      edges: [["in-chat","s1-intent"],["s1-intent","out-human"]],
+    },
+  },
+  {
+    id: "kp", label: "Подготовка КП", color: "#34C759", x: 680, y: 390, hasUpdate: false, unread: 0,
+    role: "Формирует коммерческое предложение и счёт по параметрам заказа",
+    skills: ["Расчёт стоимости", "Сборка КП", "Выставление счёта", "Учёт акций"],
+    tools: ["База знаний", "CRM"],
+    stats: { week: 143, label: "КП" },
+    flow: {
+      nodes: [
+        { id: "in-params", kind: "input",     title: "Параметры заказа", sub: "тип, тираж, сроки", ox: -520, oy: -40 },
+        { id: "s1-calc",   kind: "llm-step",  title: "Расчёт + сборка",  sub: "цена + КП · LLM",   ox: -200, oy: -40 },
+        { id: "out-kp",    kind: "output-kb", title: "КП / счёт",        sub: "клиенту в канал",   ox:  520, oy: -40 },
+      ],
+      edges: [["in-params","s1-calc"],["s1-calc","out-kp"]],
+    },
+  },
+];
+
+export const SALES_EDGES = [
+  ["lead-qual",   "first-touch"],
+  ["first-touch", "followup"],
+  ["first-touch", "hot-detector"],
+  ["first-touch", "kp"],
+];

@@ -217,7 +217,7 @@ export function ChatItem({ c, active, onClick, onDelete, onTogglePin, onRename, 
       ) : (
         <span style={{
           flex: 1, minWidth: 0,
-          fontSize: 12, color: cv.text, fontWeight: 510,
+          fontSize: 12, color: cv.text, fontWeight: 400,
           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{c.title}</span>
       )}
