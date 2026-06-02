@@ -580,6 +580,11 @@ export const SALES_AGENTS = [
     skills: ["Классификация обращений", "Категоризация клиента", "Скоринг лида", "Проставление источника"],
     tools: ["База знаний", "Открытые линии"],
     stats: { week: 412, label: "лидов" },
+    pipeline: [
+      { title: "Входящее обращение", status: "ready",   unread: true,  kb: null },
+      { title: "Классификация типа", status: "ready",   unread: false, kb: null },
+      { title: "Размеченный лид",     status: "pending", unread: false, kb: null },
+    ],
     flow: {
       nodes: [
         { id: "in-msg",    kind: "input",      title: "Входящее обращение", sub: "TG / WA / IG / форма", ox: -520, oy: -120 },
@@ -598,6 +603,11 @@ export const SALES_AGENTS = [
     skills: ["Персонализация приветствия", "Подстановка имени и заказа", "Тон бренда", "Отправка в канал"],
     tools: ["Открытые линии", "База знаний"],
     stats: { week: 388, label: "касаний" },
+    pipeline: [
+      { title: "Размеченный лид",   status: "ready",   unread: true,  kb: null },
+      { title: "Приветствие",       status: "ready",   unread: false, kb: null },
+      { title: "Отправлено в канал", status: "pending", unread: false, kb: null },
+    ],
     flow: {
       nodes: [
         { id: "in-lead",   kind: "input",      title: "Размеченный лид",   sub: "от Лид-квалификатора", ox: -520, oy: -60 },
@@ -614,6 +624,11 @@ export const SALES_AGENTS = [
     skills: ["Нудж через 1ч / 24ч", "Реактивация на 7 / 30 день", "Автозакрытие по дате акции"],
     tools: ["Открытые линии", "CRM"],
     stats: { week: 1839, label: "фоллоу-апов" },
+    pipeline: [
+      { title: "Клиент молчит",       status: "ready",   unread: false, kb: null },
+      { title: "Выбор шаблона",       status: "pending", unread: false, kb: null },
+      { title: "Нудж / автозакрытие", status: "pending", unread: false, kb: null },
+    ],
     flow: {
       nodes: [
         { id: "in-silent", kind: "input",     title: "Клиент молчит",   sub: "1ч / 24ч / 7д / 30д", ox: -520, oy: -40 },
@@ -630,6 +645,11 @@ export const SALES_AGENTS = [
     skills: ["Анализ намерения", "Сигналы готовности к оплате", "Передача человеку", "Тег «горячий»"],
     tools: ["Открытые линии"],
     stats: { week: 96, label: "горячих" },
+    pipeline: [
+      { title: "Переписка",          status: "ready",   unread: true,  kb: null },
+      { title: "Анализ намерения",   status: "pending", unread: false, kb: null },
+      { title: "Передача человеку",  status: "pending", unread: false, kb: null },
+    ],
     flow: {
       nodes: [
         { id: "in-chat",   kind: "input",      title: "Переписка",      sub: "live-сообщения",   ox: -520, oy: -40 },
@@ -645,6 +665,11 @@ export const SALES_AGENTS = [
     skills: ["Расчёт стоимости", "Сборка КП", "Выставление счёта", "Учёт акций"],
     tools: ["База знаний", "CRM"],
     stats: { week: 143, label: "КП" },
+    pipeline: [
+      { title: "Параметры заказа", status: "ready",   unread: false, kb: null },
+      { title: "Расчёт и сборка",  status: "pending", unread: false, kb: null },
+      { title: "КП / счёт",        status: "pending", unread: false, kb: null },
+    ],
     flow: {
       nodes: [
         { id: "in-params", kind: "input",     title: "Параметры заказа", sub: "тип, тираж, сроки", ox: -520, oy: -40 },
