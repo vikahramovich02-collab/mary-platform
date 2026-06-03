@@ -8,10 +8,6 @@ import { color, transition, cv } from "../../ui/tokens.js";
 
 const DEPTS = [
   { id: "smm",       name: "СММ",        color: "#FF8B3D" },
-  { id: "sales",     name: "Продажи",    color: "#34C759" },
-  { id: "finance",   name: "Отчётность", color: "#7A86FF" },
-  { id: "logistics", name: "Логистика",  color: "#3F95FF" },
-  { id: "hr",        name: "HR и найм",  color: "#FF6FB3" },
 ];
 
 const STATUS = {
@@ -27,21 +23,6 @@ const STAFF = [
   { id: "katya",  name: "Катя Сафина",        role: "Контент-менеджер",   dept: "smm",   kind: "human", status: "away",    active: 6,  overdue: 2, done: 41, load: 88, due: "Завтра",   color: "#7A86FF" },
   { id: "ag_cont", name: "Контент-агент",     role: "Генерация постов",   dept: "smm",   kind: "ai",    status: "ai",      active: 9,  overdue: 1, done: 312, load: 92, due: "—",        boss: "vika" },
   { id: "ag_write", name: "Райтер-агент",     role: "Тексты и заголовки", dept: "smm",   kind: "ai",    status: "ai",      active: 5,  overdue: 0, done: 188, load: 54, due: "—",        boss: "vika" },
-
-  // Продажи
-  { id: "ivan",   name: "Иван Соколов",       role: "Руководитель продаж", dept: "sales", kind: "human", status: "online",  lead: true,  active: 5,  overdue: 0, done: 33, load: 60, due: "Пт, 30.05", color: "#FF8B3D" },
-  { id: "alex",   name: "Александр Орлов",    role: "Менеджер по продажам", dept: "sales", kind: "human", status: "offline", active: 7,  overdue: 1, done: 52, load: 80, due: "Сегодня",  color: "#3F95FF" },
-  { id: "ag_lead", name: "Лид-скоринг агент", role: "Квалификация лидов",  dept: "sales", kind: "ai",    status: "ai",      active: 12, overdue: 0, done: 540, load: 76, due: "—",        boss: "ivan" },
-
-  // Отчётность
-  { id: "maria",  name: "Мария Дудник",       role: "Аналитик",           dept: "finance", kind: "human", status: "online", active: 3,  overdue: 0, done: 19, load: 44, due: "Пн, 02.06", color: "#FF6FB3" },
-  { id: "ag_anl", name: "Аналитик-агент",     role: "Сводки и дашборды",  dept: "finance", kind: "ai",    status: "ai",      active: 4,  overdue: 0, done: 96,  load: 38, due: "—",        boss: "maria" },
-
-  // Логистика
-  { id: "ag_log", name: "Логист-агент",       role: "Маршруты и заказы",  dept: "logistics", kind: "ai",  status: "ai",      active: 6,  overdue: 1, done: 144, load: 66, due: "—" },
-
-  // HR
-  { id: "ag_hr",  name: "Рекрутер-агент",     role: "Скрининг кандидатов", dept: "hr",   kind: "ai",    status: "ai",      active: 9,  overdue: 0, done: 73,  load: 70, due: "—" },
 ];
 
 const initials = (n) => n.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();

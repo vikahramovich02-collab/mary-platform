@@ -1006,7 +1006,7 @@ export default function TgKanalPage() {
   useEffect(() => {
     const load = () => fetch("/api/mary/departments")
       .then(r => r.ok ? r.json() : { departments: [] })
-      .then(d => setDepartments(d.departments || []))
+      .then(d => setDepartments((d.departments || []).filter(x => x.id === "smm")))
       .catch(() => {});
     load();
     const id = setInterval(load, 5000); // авто-апдейт когда Mary создаёт новый

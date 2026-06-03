@@ -25,7 +25,7 @@ export function TasksKanbanPage() {
   };
   useEffect(() => { reload(); }, [deptFilter]);
   useEffect(() => {
-    fetch("/api/mary/departments").then(r => r.json()).then(d => setDepartments(d.departments || []));
+    fetch("/api/mary/departments").then(r => r.json()).then(d => setDepartments((d.departments || []).filter(x => x.id === "smm")));
   }, []);
 
   const tasksByColumn = (col) => tasks.filter(t => t.status === col);

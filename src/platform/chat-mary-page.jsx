@@ -232,7 +232,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
     fetch("/api/mary/departments")
       .then(r => r.json())
       .then(d => {
-        const depts = (d.departments || []).filter(x => x.agents?.length || x.channels?.length);
+        const depts = (d.departments || []).filter(x => x.id === "smm" && (x.agents?.length || x.channels?.length));
         if (!depts.length) return;
         // Берём самый свежий (или тот что уже в build)
         const cached = (() => { try { return JSON.parse(localStorage.getItem("mary_build_ctx") || "null"); } catch { return null; } })();
@@ -794,7 +794,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
       fetch("/api/mary/departments").then(r => r.json()).catch(() => ({ departments: [] })),
     ]);
     setPickerKb(kb.files || []);
-    const deptList = Array.isArray(depts) ? depts : (depts.departments || []);
+    const deptList = (Array.isArray(depts) ? depts : (depts.departments || [])).filter(x => x.id === "smm");
     setPickerDepts(deptList);
   };
   const attachResource = (label, content) => {
@@ -1009,7 +1009,6 @@ export function ChatMaryPage({ dark, toggleDark }) {
             // Раздел «Отделы» сверху — закрепы, открывают синхронизированный чат отдела
             const deptPins = [
               { id: "smm-pin", title: "СММ", color: "#FF8B3D", convScope: "smm/tg-kanal" },
-              { id: "sales-pin", title: "Продажи", color: "#3F95FF", convScope: "sales/tg-kanal" },
             ];
             const teamChats = []; // Команда живёт во Входящих, не тут
             // Закреплённые юзером чаты — отдельной секцией, удаляем их из date-buckets
