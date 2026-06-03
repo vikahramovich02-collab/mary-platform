@@ -203,6 +203,7 @@ export function ChatMaryPage({ dark, toggleDark }) {
 
   const [activeAgentIds, setActiveAgentIds] = useState(new Set()); // агенты которые сейчас работают (ask_agent running)
   const [artifacts, setArtifacts] = useState([]); // [{ id, agentId, agentRole, agentColor, title, content, ts }]
+  const [deptPinOpen, setDeptPinOpen] = useState({ "smm-pin": true }); // раскрытие списка воркфлоу под отделом
   // Публикуем activeAgentIds глобально чтобы dept-page GraphCanvas мог подсветить ноды
   useEffect(() => {
     window.__maryActiveAgents = activeAgentIds;
@@ -1008,7 +1009,10 @@ export function ChatMaryPage({ dark, toggleDark }) {
 
             // Раздел «Отделы» сверху — закрепы, открывают синхронизированный чат отдела
             const deptPins = [
-              { id: "smm-pin", title: "СММ", color: "#FF8B3D", convScope: "smm/tg-kanal" },
+              { id: "smm-pin", title: "СММ", color: "#FF8B3D", deptId: "smm", convScope: "smm/tg-kanal", workflows: [
+                { title: "Тг-канал", scope: "smm/tg-kanal" },
+                { title: "Instagram", scope: "smm/instagram" },
+              ] },
             ];
             const teamChats = []; // Команда живёт во Входящих, не тут
             // Закреплённые юзером чаты — отдельной секцией, удаляем их из date-buckets
@@ -1032,37 +1036,73 @@ export function ChatMaryPage({ dark, toggleDark }) {
                     {deptPins.map(d => {
                       const deptConv = conversations.find(c => c.scope === d.convScope);
                       const isActive = deptConv && deptConv.id === activeId;
+                      const wfs = d.workflows || [];
+                      const isOpen = deptPinOpen[d.id] !== false;
+                      // Открыть/создать чат по scope
+                      const openScope = async (title, scope) => {
+                        const conv = conversations.find(c => c.scope === scope);
+                        if (conv) { setActiveId(conv.id); return; }
+                        const r = await fetch("/api/mary/conversations", {
+                          method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ title, scope }),
+                        });
+                        const c = await r.json();
+                        setConversations(prev => [c, ...prev]);
+                        setActiveId(c.id);
+                        setMessages([]);
+                      };
                       return (
-                        <div key={d.id}
-                          onClick={async () => {
-                            if (deptConv) {
-                              setActiveId(deptConv.id);
-                            } else {
-                              // Создаём чат отдела если не существует
-                              const r = await fetch("/api/mary/conversations", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ title: d.title + " · Отдел", scope: d.convScope }),
-                              });
-                              const c = await r.json();
-                              setConversations(prev => [c, ...prev]);
-                              setActiveId(c.id);
-                              setMessages([]);
-                            }
-                          }}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 8,
-                            padding: "5px 10px", fontSize: 12, color: "#262633",
-                            cursor: "pointer", borderRadius: 6,
-                            background: isActive ? "rgba(38,38,51,0.06)" : "transparent",
-                          }}
-                          onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(38,38,51,0.04)"; }}
-                          onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
-                        >
-                          <span style={{ display: "flex", color: "#262633", flexShrink: 0 }}>
-                            {deptIcon({ name: d.title, id: d.deptId }, 13)}
-                          </span>
-                          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{d.title}</span>
+                        <div key={d.id}>
+                          <div
+                            onClick={() => openScope(d.title + " · Отдел", d.convScope)}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 8,
+                              padding: "5px 10px", fontSize: 12, color: "#262633",
+                              cursor: "pointer", borderRadius: 6,
+                              background: isActive ? "rgba(38,38,51,0.06)" : "transparent",
+                            }}
+                            onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(38,38,51,0.04)"; }}
+                            onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+                          >
+                            <span style={{ display: "flex", color: "#262633", flexShrink: 0 }}>
+                              {deptIcon({ name: d.title, id: d.deptId }, 13)}
+                            </span>
+                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{d.title}</span>
+                            {wfs.length > 0 && (
+                              <span
+                                onClick={e => { e.stopPropagation(); setDeptPinOpen(o => ({ ...o, [d.id]: !isOpen })); }}
+                                style={{ display: "flex", color: "rgba(38,38,51,0.45)", flexShrink: 0, padding: 2 }}
+                                title={isOpen ? "Свернуть" : "Развернуть воркфлоу"}
+                              >
+                                <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .15s" }}>
+                                  <path d="M6 9l6 6 6-6" />
+                                </svg>
+                              </span>
+                            )}
+                          </div>
+                          {isOpen && wfs.map(w => {
+                            const wConv = conversations.find(c => c.scope === w.scope);
+                            const wActive = wConv && wConv.id === activeId;
+                            return (
+                              <div key={w.scope}
+                                onClick={() => openScope(w.title, w.scope)}
+                                style={{
+                                  display: "flex", alignItems: "center", gap: 8,
+                                  padding: "5px 10px 5px 30px", fontSize: 12,
+                                  color: wActive ? "#262633" : "rgba(38,38,51,0.65)",
+                                  cursor: "pointer", borderRadius: 6,
+                                  background: wActive ? "rgba(38,38,51,0.06)" : "transparent",
+                                }}
+                                onMouseEnter={e => { if (!wActive) e.currentTarget.style.background = "rgba(38,38,51,0.04)"; }}
+                                onMouseLeave={e => { if (!wActive) e.currentTarget.style.background = "transparent"; }}
+                              >
+                                <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.7 }}>
+                                  <rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><path d="M10 6.5h4a3 3 0 0 1 3 3V14" />
+                                </svg>
+                                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{w.title}</span>
+                              </div>
+                            );
+                          })}
                         </div>
                       );
                     })}

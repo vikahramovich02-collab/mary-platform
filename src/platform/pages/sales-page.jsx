@@ -12,7 +12,7 @@ import { I } from "../icons.jsx";
 const STAGES = [
   { id: "new",     label: "Новые лиды",  color: "#0794FF" },
   { id: "touch",   label: "First-touch", color: "#FF8B3D" },
-  { id: "work",    label: "В работе",    color: "#8A38F5" },
+  { id: "work",    label: "В работе",    color: "#262633" },
   { id: "waiting", label: "Ждуны",       color: "#FFD60A" },
   { id: "won",     label: "Готово",      color: "#34C759" },
 ];
@@ -21,7 +21,7 @@ const STAGES = [
 const CHANNEL = {
   tg:    { label: "Telegram",  color: "#0794FF" },
   wa:    { label: "WhatsApp",  color: "#34C759" },
-  ig:    { label: "Instagram", color: "#8A38F5" },
+  ig:    { label: "Instagram", color: "#262633" },
   email: { label: "E-mail",    color: "rgba(38,38,51,0.45)" },
 };
 
@@ -70,7 +70,7 @@ function HandlerBadge({ handler }) {
         <span style={{
           display: "inline-flex", alignItems: "center", justifyContent: "center",
           width: 18, height: 18, borderRadius: 5,
-          background: "rgba(138,56,245,0.10)", color: "#8A38F5", flexShrink: 0,
+          background: "rgba(38,38,51,0.06)", color: "#262633", flexShrink: 0,
         }}>{botIcon}</span>
       ) : (
         <span style={{
@@ -80,7 +80,7 @@ function HandlerBadge({ handler }) {
           color: "#fff", fontSize: 8.5, fontWeight: 600,
         }}>{handler.name.slice(0, 2)}</span>
       )}
-      <span style={{ fontSize: 11.5, color: isAgent ? "#8A38F5" : "rgba(38,38,51,0.6)", fontWeight: isAgent ? 500 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+      <span style={{ fontSize: 11.5, color: isAgent ? "#262633" : "rgba(38,38,51,0.6)", fontWeight: isAgent ? 500 : 400, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
         {handler.name}
       </span>
     </span>
@@ -135,7 +135,7 @@ function DealCard({ d, onClick, draggable, onDragStart, onDragEnd, isDragging })
       {/* Automation note */}
       {d.note && (
         <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11.5, color: "rgba(38,38,51,0.6)" }}>
-          <span style={{ color: "#8A38F5", display: "inline-flex", flexShrink: 0 }}>{sparkIcon}</span>
+          <span style={{ color: "#262633", display: "inline-flex", flexShrink: 0 }}>{sparkIcon}</span>
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.note}</span>
         </div>
       )}
@@ -196,8 +196,8 @@ function DealDrawer({ d, onClose }) {
 
           {/* Следующее автодействие */}
           {d.auto && d.auto !== "—" && (
-            <div style={{ marginBottom: 20, background: "rgba(138,56,245,0.05)", border: "1px solid rgba(138,56,245,0.15)", borderRadius: 10, padding: "12px 14px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 600, color: "#8A38F5", marginBottom: 4 }}>
+            <div style={{ marginBottom: 20, background: "rgba(38,38,51,0.03)", border: "1px solid rgba(38,38,51,0.10)", borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 600, color: "#262633", marginBottom: 4 }}>
                 {sparkIcon} Следующее автодействие
               </div>
               <div style={{ fontSize: 13, color: "#262633" }}>{d.auto}</div>
@@ -212,7 +212,7 @@ function DealDrawer({ d, onClose }) {
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                   <span style={{
                     width: 8, height: 8, borderRadius: "50%", marginTop: 4,
-                    background: ev.who === "agent" ? "#8A38F5" : ev.who === "human" ? "#82858F" : "#34C759",
+                    background: ev.who === "agent" ? "#262633" : ev.who === "human" ? "#82858F" : "#34C759",
                   }} />
                   {i < timeline.length - 1 && <span style={{ width: 1, flex: 1, background: "rgba(38,38,51,0.12)", marginTop: 3 }} />}
                 </div>
@@ -334,7 +334,7 @@ export function SalesPage() {
           <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
             {[
               { label: "Всего сделок", value: total },
-              { label: "На автопилоте", value: onAutopilot, accent: "#8A38F5" },
+              { label: "На автопилоте", value: onAutopilot, accent: "#262633" },
               { label: "Выиграно", value: won, accent: "#34C759" },
               { label: "Конверсия", value: conversion + "%" },
             ].map(s => (
@@ -346,9 +346,9 @@ export function SalesPage() {
           </div>
 
           {/* Агенты-менеджеры */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap", padding: "12px 16px", background: "rgba(138,56,245,0.04)", border: "1px solid rgba(138,56,245,0.12)", borderRadius: 12 }}>
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: "#8A38F5" }}>
-              <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: 6, background: "rgba(138,56,245,0.12)", alignItems: "center", justifyContent: "center" }}>{botIcon}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, flexWrap: "wrap", padding: "12px 16px", background: "rgba(38,38,51,0.03)", border: "1px solid rgba(38,38,51,0.08)", borderRadius: 12 }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12.5, fontWeight: 600, color: "#262633" }}>
+              <span style={{ display: "inline-flex", width: 22, height: 22, borderRadius: 6, background: "rgba(38,38,51,0.08)", alignItems: "center", justifyContent: "center" }}>{botIcon}</span>
               Агенты-менеджеры
             </span>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flex: 1 }}>
