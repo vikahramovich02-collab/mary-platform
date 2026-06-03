@@ -323,11 +323,11 @@ export function SalesPage() {
           {/* Breadcrumb */}
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16, fontSize: 12.5, color: "rgba(38,38,51,0.55)" }}>
             <span>Компания</span><span>›</span>
-            <span style={{ padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 5, color: "#262633", fontWeight: 500 }}>Продажи</span>
+            <span style={{ padding: "2px 8px", background: "rgba(38,38,51,0.06)", borderRadius: 5, color: "#262633", fontWeight: 500 }}>Клиенты</span>
           </div>
 
           {/* H1 */}
-          <h1 style={{ fontSize: 26, fontWeight: 600, color: "#262633", margin: "0 0 4px", letterSpacing: "-0.01em" }}>Продажи</h1>
+          <h1 style={{ fontSize: 26, fontWeight: 600, color: "#262633", margin: "0 0 4px", letterSpacing: "-0.01em" }}>Клиенты</h1>
           <p style={{ fontSize: 13.5, color: "rgba(38,38,51,0.55)", margin: "0 0 20px" }}>Самоведущая воронка — сделки ведут агенты-менеджеры, человек подключается на ключевых точках.</p>
 
           {/* Stats */}

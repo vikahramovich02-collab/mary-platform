@@ -49,7 +49,7 @@ const ic = {
   people:       <I d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>} />,
   tasks:        <I d={<><rect x="3" y="5" width="6" height="6" rx="2" /><path d="M3 17l2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></>} />,
   staff:        <I d={<><rect x="9" y="2" width="6" height="5" rx="2" /><rect x="2" y="16" width="6" height="5" rx="2" /><rect x="16" y="16" width="6" height="5" rx="2" /><path d="M12 7v4M5 16v-2h14v2M12 14v-3" /></>} />,
-  sales:        <I d={<><path d="M3 3v18h18" /><path d="M7 14l4-4 3 3 5-6" /><path d="M19 7v4h-4" /></>} />,
+  sales:        <I d={<><circle cx="12" cy="8" r="3.5" /><path d="M5 20v-1a7 7 0 0 1 14 0v1" /></>} />,
   kb:           <I d={<><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></>} />,
   integrations: <I d={<><path d="M12 22v-5" /><path d="M9 8V2" /><path d="M15 8V2" /><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8z" /></>} />,
   hr:           <I d={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M22 11h-6" /></>} />,
@@ -1146,7 +1146,7 @@ export default function TgKanalPage() {
             <RailBtn icon={ic.inbox} label="Входящие"    active={currentPage === "inbox"}     onClick={() => navigate("inbox")} badge={inboxUnreadCount > 0} />
             <RailBtn icon={ic.staff} label="Сотрудники"  active={currentPage === "staff"}     onClick={() => navigate("staff")} />
             <RailBtn icon={ic.tasks} label="Задачи"      active={currentPage === "tasks"}     onClick={() => navigate("tasks")} />
-            <RailBtn icon={ic.sales} label="Продажи"     active={currentPage === "sales"}     onClick={() => navigate("sales")} />
+            <RailBtn icon={ic.sales} label="Клиенты"     active={currentPage === "sales"}     onClick={() => navigate("sales")} />
             <RailBtn icon={ic.kb}    label="База знаний"  active={currentPage === "kb"}        onClick={() => navigate("kb")} />
             <RailBtn icon={ic.integrations} label="Интеграции" active={currentPage === "integrations"} onClick={() => navigate("integrations")} />
           </div>
@@ -1229,7 +1229,7 @@ export default function TgKanalPage() {
         />
         <SideRow
           icon={ic.sales}
-          label="Продажи"
+          label="Клиенты"
           active={currentPage === "sales"}
           onClick={() => navigate("sales")}
         />
