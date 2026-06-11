@@ -5,6 +5,7 @@ import { ic } from "../icons.jsx";
 import { usePeople, MOCK_PEOPLE } from "../people.js";
 import { ChatPanel, zoomBtn } from "../chat-panel.jsx";
 import { PageShell, StatCard } from "./home-inbox-pages.jsx";
+import { AutomationCanvas, SAMPLE_AUTOMATION } from "../automation-canvas.jsx";
 
 export function TeamPage() {
   const [people, setPeople] = useState([]);
@@ -339,13 +340,53 @@ export function TeamPage() {
 }
 
 // ── Бизнес-процесс ──────────────────────────────────────
+function CanvasLegend() {
+  const item = (dot, label) => (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: "rgba(38,38,51,0.55)" }}>
+      <span style={{ width: 9, height: 9, borderRadius: 3, background: dot }} />{label}
+    </span>
+  );
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+      {item(color.blue, "Триггер")}
+      {item("rgba(38,38,51,0.25)", "Таска")}
+      {item(color.purple, "Человек")}
+      {item(color.green, "Конец")}
+    </div>
+  );
+}
+
 export function BizprocPage({ onNavigate }) {
+  const [opened, setOpened] = useState(null);
   const flows = [
+    { id: "procure",     name: "Закупка по заявке",          dept: "Снабжение", status: "active", steps: 5, canvas: SAMPLE_AUTOMATION },
     { id: "smm-content", name: "Контент в Telegram-канал", dept: "СММ", status: "active",  steps: 5, channel: "tg-kanal" },
     { id: "smm-inst",    name: "Контент в Instagram",       dept: "СММ", status: "draft",   steps: 0, channel: null },
     { id: "hr-hire",     name: "Подбор и онбординг",        dept: "HR",  status: "draft",   steps: 0, channel: null },
     { id: "fin-report",  name: "Финансовый отчёт",          dept: "Финансы", status: "draft", steps: 0, channel: null },
   ];
+
+  if (opened) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", background: color.white }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 22px", borderBottom: `1px solid ${color.border}`, flexShrink: 0 }}>
+          <button onClick={() => setOpened(null)} style={{
+            display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px",
+            background: "transparent", border: `1px solid ${color.border}`, borderRadius: 999,
+            fontSize: 13, color: "#262633", cursor: "pointer", fontFamily: "inherit",
+          }}>‹ Назад</button>
+          <div style={{ fontSize: 15, fontWeight: 600, color: "#262633" }}>{opened.title}</div>
+          <span style={{ fontSize: 11, fontWeight: 500, padding: "3px 9px", borderRadius: 999, background: "rgba(38,38,51,0.06)", color: "rgba(38,38,51,0.55)" }}>{opened.dept}</span>
+          <div style={{ flex: 1 }} />
+          <CanvasLegend />
+        </div>
+        <div style={{ flex: 1, minHeight: 0 }}>
+          <AutomationCanvas automation={opened} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <PageShell title="Бизнес-процессы" sub="Workflows которые работают параллельно через AI-агенты"
       action={
@@ -362,11 +403,11 @@ export function BizprocPage({ onNavigate }) {
         {flows.map(f => {
           const isActive = f.status === "active";
           return (
-            <div key={f.id} onClick={() => f.channel && onNavigate("tg-kanal")} style={{
+            <div key={f.id} onClick={() => f.canvas ? setOpened(f.canvas) : (f.channel && onNavigate("tg-kanal"))} style={{
               display: "flex", alignItems: "center", gap: 14,
               padding: "16px 18px",
               background: "rgba(38,38,51,0.025)", borderRadius: 12,
-              cursor: f.channel ? "pointer" : "default",
+              cursor: (f.canvas || f.channel) ? "pointer" : "default",
             }}>
               <div style={{
                 width: 38, height: 38, borderRadius: 10,
@@ -386,7 +427,7 @@ export function BizprocPage({ onNavigate }) {
                 background: isActive ? "rgba(52,199,89,0.14)" : "rgba(38,38,51,0.08)",
                 color: isActive ? "#34C759" : "rgba(38,38,51,0.5)",
               }}>{isActive ? "Активен" : "Черновик"}</span>
-              {f.channel && <span style={{ display: "flex", color: "rgba(38,38,51,0.4)" }}>{ic.arrowRight}</span>}
+              {(f.canvas || f.channel) && <span style={{ display: "flex", color: "rgba(38,38,51,0.4)" }}>{ic.arrowRight}</span>}
             </div>
           );
         })}
