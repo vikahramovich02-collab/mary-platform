@@ -16,36 +16,6 @@ function kbFolderOf(name = "") {
   return (KB_FOLDERS.find(f => f.match.test(name)) || KB_FOLDERS[KB_FOLDERS.length - 1]).id;
 }
 
-function WfChip({ active, color: dot, name, onOpen, onClose }) {
-  return (
-    <div style={{
-      display: "inline-flex", alignItems: "center", gap: 7,
-      padding: "7px 6px 7px 11px", borderRadius: 11,
-      background: active ? color.white : "transparent",
-      transition: "background 0.15s",
-    }}>
-      <button onClick={onOpen} style={{
-        display: "inline-flex", alignItems: "center", gap: 7,
-        background: "transparent", border: "none", padding: 0,
-        fontSize: 12.5, color: active ? "#262633" : "rgba(38,38,51,0.5)", fontWeight: 500,
-        cursor: "pointer", fontFamily: "inherit",
-        maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-      }}>
-        <span style={{ display: "inline-flex", color: dot || "#7A86FF", flexShrink: 0 }}>{deptIcon({ name }, 14)}</span>
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name}</span>
-      </button>
-      <button onClick={onClose} title="Закрыть воркфлоу" style={{
-        width: 16, height: 16, padding: 0, flexShrink: 0,
-        background: "transparent", border: "none", borderRadius: 5,
-        color: "rgba(38,38,51,0.45)", cursor: "pointer", fontFamily: "inherit",
-        display: "inline-flex", alignItems: "center", justifyContent: "center",
-      }}>
-        <svg width={9} height={9} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
-      </button>
-    </div>
-  );
-}
-
 export function ActivityPanel({ build: buildProp, activity, currentTool, activeAgentIds, artifacts = [], onCloseArtifact, onClose, docRequest }) {
   const [localBuilds, setLocalBuilds] = useState([]); // воркфлоу, открытые из пикера "+" (вкладки)
   const [tab, setTab] = useState(buildProp ? "build" : "log");
@@ -349,18 +319,6 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
             </div>
           )}
         </div>
-        {buildProp && (
-          <WfChip active={tab === "build"} color={buildProp.color} name={buildProp.name}
-            onOpen={() => setTab("build")} onClose={() => setTab("log")} />
-        )}
-        {localBuilds.map(b => (
-          <WfChip key={b.deptId} active={tab === `wf:${b.deptId}`} color={b.color} name={b.name}
-            onOpen={() => setTab(`wf:${b.deptId}`)}
-            onClose={() => {
-              setLocalBuilds(prev => prev.filter(x => x.deptId !== b.deptId));
-              if (tab === `wf:${b.deptId}`) setTab(buildProp ? "build" : "log");
-            }} />
-        ))}
         {artifacts.map(a => {
           const active = tab === `art:${a.id}`;
           return (
@@ -447,10 +405,7 @@ export function ActivityPanel({ build: buildProp, activity, currentTool, activeA
       ) : tab.startsWith("art:") ? (
         <ArtifactView artifact={artifacts.find(a => `art:${a.id}` === tab)} />
       ) : buildTab ? (
-        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-          <BuildCanvas build={buildTab} activeAgentIds={activeAgentIds} />
-          <WorkflowLogs build={buildTab} />
-        </div>
+        <BuildCanvas build={buildTab} activeAgentIds={activeAgentIds} />
       ) : (
         <ActivityLog activity={activity} />
       )}

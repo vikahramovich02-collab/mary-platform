@@ -148,9 +148,26 @@ export function renderMarkdown(text) {
         items.push(lines[i].replace(/^[-*]\s+/, ""));
         i++;
       }
-      blocks.push(<ul key={blocks.length} style={{
-        margin: "8px 0", paddingLeft: 22,
-      }}>{items.map((it, k) => <li key={k} style={{ marginBottom: 7, lineHeight: 1.5 }}>{renderInline(it)}</li>)}</ul>);
+      blocks.push(
+        <div key={blocks.length} style={{ margin: "8px 0", display: "flex", flexDirection: "column", gap: 8 }}>
+          {items.map((it, k) => (
+            <div key={k} style={{ display: "flex", alignItems: "flex-start", gap: 10, lineHeight: 1.5 }}>
+              <span style={{
+                display: "inline-flex",
+                color: "rgba(38,38,51,0.42)",
+                flexShrink: 0,
+                marginTop: 2,
+              }}>
+                <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 12h14" />
+                  <path d="M13 6l6 6-6 6" />
+                </svg>
+              </span>
+              <span style={{ minWidth: 0 }}>{renderInline(it)}</span>
+            </div>
+          ))}
+        </div>
+      );
       continue;
     }
     if (/^\d+\.\s+/.test(line)) {

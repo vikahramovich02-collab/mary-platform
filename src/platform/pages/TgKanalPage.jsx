@@ -523,13 +523,6 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
       wasDraggedRef.current = false;
       return;
     }
-    // Если у агента есть workflow — сразу раскрываем его флоу.
-    // Если нет — fallback на старый раскрывающийся pipeline на карточке.
-    const a = activeAgents.find(x => x.id === id);
-    if (a?.flow) {
-      setDrilledAgentId(id);
-      return;
-    }
     setExpandedId(prev => prev === id ? null : id);
   }
   function handleOpenKb(title, agent) {
@@ -749,7 +742,6 @@ function GraphCanvas({ chatOpen, chatMode, onChatModeChange, dockedHeight, onDoc
                 onOpenKb={(title) => handleOpenKb(title, a)}
                 onOpenChat={onAgentChat}
                 onOpenSettings={onAgentSettings}
-                onOpenFlow={() => setDrilledAgentId(a.id)}
               />
             </div>
           );

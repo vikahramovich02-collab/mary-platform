@@ -157,6 +157,29 @@ function DemoChips({ actions, onPick }) {
   );
 }
 
+function extractSuggestedReplies(text) {
+  if (!text) return null;
+  const match = text.match(/например:\s*[«"]([^«»"\n]+)[»"]/i);
+  const base = match?.[1]?.trim();
+  if (!base) return null;
+
+  const variants = [base];
+  const lower = base.toLowerCase();
+
+  if (/маникюр/.test(lower)) {
+    variants.push("Здравствуйте, хочу записаться на маникюр на завтра после 18:00");
+    variants.push("Привет, есть ли окошко на маникюр сегодня вечером?");
+  } else if (/стриж|бров|ресниц|космет|массаж/.test(lower)) {
+    variants.push(base.replace(/привет/i, "Здравствуйте"));
+    variants.push("Добрый день, хочу записаться, подскажите ближайшее свободное время");
+  } else {
+    variants.push("Здравствуйте, хочу записаться, подскажите ближайшее свободное время");
+    variants.push("Привет, есть ли свободное окошко на завтра?");
+  }
+
+  return [...new Set(variants)].slice(0, 3);
+}
+
 export function OptionsBlock({ options, multi, onPick, highlights, disabled, noTopMargin }) {
   const [selected, setSelected] = useState(() => new Set());
   const [freeText, setFreeText] = useState("");
@@ -478,6 +501,7 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
   const body = checklist.options ? checklist.body : (numbered.options ? numbered.body : m.text);
   const options = checklist.options || numbered.options;
   const multi   = !!checklist.options || (m._highlights?.length > 1);
+  const suggestedReplies = !options && !m._quickActions ? extractSuggestedReplies(body) : null;
   const maryActBtn = {
     display: "inline-flex", alignItems: "center", justifyContent: "center",
     width: 26, height: 26, padding: 0,
@@ -533,6 +557,9 @@ export function ChatBubble({ m, isLast, onPickOption, index, onEdit, suppressInt
         )}
         {m._quickActions && isLast && (
           <DemoChips actions={m._quickActions} onPick={onPickOption} />
+        )}
+        {suggestedReplies?.length && canInteract && (
+          <DemoChips actions={suggestedReplies.map(label => ({ label, icon: "chat" }))} onPick={onPickOption} />
         )}
         {!m._streaming && body && body.trim().length > 0 && (
           <ActionBar text={body} />

@@ -552,8 +552,6 @@ export function ChatMaryPage({ dark, toggleDark }) {
               result: data.result,
               ts: Date.now(),
             }, ...prev].slice(0, 30));
-            // Авто-открытие activity panel при первой работе
-            setShowActivity(true);
             // ── live workflow builder: апдейт по результатам tool ──
             // Любой dept-mutating tool возвращает полное состояние department —
             // используем его как источник правды (на случай если Mary апдейтит
@@ -1229,29 +1227,6 @@ export function ChatMaryPage({ dark, toggleDark }) {
                     )}
                   </button>
                 )}
-                {!showActivity && !isMobile && (
-                  <button
-                    onClick={() => setShowActivity(true)}
-                    title="Открыть панель с файлами и воркфлоу"
-                    style={{
-                      position: "relative",
-                      display: "inline-flex", alignItems: "center", justifyContent: "center",
-                      width: 32, height: 32, flexShrink: 0,
-                      background: "transparent",
-                      border: "none",
-                      borderRadius: 8,
-                      cursor: "pointer", fontFamily: "inherit",
-                      color: cv.muted,
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.background = cv.hover; e.currentTarget.style.color = cv.text; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = cv.muted; }}
-                  >
-                    <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <path d="M14 2v6h6" />
-                    </svg>
-                  </button>
-                )}
               </div>
             )}
 
@@ -1507,27 +1482,6 @@ export function ChatMaryPage({ dark, toggleDark }) {
           </>
         )}
       </div>
-
-      {/* Activity panel: открывается кнопкой в углу */}
-      {showActivity && (
-        <ActivityPanel
-          build={build}
-          activity={activity}
-          activeAgentIds={activeAgentIds}
-          artifacts={artifacts}
-          onCloseArtifact={(id) => setArtifacts(prev => prev.filter(a => a.id !== id))}
-          currentTool={(() => {
-            // Если есть streaming message с активным tool — показываем его
-            const lastStreaming = [...messages].reverse().find(m => m._streaming && m._tools?.length);
-            if (!lastStreaming) return null;
-            const runningTool = [...(lastStreaming._tools || [])].reverse().find(t => t.status === "running");
-            return runningTool ? { name: runningTool.name, args: runningTool.args } : null;
-          })()}
-          onClose={() => setShowActivity(false)}
-          docRequest={docRequest}
-        />
-      )}
     </div>
   );
 }
-

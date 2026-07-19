@@ -1,451 +1,548 @@
-import { useState, useEffect, useRef } from "react";
-import { color, transition } from "../../ui/tokens.js";
-import { zoomBtn } from "../chat-panel.jsx";
-
-const CARD_W = 180, CARD_H = 64, GAP_X = 72, GAP_Y = 80;
-const MAX_PER_ROW = 4;
-const DEPT_NODE_W = 220, DEPT_NODE_H = 72;
-const VERT_GAP = 100; // gap between dept node and workflow row
+import { color } from "../../ui/tokens.js";
 
 const CHAN_ICONS = {
-  tg: <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor"><path d="M21.8 2.2a1 1 0 0 0-1-.2L2.3 9.3a1 1 0 0 0 .1 1.9l4.6 1.5 1.8 5.6a1 1 0 0 0 1.7.4l2.6-2.6 4.5 3.3a1 1 0 0 0 1.5-.7l2.7-15a1 1 0 0 0-.3-.8z"/></svg>,
-  inst: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r=".5" fill="currentColor"/></svg>,
-  vk: <svg width={20} height={20} viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 15.5h1.9c.4 0 .5-.3.5-.5 0 0 0-2 .9-2.3.9-.3 2 1.8 3.2 2.6.9.6 1.6.5 1.6.5l3.2-.1s1.7-.1.9-1.4c-.1-.2-.6-.9-2.2-2.5C21.3 10 20.9 10 21.2 9.5c.7-1 1.8-2.5 2.3-3.4.3-.6.1-.9-.5-.9h-2c-.5 0-.7.3-.9.6 0 0-1 2.3-2.5 3.8-.7.6-1 .3-1 0V6.3c0-.5-.1-.8-.7-.8h-3.2c-.4 0-.7.3-.7.6 0 .7.9.9.9 2.7v4.1c0 .6-.1.7-.4.7-.6 0-2.1-2.3-3-5C9.3 7.7 9 7.5 8.4 7.5H6.5c-.6 0-.7.3-.7.6 0 .7.7 4 3.3 8.3C11 19 13 20 14.9 20c1 0 1.2-.3 1.2-.7v-2.1c0-.6.1-.7.5-.7z"/></svg>,
-  analytics: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
-  email: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>,
-  support: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
-  other: <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+  tg: <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor"><path d="M21.8 2.2a1 1 0 0 0-1-.2L2.3 9.3a1 1 0 0 0 .1 1.9l4.6 1.5 1.8 5.6a1 1 0 0 0 1.7.4l2.6-2.6 4.5 3.3a1 1 0 0 0 1.5-.7l2.7-15a1 1 0 0 0-.3-.8z"/></svg>,
+  inst: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="5"/><circle cx="17.5" cy="6.5" r=".5" fill="currentColor"/></svg>,
+  vk: <svg width={18} height={18} viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 15.5h1.9c.4 0 .5-.3.5-.5 0 0 0-2 .9-2.3.9-.3 2 1.8 3.2 2.6.9.6 1.6.5 1.6.5l3.2-.1s1.7-.1.9-1.4c-.1-.2-.6-.9-2.2-2.5C21.3 10 20.9 10 21.2 9.5c.7-1 1.8-2.5 2.3-3.4.3-.6.1-.9-.5-.9h-2c-.5 0-.7.3-.9.6 0 0-1 2.3-2.5 3.8-.7.6-1 .3-1 0V6.3c0-.5-.1-.8-.7-.8h-3.2c-.4 0-.7.3-.7.6 0 .7.9.9.9 2.7v4.1c0 .6-.1.7-.4.7-.6 0-2.1-2.3-3-5C9.3 7.7 9 7.5 8.4 7.5H6.5c-.6 0-.7.3-.7.6 0 .7.7 4 3.3 8.3C11 19 13 20 14.9 20c1 0 1.2-.3 1.2-.7v-2.1c0-.6.1-.7.5-.7z"/></svg>,
+  email: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>,
+  other: <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
 };
 
 const CHAN_COLORS = {
-  tg:        { icon: "#2AABEE", bg: "#E8F7FE" },
-  inst:      { icon: "#E1306C", bg: "#FDE8F0" },
-  vk:        { icon: "#2787F5", bg: "#E6F1FE" },
-  analytics: { icon: "#34C759", bg: "#E8F8EE" },
-  email:     { icon: "#FF9500", bg: "#FFF3E0" },
-  support:   { icon: "#7A86FF", bg: "#EEF0FF" },
-  other:     { icon: "#8E8EA0", bg: "#F0F0F4" },
+  tg: { fg: "#2AABEE", bg: "#E8F7FE" },
+  inst: { fg: "#E1306C", bg: "#FDE8F0" },
+  vk: { fg: "#2787F5", bg: "#E6F1FE" },
+  email: { fg: "#FF9500", bg: "#FFF3E0" },
+  other: { fg: "#8E8EA0", bg: "#F0F0F4" },
 };
 
-function chanIcon(ch) {
-  const s = ((ch.id || "") + (ch.name || "") + (ch.type || "")).toLowerCase();
-  if (s.includes("аналит") || s.includes("analytics")) return "analytics";
+function getChannelKind(ch) {
+  const s = `${ch?.id || ""} ${ch?.name || ""} ${ch?.type || ""}`.toLowerCase();
   if (s.includes("inst") || s.includes("инст")) return "inst";
   if (s.includes("vk") || s.includes("вк")) return "vk";
   if (s.includes("email") || s.includes("почт")) return "email";
-  if (s.includes("support") || s.includes("поддерж")) return "support";
   if (s.includes("tg") || s.includes("telegram") || s.includes("телег")) return "tg";
   return "other";
 }
 
-function layoutCards(n) {
-  if (n === 0) return [];
-  const cols = Math.min(n, MAX_PER_ROW);
-  return Array.from({ length: n }, (_, i) => ({
-    x: (i % cols) * (CARD_W + GAP_X),
-    y: Math.floor(i / cols) * (CARD_H + GAP_Y),
-  }));
+function getDeptOutcome(dept) {
+  const name = (dept?.name || "").toLowerCase();
+  if (name.includes("запис")) return "Записывает визит и подтверждает клиенту";
+  if (name.includes("поддерж")) return "Закрывает вопрос или эскалирует человеку";
+  if (name.includes("продаж")) return "Доводит до следующего шага сделки";
+  if (name.includes("smm") || name.includes("контент")) return "Готовит и передаёт результат в публикацию";
+  return "Фиксирует результат и двигает процесс дальше";
 }
 
-// ── Dept header node ─────────────────────────────────────────
-function DeptNode({ dept, pos }) {
-  const col = dept?.color || "#FF8B3D";
+function buildWorkflowSteps(dept) {
+  const channels = dept?.channels || [];
+  const integrations = dept?.integrations || [];
+  const firstChannel = channels[0]?.name || "канал";
+  const outcome = getDeptOutcome(dept);
+  const triggerLabel = channels.length > 1 ? "Сообщение из каналов" : `Сообщение из ${firstChannel}`;
+  const stepThree = integrations.length > 0
+    ? "Проверяет данные"
+    : "Опирается на контекст";
+
+  return [
+    {
+      id: "start",
+      kind: "start",
+      title: "Start",
+      sub: "Точка запуска сценария",
+    },
+    {
+      id: "trigger",
+      kind: "trigger",
+      title: triggerLabel,
+      sub: channels.length > 1 ? channels.map((ch) => ch.name).join(" • ") : "Вход клиента в отдел",
+    },
+    {
+      id: "understand",
+      kind: "llm",
+      title: "Mary понимает запрос",
+      sub: "Определяет намерение клиента и чего он хочет добиться",
+    },
+    {
+      id: "reply",
+      kind: "agent",
+      title: "Отвечает и уточняет",
+      sub: "Сама ведёт диалог и добирает только недостающие детали",
+    },
+    {
+      id: "operate",
+      kind: integrations.length > 0 ? "integration" : "agent",
+      title: stepThree,
+      sub: integrations.length > 0 ? "Календарь, CRM, таблицы, база знаний" : "Сценарий ещё можно докрутить интеграциями позже",
+    },
+    {
+      id: "result",
+      kind: "result",
+      title: outcome,
+      sub: "Клиент получает понятный следующий шаг без ручной рутины",
+    },
+  ];
+}
+
+function IconWrap({ kind }) {
+  const tone = CHAN_COLORS[kind] || CHAN_COLORS.other;
+  return (
+    <span style={{
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      background: tone.bg,
+      color: tone.fg,
+      flexShrink: 0,
+    }}>
+      {CHAN_ICONS[kind] || CHAN_ICONS.other}
+    </span>
+  );
+}
+
+function StatPill({ value, label }) {
   return (
     <div style={{
-      position: "absolute",
-      left: pos.x, top: pos.y,
-      width: DEPT_NODE_W, height: DEPT_NODE_H,
-      background: color.white,
-      borderRadius: 20,
-      boxShadow: `0 0 0 2px ${col}40, 0 4px 20px ${col}18`,
-      display: "flex", alignItems: "center", gap: 14,
-      padding: "0 20px",
-      userSelect: "none",
+      display: "flex",
+      flexDirection: "column",
+      gap: 2,
+      minWidth: 92,
+      padding: "12px 14px",
+      background: "#FFFFFF",
+      border: "1px solid rgba(38,38,51,0.08)",
+      borderRadius: 14,
     }}>
-      <div style={{
-        width: 40, height: 40, borderRadius: 12,
-        background: col + "18", color: col,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
-      }}>
-        <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="7" width="20" height="14" rx="2"/>
-          <path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2"/>
-        </svg>
-      </div>
-      <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#262633", lineHeight: 1.2 }}>
-          {dept?.name}
-        </div>
-        <div style={{ fontSize: 12, color: "rgba(38,38,51,0.45)", marginTop: 3 }}>Отдел</div>
-      </div>
-      {/* Bottom connector dot */}
-      <span style={{
-        position: "absolute", left: "50%", bottom: -5, transform: "translateX(-50%)",
-        width: 9, height: 9, borderRadius: "50%",
-        background: color.white, border: `1px solid ${col}60`,
-      }} />
+      <span style={{ fontSize: 18, fontWeight: 600, color: "#262633", lineHeight: 1.1 }}>{value}</span>
+      <span style={{ fontSize: 12, color: "rgba(38,38,51,0.48)" }}>{label}</span>
     </div>
   );
 }
 
-// ── Workflow card — style as AgentCard ───────────────────────
-function WorkflowCard({ ch, pos, deptCol, agentCount, onClick }) {
-  const [hov, setHov] = useState(false);
-  const type = chanIcon(ch);
-  const chanCol = CHAN_COLORS[type] || CHAN_COLORS.other;
-  const agentLabel = agentCount === 1 ? "1 агент" : agentCount > 1 ? `${agentCount} агента` : null;
+function TopFilter({ active, children, onClick }) {
   return (
-    <div
+    <button
       onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
       style={{
-        position: "absolute",
-        left: pos.x, top: pos.y,
-        width: CARD_W, height: CARD_H,
-        background: color.white,
-        borderRadius: 24,
-        boxShadow: hov
-          ? `0 0 0 2px ${deptCol}, 0 4px 16px ${deptCol}22`
-          : "0 1px 2px rgba(38,38,51,0.04)",
-        display: "flex", alignItems: "center", gap: 12,
-        padding: "0 16px",
+        border: "none",
+        borderRadius: 14,
+        padding: "10px 14px",
+        background: active ? color.white : "transparent",
+        boxShadow: active ? "0 1px 2px rgba(38,38,51,0.06)" : "none",
+        color: active ? "#262633" : "rgba(38,38,51,0.48)",
+        fontSize: 14,
+        fontWeight: 500,
         cursor: "pointer",
-        transition: "box-shadow 0.15s",
-        userSelect: "none",
+        fontFamily: "inherit",
       }}
     >
-      <div style={{
-        width: 42, height: 42, borderRadius: 12,
-        background: chanCol.bg, color: chanCol.icon,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flexShrink: 0,
-      }}>
-        {CHAN_ICONS[type]}
-      </div>
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{ fontSize: 14, fontWeight: 510, color: "#262633", lineHeight: 1.2,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {ch.name}
-        </div>
-        <div style={{ fontSize: 12, color: "rgba(38,38,51,0.5)", marginTop: 3 }}>
-          {agentLabel ? agentLabel : "Воркфлоу"}
-        </div>
-      </div>
-      {/* Top connector dot */}
-      <span style={{
-        position: "absolute", left: "50%", top: -5, transform: "translateX(-50%)",
-        width: 9, height: 9, borderRadius: "50%",
-        background: color.white, border: "1px solid rgba(38,38,51,0.18)",
-      }} />
-      <span style={{
-        position: "absolute", left: -5, top: "50%", transform: "translateY(-50%)",
-        width: 9, height: 9, borderRadius: "50%",
-        background: color.white, border: "1px solid rgba(38,38,51,0.18)",
-      }} />
-      <span style={{
-        position: "absolute", right: -5, top: "50%", transform: "translateY(-50%)",
-        width: 9, height: 9, borderRadius: "50%",
-        background: color.white, border: "1px solid rgba(38,38,51,0.18)",
-      }} />
-    </div>
-  );
-}
-
-// ── Toolbar icons ────────────────────────────────────────────
-const tbIc = {
-  pointer: <svg width={15} height={15} viewBox="0 0 24 24" fill="currentColor"><path d="M5.5 3l13 7-5.6 1.6 1.6 5.6-2 1-3-7-4 4z" /></svg>,
-  hand:    <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M18 11V6a2 2 0 1 0-4 0v5" /><path d="M14 10V4a2 2 0 1 0-4 0v6" /><path d="M10 10.5V6a2 2 0 0 0-4 0v8" /><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-1-5.5-2.5L2 15c-.6-.9-.4-2 .5-2.5.9-.6 2-.4 2.5.5L7 15" /></svg>,
-  chevron: <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>,
-  zoomIn:  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>,
-  zoomOut: <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round"><path d="M5 12h14"/></svg>,
-  expand:  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M3 9V3h6M21 9V3h-6M3 15v6h6M21 15v6h-6"/></svg>,
-};
-
-function ToolOpt({ icon, label, active, onClick }) {
-  const [h, setH] = useState(false);
-  return (
-    <button onClick={onClick} onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{
-      display: "flex", alignItems: "center", gap: 8,
-      width: "100%", padding: "7px 10px",
-      background: active ? "rgba(38,38,51,0.06)" : h ? "rgba(38,38,51,0.03)" : "transparent",
-      color: "#262633", border: "none", borderRadius: 7,
-      cursor: "pointer", fontFamily: "inherit", textAlign: "left",
-      fontSize: 13, fontWeight: 500,
-    }}>
-      <span style={{ display: "flex" }}>{icon}</span>
-      <span>{label}</span>
+      {children}
     </button>
   );
 }
 
-// ── SVG connector lines ──────────────────────────────────────
-function ConnectorLines({ channels, deptNodePos, cardPositions, scale }) {
-  const col = "rgba(38,38,51,0.12)";
-  const deptBottomX = deptNodePos.x + DEPT_NODE_W / 2;
-  const deptBottomY = deptNodePos.y + DEPT_NODE_H;
-
+function ActionButton({ primary = false, onClick, children }) {
   return (
-    <svg style={{ position: "absolute", left: 0, top: 0, pointerEvents: "none", overflow: "visible" }}>
-      {channels.map((ch, i) => {
-        const pos = cardPositions[i];
-        if (!pos) return null;
-        const cardTopX = pos.x + CARD_W / 2;
-        const cardTopY = pos.y;
-        const midY = deptBottomY + (cardTopY - deptBottomY) / 2;
-        return (
-          <path
-            key={ch.id}
-            d={`M ${deptBottomX} ${deptBottomY} C ${deptBottomX} ${midY}, ${cardTopX} ${midY}, ${cardTopX} ${cardTopY}`}
-            fill="none"
-            stroke={col}
-            strokeWidth={1.5}
-            strokeDasharray="4 3"
-          />
-        );
-      })}
-    </svg>
+    <button
+      onClick={onClick}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 8,
+        height: 40,
+        padding: "0 16px",
+        borderRadius: 12,
+        border: primary ? "none" : "1px solid rgba(38,38,51,0.12)",
+        background: primary ? "#262633" : "#FFFFFF",
+        color: primary ? color.white : "#262633",
+        fontSize: 13.5,
+        fontWeight: 550,
+        cursor: "pointer",
+        fontFamily: "inherit",
+        whiteSpace: "nowrap",
+      }}
+    >
+      {children}
+    </button>
   );
 }
 
-// ── Main export ──────────────────────────────────────────────
-export function DepartmentOverviewPage({ dept, onNavigate, onOpenChat }) {
-  const panRef = useRef(null);
-  const canvasRef = useRef(null);
-  const [view, setView] = useState({ x: 0, y: 0 });
-  const [scale, setScale] = useState(1);
-  const [tool, setTool] = useState("pointer");
-  const [toolOpen, setToolOpen] = useState(false);
-  const [agentCount, setAgentCount] = useState((dept?.agents || []).length);
-
-  function onMouseDown(e) {
-    if (e.button !== 0) return;
-    if (e.target !== e.currentTarget && !e.target.dataset?.pan) return;
-    panRef.current = { sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
-  }
-
-  useEffect(() => {
-    const onMove = (e) => {
-      if (!panRef.current) return;
-      const p = panRef.current;
-      setView({ x: p.vx + e.clientX - p.sx, y: p.vy + e.clientY - p.sy });
-    };
-    const onUp = () => { panRef.current = null; };
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
-  }, []);
-
-  useEffect(() => {
-    if (!dept?.id) return;
-    fetch("/api/mary/departments")
-      .then(r => r.json())
-      .then(d => {
-        const found = (d.departments || []).find(x => x.id === dept.id);
-        if (found) setAgentCount((found.agents || []).length);
-      })
-      .catch(() => {});
-  }, [dept?.id]);
-
-  function fitToView() { setView({ x: 0, y: 0 }); setScale(1); }
-  function zoomIn()    { setScale(s => Math.min(s + 0.1, 2)); }
-  function zoomOut()   { setScale(s => Math.max(s - 0.1, 0.3)); }
-
-  const channels = dept?.channels || [];
-  const col = dept?.color || "#FF8B3D";
-
-  // Layout: dept node centered at top, workflow cards in row below
-  const cols = Math.min(channels.length || 1, MAX_PER_ROW);
-  const cardRowW = cols * CARD_W + (cols - 1) * GAP_X;
-  const totalW = Math.max(cardRowW, DEPT_NODE_W);
-
-  const deptPos = { x: (totalW - DEPT_NODE_W) / 2, y: 0 };
-  const cardRowOffsetX = (totalW - cardRowW) / 2;
-  const cardPositions = layoutCards(channels.length).map(p => ({
-    x: cardRowOffsetX + p.x,
-    y: DEPT_NODE_H + VERT_GAP + p.y,
-  }));
-
-  const rows = Math.ceil((channels.length || 1) / cols);
-  const totalH = DEPT_NODE_H + VERT_GAP + rows * CARD_H + (rows - 1) * GAP_Y;
+function FlowStepCard({ step, accent }) {
+  const kindStyles = {
+    start: { bg: "#FFF5D8", fg: "#D9981E", border: "#F1D28B", label: "Start" },
+    trigger: { bg: "#EEF4FF", fg: "#3F95FF", border: "#D5E6FF", label: "Trigger" },
+    llm: { bg: "#FCEBFA", fg: "#D946A8", border: "#F4CDEC", label: "LLM" },
+    agent: { bg: `${accent}14`, fg: accent, border: `${accent}2A`, label: "Agent" },
+    integration: { bg: "#EEF8F2", fg: "#34C759", border: "#CDEBD7", label: "Integration" },
+    result: { bg: "#F1FAF4", fg: "#34C759", border: "#C7E7D0", label: "Result" },
+  };
+  const tone = kindStyles[step.kind] || kindStyles.agent;
 
   return (
-    <div
-      ref={canvasRef}
-      onMouseDown={onMouseDown}
-      data-pan="true"
+    <div style={{
+      width: 224,
+      minHeight: 138,
+      background: "#FFFFFF",
+      border: `1px solid ${tone.border}`,
+      borderRadius: 20,
+      padding: 18,
+      boxShadow: "0 1px 2px rgba(38,38,51,0.03)",
+      display: "flex",
+      flexDirection: "column",
+      gap: 16,
+      flexShrink: 0,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+        <span style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minWidth: 72,
+          height: 28,
+          padding: "0 10px",
+          borderRadius: 999,
+          background: tone.bg,
+          color: tone.fg,
+          fontSize: 11.5,
+          fontWeight: 700,
+          letterSpacing: "0.02em",
+        }}>
+          {tone.label}
+        </span>
+        <span style={{
+          width: 10,
+          height: 10,
+          borderRadius: "50%",
+          background: tone.fg,
+          boxShadow: `0 0 0 6px ${tone.fg}18`,
+          flexShrink: 0,
+        }} />
+      </div>
+      <div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#262633", lineHeight: 1.3 }}>
+          {step.title}
+        </div>
+        <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.52)", lineHeight: 1.5, marginTop: 8 }}>
+          {step.sub}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FlowArrow() {
+  return (
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      color: "rgba(38,38,51,0.24)",
+      flexShrink: 0,
+      padding: "0 2px",
+    }}>
+      <span style={{ width: 24, height: 1.5, background: "currentColor" }} />
+      <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 12h14" />
+        <path d="M13 6l6 6-6 6" />
+      </svg>
+      <span style={{ width: 24, height: 1.5, background: "currentColor" }} />
+    </div>
+  );
+}
+
+function SectionCard({ title, actionLabel, onAction, children }) {
+  return (
+    <div style={{
+      background: "#FFFFFF",
+      border: "1px solid rgba(38,38,51,0.07)",
+      borderRadius: 22,
+      padding: 18,
+      boxShadow: "0 1px 2px rgba(38,38,51,0.025)",
+    }}>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 12,
+        marginBottom: 14,
+        flexWrap: "wrap",
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#262633" }}>{title}</div>
+        {actionLabel && (
+          <button
+            onClick={onAction}
+            style={{
+              height: 36,
+              padding: "0 14px",
+              borderRadius: 12,
+              background: "rgba(38,38,51,0.05)",
+              border: "none",
+              color: "#262633",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            {actionLabel}
+          </button>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function RowItem({ icon, title, sub, meta, onClick }) {
+  return (
+    <button
+      onClick={onClick}
       style={{
-        position: "relative",
-        flex: 1, minHeight: 0,
-        background: "#F7F7F7",
-        backgroundImage: "radial-gradient(circle, #ffffff 1.4px, transparent 1.4px)",
-        backgroundSize: "20px 20px",
-        backgroundPosition: "10px 10px",
-        borderRadius: 16,
-        overflow: "hidden",
-        cursor: "default",
-        userSelect: "none",
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        padding: "16px 18px",
+        background: "#FFFFFF",
+        border: "1px solid rgba(38,38,51,0.07)",
+        borderRadius: 18,
+        cursor: onClick ? "pointer" : "default",
+        textAlign: "left",
+        fontFamily: "inherit",
       }}
     >
-      {/* Breadcrumb */}
-      <div style={{
-        position: "absolute", top: 18, left: 24,
-        display: "flex", alignItems: "center", gap: 8,
-        fontSize: 13.5, color: "rgba(38,38,51,0.55)", zIndex: 5,
-        pointerEvents: "auto",
-      }}>
-        <span style={{ cursor: "pointer" }} onClick={() => onNavigate?.("home")}>Отделы</span>
-        <span style={{ opacity: 0.6 }}>›</span>
-        <span style={{ color: "#262633", fontWeight: 500 }}>{dept?.name}</span>
-      </div>
-
-      {/* "Тестировать" button */}
-      <button
-        onClick={() => onNavigate?.("sandbox")}
-        style={{
-          position: "absolute", top: 14, right: 16, zIndex: 6,
-          display: "inline-flex", alignItems: "center", gap: 7,
-          padding: "7px 14px",
-          background: "#262633", color: color.white,
-          border: "none", borderRadius: 8,
-          fontSize: 12.5, fontWeight: 500,
-          cursor: "pointer", fontFamily: "inherit",
-          boxShadow: "0 1px 3px rgba(38,38,51,0.12)",
-        }}
-      >
-        <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <polygon points="5 3 19 12 5 21 5 3"/>
-        </svg>
-        Тестировать
-      </button>
-
-      {/* Centered canvas grid */}
-      <div
-        data-pan="true"
-        style={{
-          position: "absolute",
-          left: `calc(50% + ${view.x}px)`,
-          top: `calc(50% + ${view.y}px)`,
-          transform: `translate(-50%, -50%) scale(${scale})`,
-          width: totalW, height: totalH,
-        }}
-      >
-        {/* Connector lines from dept node to workflow cards */}
-        {channels.length > 0 && (
-          <ConnectorLines
-            channels={channels}
-            deptNodePos={deptPos}
-            cardPositions={cardPositions}
-            scale={scale}
-          />
-        )}
-
-        {/* Dept header node */}
-        <DeptNode dept={dept} pos={deptPos} />
-
-        {/* Workflow cards */}
-        {channels.map((ch, i) => (
-          <WorkflowCard
-            key={ch.id}
-            ch={ch}
-            pos={cardPositions[i] || { x: 0, y: DEPT_NODE_H + VERT_GAP }}
-            deptCol={col}
-            agentCount={agentCount}
-            onClick={() => onNavigate?.(ch.page)}
-          />
-        ))}
-
-        {/* Empty state */}
-        {channels.length === 0 && (
-          <div style={{
-            position: "absolute",
-            left: (totalW - 240) / 2,
-            top: DEPT_NODE_H + VERT_GAP,
-            width: 240, fontSize: 13, color: "rgba(38,38,51,0.4)",
-            textAlign: "center", lineHeight: 1.5,
-          }}>
-            Нет воркфлоу.<br/>Попросите Mary добавить канал.
+      {icon}
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <div style={{ fontSize: 14.5, fontWeight: 550, color: "#262633", lineHeight: 1.25 }}>
+          {title}
+        </div>
+        {sub && (
+          <div style={{ fontSize: 12.5, color: "rgba(38,38,51,0.5)", lineHeight: 1.45, marginTop: 4 }}>
+            {sub}
           </div>
         )}
       </div>
-
-      {/* Toolbar bottom-left */}
-      <div style={{
-        position: "absolute", left: 16, bottom: 16,
-        display: "flex", alignItems: "center",
-        height: 40, background: color.white,
-        border: "1px solid rgba(38,38,51,0.08)",
-        borderRadius: 12, padding: "0 10px",
-        boxShadow: "0 1px 2px rgba(38,38,51,0.04)",
-        gap: 6, zIndex: 11,
-        transition: transition.base,
-      }}>
-        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-          <button style={zoomBtn} onClick={() => setToolOpen(v => !v)}>
-            {tool === "pointer" ? tbIc.pointer : tbIc.hand}
-          </button>
-          <button style={{ ...zoomBtn, color: "rgba(38,38,51,0.5)" }} onClick={() => setToolOpen(v => !v)}>
-            {tbIc.chevron}
-          </button>
-          {toolOpen && (
-            <div style={{
-              position: "absolute", bottom: "calc(100% + 6px)", left: 0,
-              background: color.white, border: "1px solid rgba(38,38,51,0.1)",
-              borderRadius: 10, boxShadow: "0 6px 18px rgba(38,38,51,0.1)",
-              padding: 4, minWidth: 130, zIndex: 5,
-            }}>
-              <ToolOpt icon={tbIc.pointer} label="Указатель" active={tool === "pointer"} onClick={() => { setTool("pointer"); setToolOpen(false); }} />
-              <ToolOpt icon={tbIc.hand}    label="Рука"      active={tool === "hand"}    onClick={() => { setTool("hand");    setToolOpen(false); }} />
-            </div>
-          )}
-        </div>
-        <div style={{ width: 1, height: 18, background: "rgba(38,38,51,0.1)" }} />
-        <button style={zoomBtn} onClick={zoomOut}>{tbIc.zoomOut}</button>
-        <span style={{ fontSize: 13, color: "#262633", minWidth: 40, textAlign: "center", fontFamily: "inherit" }}>
-          {Math.round(scale * 100)}%
-        </span>
-        <button style={zoomBtn} onClick={zoomIn}>{tbIc.zoomIn}</button>
-        <div style={{ width: 1, height: 18, background: "rgba(38,38,51,0.1)" }} />
-        <button style={zoomBtn} onClick={fitToView}>{tbIc.expand}</button>
-      </div>
-
-      {/* "Спросить у Mary" */}
-      <button
-        onClick={() => {
-          const d = new Date();
-          const t = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-          const msg = dept?.name ? {
-            id: "ctx-" + Date.now(),
-            agentId: "mary",
-            time: t,
-            text: `Привет! Я только что открыл отдел **${dept.name}**. Что можно сделать прямо сейчас — добавить каналы, настроить агентов, запустить pipeline?`,
-          } : null;
-          onOpenChat ? onOpenChat(msg) : onNavigate?.(channels[0]?.page || "tg-kanal");
-        }}
-        style={{
-          position: "absolute", left: "50%", bottom: 16, transform: "translateX(-50%)",
-          display: "flex", alignItems: "center", gap: 10,
-          background: color.white,
-          border: "1px solid rgba(38,38,51,0.08)",
-          borderRadius: 999,
-          padding: "9px 16px 9px 18px",
-          boxShadow: "0 2px 8px rgba(38,38,51,0.06)",
-          fontSize: 14, color: "#262633", fontWeight: 500,
-          cursor: "pointer", fontFamily: "inherit",
-        }}
-      >
-        <span>Спросить у Mary</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+        {meta && <span style={{ fontSize: 12.5, color: "rgba(38,38,51,0.42)" }}>{meta}</span>}
         <span style={{
-          display: "inline-flex", alignItems: "center", justifyContent: "center",
-          width: 22, height: 22, borderRadius: 7,
-          background: "rgba(255,139,61,0.12)", color: "#FF8B3D",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: 38,
+          height: 38,
+          borderRadius: 12,
+          background: "rgba(38,38,51,0.05)",
+          color: "rgba(38,38,51,0.7)",
         }}>
-          <svg width={12} height={12} viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 2L9.5 9.5 2 12l7.5 2.5L12 22l2.5-7.5L22 12l-7.5-2.5L12 2z"/>
+          <svg width={17} height={17} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 12h14" />
+            <path d="M13 6l6 6-6 6" />
           </svg>
         </span>
-      </button>
+      </div>
+    </button>
+  );
+}
+
+export function DepartmentOverviewPage({ dept, onNavigate, onOpenChat }) {
+  const channels = dept?.channels || [];
+  const agents = dept?.agents || [];
+  const integrations = dept?.integrations || [];
+  const accent = dept?.color || "#FF8B3D";
+  const steps = buildWorkflowSteps(dept);
+  const firstChannelPage = channels[0]?.page;
+
+  return (
+    <div style={{
+      display: "flex",
+      flexDirection: "column",
+      gap: 28,
+      height: "100%",
+      minHeight: 0,
+      maxWidth: 1080,
+      margin: "0 auto",
+      padding: "56px 28px 88px",
+      background: color.white,
+      overflow: "auto",
+    }}>
+      <div style={{
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "space-between",
+        gap: 16,
+        flexWrap: "wrap",
+      }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, minWidth: 0 }}>
+          <div style={{ fontSize: 44, lineHeight: 1.02, fontWeight: 600, color: "#262633", letterSpacing: "-0.04em" }}>
+            Автоматизации
+          </div>
+          <div style={{ maxWidth: 760, fontSize: 17, lineHeight: 1.5, color: "rgba(38,38,51,0.52)" }}>
+            {dept?.name
+              ? `Отдел «${dept.name}»: здесь виден старт сценария, как Mary ведёт клиента по шагам и что подключено вокруг процесса.`
+              : "Здесь виден старт сценария, как Mary ведёт клиента по шагам и что подключено вокруг процесса."}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <ActionButton onClick={() => onOpenChat?.({
+            id: "ctx-" + Date.now(),
+            agentId: "mary",
+            text: dept?.name
+              ? `Я открыл отдел ${dept.name}. Покажи, что здесь лучше докрутить в первую очередь.`
+              : "Покажи, что здесь лучше докрутить в первую очередь.",
+          })}>
+            Спросить Mary
+          </ActionButton>
+          <ActionButton primary onClick={() => onNavigate?.("sandbox")}>
+            Тестировать сценарий
+          </ActionButton>
+        </div>
+      </div>
+
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 18,
+        flexWrap: "wrap",
+      }}>
+        <div style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 6,
+          padding: 4,
+          borderRadius: 18,
+          background: "rgba(38,38,51,0.04)",
+        }}>
+          <TopFilter active>Сценарий</TopFilter>
+          <TopFilter onClick={() => firstChannelPage && onNavigate?.(firstChannelPage)}>Канал</TopFilter>
+          <TopFilter onClick={() => onNavigate?.("integrations")}>Интеграции</TopFilter>
+        </div>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <StatPill value={channels.length} label={channels.length === 1 ? "канал" : "каналов"} />
+          <StatPill value={agents.length} label={agents.length === 1 ? "агент" : "агентов"} />
+          <StatPill value={integrations.length} label={integrations.length === 1 ? "интеграция" : "интеграций"} />
+        </div>
+      </div>
+
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 18 }}>
+        <SectionCard
+          title="Основной сценарий"
+          actionLabel={firstChannelPage ? "Открыть канал" : null}
+          onAction={firstChannelPage ? () => onNavigate?.(firstChannelPage) : undefined}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ fontSize: 13.5, color: "rgba(38,38,51,0.48)", lineHeight: 1.5 }}>
+              Сценарий читается слева направо: старт, входящее сообщение, работа Mary, действие в системе и итог для клиента.
+            </div>
+            <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+              <div style={{ display: "flex", alignItems: "stretch", gap: 14, minWidth: "max-content" }}>
+                {steps.map((step, idx) => (
+                  <div key={step.id} style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    <FlowStepCard step={step} accent={accent} />
+                    {idx < steps.length - 1 && <FlowArrow />}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Каналы входа" actionLabel="Добавить канал">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {channels.length === 0 && (
+              <div style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(38,38,51,0.48)", padding: "6px 2px" }}>
+                Каналы пока не добавлены. Попросите Mary собрать первый входящий сценарий.
+              </div>
+            )}
+            {channels.map((ch) => {
+              const kind = getChannelKind(ch);
+              return (
+                <RowItem
+                  key={ch.id}
+                  title={ch.name}
+                  sub="Точка входа клиента в автоматизацию"
+                  onClick={ch.page ? () => onNavigate?.(ch.page) : undefined}
+                  icon={<IconWrap kind={kind} />}
+                />
+              );
+            })}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Кто работает внутри">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {agents.length === 0 && (
+              <div style={{ fontSize: 13, lineHeight: 1.5, color: "rgba(38,38,51,0.48)", padding: "6px 2px" }}>
+                Агенты ещё не добавлены. Здесь появится состав отдела, когда Mary его соберёт.
+              </div>
+            )}
+            {agents.slice(0, 6).map((agent) => (
+              <RowItem
+                key={agent.id}
+                title={agent.role || agent.name || "Агент"}
+                sub={agent.tasks || agent.systemPrompt?.slice(0, 110) || "Внутренний шаг процесса"}
+                meta={agent.model || null}
+                icon={
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    background: `${accent}16`,
+                    color: accent,
+                    flexShrink: 0,
+                  }}>
+                    <svg width={18} height={18} viewBox="0 0 24 24">
+                      <rect x="11.25" y="2" width="1.5" height="3" rx=".75" fill="currentColor"/>
+                      <rect x="4.5" y="5.5" width="15" height="15" rx="4.5" fill="currentColor"/>
+                      <circle cx="9.3" cy="13" r="1.4" fill="white"/>
+                      <circle cx="14.7" cy="13" r="1.4" fill="white"/>
+                    </svg>
+                  </span>
+                }
+              />
+            ))}
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Что докрутить дальше">
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              integrations.length === 0 ? "Добавить интеграции, чтобы Mary работала не только по диалогу." : "Проверить, какие интеграции реально нужны в первом показе.",
+              "Пройти ещё 2–3 живых кейса клиента и убрать лишние уточнения.",
+              "После этого уже расширять сценарий новыми ветками, а не раньше.",
+            ].map((line, idx) => (
+              <RowItem
+                key={idx}
+                title={line}
+                sub="Следующий понятный продуктовый шаг"
+                icon={
+                  <span style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    width: 38,
+                    height: 38,
+                    borderRadius: 12,
+                    background: "rgba(38,38,51,0.05)",
+                    color: accent,
+                    flexShrink: 0,
+                    fontWeight: 700,
+                    fontSize: 16,
+                  }}>+</span>
+                }
+              />
+            ))}
+          </div>
+        </SectionCard>
+      </div>
     </div>
   );
 }
