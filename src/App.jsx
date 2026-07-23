@@ -194,11 +194,16 @@ function Chat({ onDone, onHome, embedded = false }) {
     if (/самокрит|жду подходящего|не начинаю/.test(joined)) return specialists.find((item) => item.id === "yulia");
     return specialists.find((item) => item.id === "darya");
   };
+  const createRecommendationMessage = (person) => ({ role: "recommendation", person });
   const finishWithPerson = (nextMessages, nextAnswers, lead = "Вот специалист, который может подойти под ваш запрос.") => {
     const person = resolvePerson(nextAnswers);
     setPostMatchMode(false);
     setResultPerson(person);
-    setMessages([...nextMessages, { role: "assistant", text: `${greetingName}${lead}`.trim() }]);
+    setMessages([
+      ...nextMessages,
+      { role: "assistant", text: `${greetingName}${lead}`.trim() },
+      createRecommendationMessage(person),
+    ]);
   };
   const continueMatching = () => {
     setPostMatchMode(true);
@@ -211,6 +216,11 @@ function Chat({ onDone, onHome, embedded = false }) {
     const index = specialists.findIndex((item) => item.id === resultPerson.id);
     const next = specialists[(index + 1) % specialists.length];
     setResultPerson(next);
+    setMessages((prev) => [
+      ...prev,
+      { role: "assistant", text: `${greetingName}Показываю ещё одного специалиста.`.trim() },
+      createRecommendationMessage(next),
+    ]);
   };
   const resolveRefinedPerson = (option) => {
     if (option === "Показать ещё вариант") {
@@ -230,8 +240,10 @@ function Chat({ onDone, onHome, embedded = false }) {
       ...prev,
       { role: "user", text: value },
       { role: "assistant", text: `${greetingName}${value === "Показать ещё вариант" ? "Показываю ещё одного специалиста." : "Поняла. Тогда покажу более точный вариант."}`.trim() },
+      createRecommendationMessage(nextPerson),
     ]);
     setResultPerson(nextPerson);
+    setPostMatchMode(false);
   };
 
   const pushAnswer = (raw) => {
@@ -306,7 +318,15 @@ function Chat({ onDone, onHome, embedded = false }) {
       : <><button onClick={continueMatching}>Продолжить подбор</button><button onClick={showNextRecommendation}>Показать ещё вариант</button></>)
     : current.options.map((option) => <button key={option} onClick={() => pushAnswer(option)}>{option}</button>);
 
-  const body = <section className="journey-flow" aria-label="Подбор психолога"><div className="journey-thread">{messages.map((message, index) => message.role === "assistant" ? <FigmaAssistantBlock key={index} className="journey-thread-block" text={message.text.split("\n\n").map((part, partIndex) => <span key={partIndex}>{part}{partIndex < message.text.split("\n\n").length - 1 ? <><br /><br /></> : null}</span>)} /> : <JourneyUserMessage key={index} className="journey-thread-user" text={message.text} />)}{resultPerson ? <JourneyRecommendationCard person={resultPerson} onOpen={() => onDone({ person: resultPerson })} /> : null}</div><div className="journey-bottom-underlay" aria-hidden="true" /><section className="figma-answers journey-answers" aria-label="Варианты ответа"><p>Выберите вариант ответа или напишите</p>{answerButtons}</section><form className="figma-input journey-input" onSubmit={e => { e.preventDefault(); pushAnswer(text); }}><input aria-label="Расскажите" id="journey-next-text" value={text} onChange={e => setText(e.target.value)} placeholder="Расскажите.." /><button type="submit"><img src="/intreatment-figma/asset-2.svg" alt="" />Отправить</button></form><p className="figma-safety journey-safety"><strong>Если вам сейчас небезопасно</strong> <span>Пожалуйста, обратитесь в экстренные службы вашего региона.</span></p></section>;
+  const body = <section className="journey-flow" aria-label="Подбор психолога"><div className="journey-thread">{messages.map((message, index) => {
+    if (message.role === "assistant") {
+      return <FigmaAssistantBlock key={index} className="journey-thread-block" text={message.text.split("\n\n").map((part, partIndex) => <span key={partIndex}>{part}{partIndex < message.text.split("\n\n").length - 1 ? <><br /><br /></> : null}</span>)} />;
+    }
+    if (message.role === "recommendation") {
+      return <JourneyRecommendationCard key={index} person={message.person} onOpen={() => onDone({ person: message.person })} />;
+    }
+    return <JourneyUserMessage key={index} className="journey-thread-user" text={message.text} />;
+  })}</div><div className="journey-bottom-underlay" aria-hidden="true" /><section className="figma-answers journey-answers" aria-label="Варианты ответа"><p>Выберите вариант ответа или напишите</p>{answerButtons}</section><form className="figma-input journey-input" onSubmit={e => { e.preventDefault(); pushAnswer(text); }}><input aria-label="Расскажите" id="journey-next-text" value={text} onChange={e => setText(e.target.value)} placeholder="Расскажите.." /><button type="submit"><img src="/intreatment-figma/asset-2.svg" alt="" />Отправить</button></form><p className="figma-safety journey-safety"><strong>Если вам сейчас небезопасно</strong> <span>Пожалуйста, обратитесь в экстренные службы вашего региона.</span></p></section>;
   if (embedded) return body;
   return <main className="flow-page"><Header compact onHome={onHome} />{body}</main>;
 }
@@ -339,7 +359,6 @@ function AuthChoice({ booking, onBack, onNext }) {
 }
 
 function Payment({ booking, onBack, onSuccess }) {
-  return <div className="copied-first-screen journey-page"><PlatformNav onStart={() => {}} /><main className="flow-page"><section className="payment"><button className="back-link" onClick={onBack}>← К регистрации</button><div className="eyebrow">Демо-оплата</div><h1>Подтвердите запись</h1><p>Ниже — демонстрационная точка оплаты. Кнопка завершает пользовательский путь без реального списания.</p><div className="payment-panel"><div className="order"><Avatar person={booking.person} /><div><strong>{booking.person.name}</strong><span>{booking.day.label}, {booking.slot} · 50 минут</span></div><b>{booking.person.price.toLocaleString("ru-RU")} ₽</b></div><div className="payment-summary"><div><span>Способ входа</span><strong>{providerLabel}</strong></div><div><span>Формат</span><strong>Онлайн-встреча</strong></div><div><span>Длительность</span><strong>50 минут</strong></div><div><span>К оплате</span><strong>{booking.person.price.toLocaleString("ru-RU")} ₽</strong></div></div><div className="payment-actions"><Button onClick={onSuccess}>Оплатить {booking.person.price.toLocaleString("ru-RU")} ₽</Button><small>Деньги не списываются. Это только демонстрация checkout-сценария.</small></div></div></section></main></div>;
   return <div className="copied-first-screen journey-page"><PlatformNav onStart={() => {}} /><main className="flow-page"><section className="payment"><button className="back-link" onClick={onBack}>← К оформлению</button><div className="eyebrow">Демо-оплата</div><h1>Подтвердите запись</h1><p>Ниже — демонстрационная точка оплаты. Кнопка завершает пользовательский путь без реального списания.</p><div className="payment-panel"><div className="order"><Avatar person={booking.person} /><div><strong>{booking.person.name}</strong><span>{booking.day.label}, {booking.slot} · 50 минут</span></div><b>{booking.person.price.toLocaleString("ru-RU")} ₽</b></div><div className="payment-summary"><div><span>Формат</span><strong>Онлайн-встреча</strong></div><div><span>Длительность</span><strong>50 минут</strong></div><div><span>Дата и время</span><strong>{booking.day.label}, {booking.slot}</strong></div><div><span>К оплате</span><strong>{booking.person.price.toLocaleString("ru-RU")} ₽</strong></div></div><div className="payment-actions"><Button onClick={onSuccess}>Оплатить {booking.person.price.toLocaleString("ru-RU")} ₽</Button><small>Деньги не списываются. Это только демонстрация checkout-сценария.</small></div></div></section></main></div>;
 }
 function PlatformHome({ booking, onRestart }) {
