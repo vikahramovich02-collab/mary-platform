@@ -32,6 +32,7 @@ import { RightRail, RailItem, RailDrawer, TasksContent, FilesContent } from "./r
 import { DepartmentOverviewPage } from "./dept-overview.jsx";
 import { StaffPage } from "./staff-page.jsx";
 import { SalesPage } from "./sales-page.jsx";
+import { WorkflowPage } from "./workflow-page.jsx";
 
 // Реплика экрана Figma node 5522:2547 (file: o1syNp93H3v2dyA3JHp4em — Mary)
 // Сабпейдж "Тг-канал" в отделе "СММ".
@@ -1243,6 +1244,12 @@ export default function TgKanalPage() {
           active={currentPage === "integrations"}
           onClick={() => navigate("integrations")}
         />
+        <SideRow
+          icon={ic.bizproc}
+          label="Воркфлоу"
+          active={currentPage === "workflow"}
+          onClick={() => navigate("workflow")}
+        />
 
         <SectionHeader
           label="Отделы"
@@ -1443,6 +1450,8 @@ export default function TgKanalPage() {
           <SalesPage />
         ) : currentPage === "team" ? (
           <TeamPage />
+        ) : currentPage === "workflow" ? (
+          <WorkflowPage />
         ) : currentPage === "bizproc" ? (
           <BizprocPage onNavigate={setCurrentPage} />
         ) : currentPage === "settings" ? (

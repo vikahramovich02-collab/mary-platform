@@ -59,12 +59,12 @@ function Port({ side }) {
   }} />;
 }
 
-function TriggerNode({ n, onClick }) {
+function TriggerNode({ n, onClick, active }) {
   return (
     <button onClick={onClick} style={{
       position: "absolute", left: n.x, top: n.y, width: NODE_W, height: NODE_H,
-      background: color.white, border: `1.5px solid ${color.blue}`, borderRadius: 16,
-      boxShadow: `0 4px 14px ${color.blue}22`, display: "flex", alignItems: "center", gap: 10,
+      background: color.white, border: `1.5px solid ${active ? color.purple : color.blue}`, borderRadius: 16,
+      boxShadow: active ? `0 0 0 4px ${color.purpleBg}, 0 4px 14px ${color.purple}33` : `0 4px 14px ${color.blue}22`, display: "flex", alignItems: "center", gap: 10,
       padding: "0 13px", cursor: "pointer", fontFamily: "inherit", textAlign: "left",
     }}>
       <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(7,148,255,0.10)", color: color.blue, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -79,19 +79,29 @@ function TriggerNode({ n, onClick }) {
   );
 }
 
-function TaskNode({ n, onClick }) {
+function TaskNode({ n, onClick, active }) {
   const isHuman = n.agentKind === "human";
-  const chipC = isHuman ? color.purple : "#262633";
-  const chipBg = isHuman ? "rgba(138,56,245,0.10)" : "rgba(38,38,51,0.06)";
+  const control = {
+    condition: { label: "Условие", c: color.orange, bg: "rgba(255,77,0,.09)" },
+    wait: { label: "Ожидание", c: color.blue, bg: color.blueBg },
+    approval: { label: "Апрув человека", c: color.purple, bg: color.purpleBg },
+    escalation: { label: "Эскалация", c: color.red, bg: color.redBg },
+    delegation: { label: "Делегирование", c: color.green, bg: color.greenBg },
+    read: { label: "Чтение · r", c: color.blue, bg: color.blueBg },
+    write: { label: "Запись · w", c: color.green, bg: color.greenBg },
+  }[n.type];
+  const chipC = control?.c || (isHuman ? color.purple : "#262633");
+  const chipBg = control?.bg || (isHuman ? "rgba(138,56,245,0.10)" : "rgba(38,38,51,0.06)");
   return (
     <button onClick={onClick} style={{
       position: "absolute", left: n.x, top: n.y, width: NODE_W, height: NODE_H,
-      background: color.white, border: `1px solid ${color.border}`, borderRadius: 16,
-      boxShadow: "0 1px 3px rgba(38,38,51,0.06)", display: "flex", flexDirection: "column",
+      background: color.white, border: `1.5px solid ${active ? color.purple : color.border}`, borderRadius: 16,
+      boxShadow: active ? `0 0 0 4px ${color.purpleBg}, 0 4px 14px ${color.purple}33` : "0 1px 3px rgba(38,38,51,0.06)", display: "flex", flexDirection: "column",
       justifyContent: "center", gap: 5, padding: "0 13px", cursor: "pointer",
       fontFamily: "inherit", textAlign: "left",
     }}>
-      <div style={{ fontSize: 12.5, fontWeight: 510, color: "#262633", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{n.title}</div>
+      {control && <div style={{ color: control.c, fontSize: 9.5, fontWeight: 700, letterSpacing: ".05em", textTransform: "uppercase" }}>{control.label}</div>}
+      <div style={{ fontSize: 12.5, fontWeight: 510, color: "#262633", lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: control ? 1 : 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{n.title}</div>
       {n.agent && (
         <span style={{ display: "inline-flex", alignItems: "center", gap: 5, alignSelf: "flex-start", padding: "2px 7px", borderRadius: 999, background: chipBg, color: chipC, fontSize: 10.5, fontWeight: 500 }}>
           <span style={{ display: "inline-flex" }}>{isHuman ? I.human : I.agent}</span>{n.agent}
@@ -102,12 +112,13 @@ function TaskNode({ n, onClick }) {
   );
 }
 
-function EndNode({ n, onClick }) {
+function EndNode({ n, onClick, active }) {
   const st = END_STYLE[n.outcome] || END_STYLE.success;
   return (
     <button onClick={onClick} style={{
       position: "absolute", left: n.x, top: n.y, width: NODE_W, height: NODE_H,
-      background: st.bg, border: `1.5px solid ${st.c}`, borderRadius: 16,
+      background: st.bg, border: `1.5px solid ${active ? color.purple : st.c}`, borderRadius: 16,
+      boxShadow: active ? `0 0 0 4px ${color.purpleBg}, 0 4px 14px ${color.purple}33` : "none",
       display: "flex", alignItems: "center", gap: 10, padding: "0 13px",
       cursor: "pointer", fontFamily: "inherit", textAlign: "left",
     }}>
@@ -122,7 +133,7 @@ function EndNode({ n, onClick }) {
 }
 
 // ── канвас ──────────────────────────────────────────────────────────────────
-export function AutomationCanvas({ automation, onNodeClick }) {
+export function AutomationCanvas({ automation, onNodeClick, activeNodeId }) {
   const wrapRef = useRef(null);
   const [view, setView] = useState({ x: 40, y: 40, scale: 1 });
   const drag = useRef(null);
@@ -203,9 +214,9 @@ export function AutomationCanvas({ automation, onNodeClick }) {
         {/* ноды */}
         {automation.nodes.map(n => {
           const click = () => onNodeClick && onNodeClick(n);
-          if (n.type === "trigger") return <TriggerNode key={n.id} n={n} onClick={click} />;
-          if (n.type === "end") return <EndNode key={n.id} n={n} onClick={click} />;
-          return <TaskNode key={n.id} n={n} onClick={click} />;
+          if (n.type === "trigger") return <TriggerNode key={n.id} n={n} onClick={click} active={n.id === activeNodeId} />;
+          if (n.type === "end") return <EndNode key={n.id} n={n} onClick={click} active={n.id === activeNodeId} />;
+          return <TaskNode key={n.id} n={n} onClick={click} active={n.id === activeNodeId} />;
         })}
       </div>
     </div>
@@ -237,5 +248,54 @@ export const SAMPLE_AUTOMATION = {
     { from: "t4", to: "t5", label: "да", kind: "good" },
     { from: "t4", to: "endNo", label: "нет", kind: "bad" },
     { from: "t5", to: "endOk" },
+  ],
+};
+
+// Первый рабочий сценарий из гайда: агент работает автономно до спорного случая.
+export const SALON_BOOKING_AUTOMATION = {
+  id: "salon-direct-booking",
+  title: "Запись из Direct",
+  dept: "Клиенты · салон",
+  trigger: "incoming",
+  nodes: [
+    { id: "direct", type: "trigger", kind: "incoming", title: "Сообщение в Direct", x: 20, y: 220 },
+    { id: "intent", type: "task", title: "Распознать услугу и пожелание", agent: "Агент записи", agentKind: "agent", x: 280, y: 220 },
+    { id: "read-data", type: "read", title: "Прочитать: прайс, графики, журнал", agent: "Агент записи", agentKind: "agent", x: 540, y: 220 },
+    { id: "slots", type: "task", title: "Проверить доступность окон", agent: "Агент записи", agentKind: "agent", x: 800, y: 220 },
+    { id: "offer", type: "task", title: "Предложить свободные окна", agent: "Агент записи", agentKind: "agent", x: 1060, y: 220 },
+    { id: "wait-choice", type: "wait", title: "Ждать выбор клиента", x: 1320, y: 220 },
+    { id: "choice", type: "condition", title: "Выбрано доступное время?", x: 1580, y: 220 },
+    { id: "book", type: "write", title: "Записать визит в журнал", agent: "Агент записи", agentKind: "agent", x: 1840, y: 110 },
+    { id: "delegate-reminder", type: "delegation", title: "Запустить «Напоминание о визите»", x: 2100, y: 110 },
+    { id: "ok", type: "end", outcome: "success", title: "Визит подтверждён", x: 2360, y: 110 },
+    { id: "human", type: "escalation", title: "Передать владельцу", agent: "Ирина", agentKind: "human", x: 1840, y: 370 },
+    { id: "escalated", type: "end", outcome: "return", title: "Карточка во Входящих", x: 2100, y: 370 },
+  ],
+  edges: [
+    { from: "direct", to: "intent" }, { from: "intent", to: "read-data" }, { from: "read-data", to: "slots" }, { from: "slots", to: "offer" }, { from: "offer", to: "wait-choice" }, { from: "wait-choice", to: "choice" },
+    { from: "choice", to: "book", label: "да", kind: "good" }, { from: "book", to: "delegate-reminder" }, { from: "delegate-reminder", to: "ok" },
+    { from: "choice", to: "human", label: "нет / спорно", kind: "bad" }, { from: "human", to: "escalated" },
+  ],
+};
+
+export const SALON_REMINDER_AUTOMATION = {
+  id: "salon-visit-reminder",
+  title: "Напоминание о визите",
+  dept: "Клиенты · салон",
+  trigger: "timer",
+  nodes: [
+    { id: "timer", type: "trigger", kind: "timer", title: "За 48 часов до визита", x: 20, y: 220 },
+    { id: "find", type: "task", title: "Собрать визиты на дату", agent: "Агент записи", agentKind: "agent", x: 280, y: 220 },
+    { id: "send", type: "task", title: "Отправить «да / перенести»", agent: "Агент записи", agentKind: "agent", x: 540, y: 220 },
+    { id: "wait-answer", type: "wait", title: "Ждать ответ клиента 24 часа", x: 800, y: 220 },
+    { id: "answer", type: "condition", title: "Какой ответ получен?", x: 1060, y: 220 },
+    { id: "confirmed", type: "end", outcome: "success", title: "Подтверждено", x: 1320, y: 100 },
+    { id: "reschedule", type: "task", title: "Предложить новые слоты", agent: "Агент записи", agentKind: "agent", x: 1320, y: 260 },
+    { id: "moved", type: "end", outcome: "return", title: "Визит перенесён", x: 1580, y: 260 },
+    { id: "silent", type: "end", outcome: "reject", title: "Нет ответа: пометка админу", x: 1320, y: 420 },
+  ],
+  edges: [
+    { from: "timer", to: "find" }, { from: "find", to: "send" }, { from: "send", to: "wait-answer" }, { from: "wait-answer", to: "answer" },
+    { from: "answer", to: "confirmed", label: "приду", kind: "good" }, { from: "answer", to: "reschedule", label: "перенести", kind: "bad" }, { from: "reschedule", to: "moved" }, { from: "answer", to: "silent", label: "нет ответа", kind: "bad" },
   ],
 };

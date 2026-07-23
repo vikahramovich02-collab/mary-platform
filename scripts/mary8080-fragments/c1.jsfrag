@@ -1,0 +1,207 @@
+function c1({dept:s,onBack:d,reveal:c,onConnect:o,initialTab:u,channel:f,pendingChannel:y,onExpand:b,highlight:x}){
+  const B=s.name==="Записи"?"Запись клиентов":s.name,
+    K=s.name||"Записи",
+    t=g.useMemo(()=>{
+      const n={
+        "Записи":{
+          title:"Запись клиентов",
+          breadcrumb:"Запись клиентов",
+          tabs:["Воркфлоу","Интеграции","Команда"],
+          triggerExpandable:!0,
+          workflow:{
+            trigger:{title:"Пришло сообщение\nот клиента",caption:"Триггер",icon:"#18C04C",text:"Новое сообщение запускает сценарий записи.",chips:["Instagram"]},
+            task1:{title:"Понять, что хочет\nклиент",caption:"Задача",icon:"#3B82F6",text:"Mary определяет услугу, желаемую дату и важные детали клиента.",chips:["Агент-Администратор"]},
+            task2:{title:"Подобрать\nсвободные окна",caption:"Задача",icon:"#3B82F6",text:"Mary сверяет график мастеров и уже созданные визиты.",chips:["Агент-Администратор"]},
+            condition:{title:"Есть свободные\nокна?",caption:"Вопрос",icon:"#7C3AED",text:"Если слот найден, Mary записывает визит. Если нет — предлагает ближайшее время.",chips:["Да / Нет"]},
+            yes:{title:"Записать визит",caption:"Сотрудник",icon:"#F59E0B",text:"Mary создаёт запись и отправляет подтверждение клиенту.",chips:["Ангелина А."]},
+            no:{title:"Предложить ближайшее\nвремя",caption:"Сотрудник",icon:"#F59E0B",text:"Если свободного слота нет, Mary предлагает ближайшую альтернативу или лист ожидания.",chips:["Ангелина А."]}
+          },
+          integrations:[
+            {name:"Instagram",desc:"Основной входящий канал для новых обращений.",connected:!0},
+            {name:"Google Calendar",desc:"Сверяет занятость и доступные окна мастеров.",connected:!1},
+            {name:"Журнал записи",desc:"Хранит подтверждённые визиты и статусы клиентов.",connected:!0}
+          ],
+          team:[
+            {name:"Mary",desc:"Держит весь путь клиента и переключает сценарий по ситуации.",status:"Основной"},
+            {name:"Агент-Администратор",desc:"Уточняет запрос, подбирает время и подтверждает визит.",status:"В работе"},
+            {name:"Агент напоминаний",desc:"Запускает напоминание о визите после успешной записи.",status:"Подключён"}
+          ]
+        },
+        "Возврат клиентов":{
+          title:"Возврат клиентов",
+          breadcrumb:"Возврат клиентов",
+          tabs:["Воркфлоу","Интеграции","Команда"],
+          triggerExpandable:!1,
+          workflow:{
+            trigger:{title:"Клиент давно\nне возвращался",caption:"Триггер",icon:"#18C04C",text:"Сценарий запускается по сегменту клиентов без повторного визита.",chips:["CRM"]},
+            task1:{title:"Найти спящих\nклиентов",caption:"Задача",icon:"#3B82F6",text:"Mary выбирает клиентов по сроку последнего визита и истории обращений.",chips:["Mary"]},
+            task2:{title:"Собрать повод\nвернуться",caption:"Задача",icon:"#3B82F6",text:"Mary подбирает сообщение, акцию или мягкое напоминание под сегмент.",chips:["Агент возврата"]},
+            condition:{title:"Клиент\nответил?",caption:"Вопрос",icon:"#7C3AED",text:"Если клиент включился в диалог, Mary переводит его обратно в запись. Если нет — ставит в следующий цикл.",chips:["Да / Нет"]},
+            yes:{title:"Передать\nв запись",caption:"Сотрудник",icon:"#F59E0B",text:"Mary продолжает диалог до выбора услуги и времени.",chips:["Агент записи"]},
+            no:{title:"Поставить в\nповторный цикл",caption:"Сотрудник",icon:"#F59E0B",text:"Контакт уходит в отложенный возврат с новым касанием позже.",chips:["Mary"]}
+          },
+          integrations:[
+            {name:"Журнал клиентов",desc:"Хранит дату последнего визита и сегменты для возврата.",connected:!0},
+            {name:"WhatsApp",desc:"Дополнительный канал для мягких напоминаний и реактивации.",connected:!1},
+            {name:"CRM / таблица",desc:"Собирает статусы возврата и результаты касаний.",connected:!0}
+          ],
+          team:[
+            {name:"Mary",desc:"Ведёт сегментацию и распределяет сценарии возврата.",status:"Основной"},
+            {name:"Агент возврата",desc:"Пишет клиенту, предлагает повод вернуться и отслеживает ответ.",status:"В работе"},
+            {name:"Агент записи",desc:"Подхватывает заинтересованного клиента и доводит до визита.",status:"Подключён"}
+          ]
+        },
+        "Поддержка клиентов":{
+          title:"Поддержка клиентов",
+          breadcrumb:"Поддержка клиентов",
+          tabs:["Воркфлоу","Интеграции","Команда"],
+          triggerExpandable:!1,
+          workflow:{
+            trigger:{title:"Пришёл вопрос\nот клиента",caption:"Триггер",icon:"#18C04C",text:"Сценарий запускается с любого входящего вопроса в канале поддержки.",chips:["Telegram"]},
+            task1:{title:"Понять тему\nобращения",caption:"Задача",icon:"#3B82F6",text:"Mary определяет тип вопроса: запись, отмена, цена, адрес, жалоба или сложный кейс.",chips:["Mary"]},
+            task2:{title:"Найти ответ\nв базе знаний",caption:"Задача",icon:"#3B82F6",text:"Mary сверяет ответ с регламентами, FAQ и актуальными правилами команды.",chips:["Агент поддержки"]},
+            condition:{title:"Хватает\nконтекста?",caption:"Вопрос",icon:"#7C3AED",text:"Если данных достаточно, Mary отвечает сама. Если нет — эскалирует человеку с контекстом.",chips:["Да / Нет"]},
+            yes:{title:"Ответить\nклиенту",caption:"Сотрудник",icon:"#F59E0B",text:"Mary даёт готовый ответ и фиксирует тему обращения.",chips:["Агент поддержки"]},
+            no:{title:"Передать\nменеджеру",caption:"Сотрудник",icon:"#F59E0B",text:"Менеджер получает уже собранный контекст без переспроса клиента.",chips:["Менеджер смены"]}
+          },
+          integrations:[
+            {name:"Telegram",desc:"Основной канал быстрых обращений и уточняющих вопросов.",connected:!0},
+            {name:"База знаний",desc:"Содержит FAQ, регламенты и готовые ответы по процессам.",connected:!0},
+            {name:"Эскалации менеджеру",desc:"Передаёт сложные случаи человеку с полным контекстом.",connected:!1}
+          ],
+          team:[
+            {name:"Mary",desc:"Маршрутизирует обращения и решает типовые вопросы сама.",status:"Основной"},
+            {name:"Агент поддержки",desc:"Отвечает по базе знаний и держит SLA по быстрым обращениям.",status:"В работе"},
+            {name:"Менеджер смены",desc:"Забирает жалобы и нестандартные случаи после эскалации.",status:"Подключён"}
+          ]
+        }
+      };
+      return n[K]||n["Записи"];
+    },[K]),
+    [n,r]=g.useState(u==="integrations"?"integrations":u==="team"?"team":"workflow"),
+    [I,Q]=g.useState("all"),
+    [a,i]=g.useState("trigger"),
+    [D,L]=g.useState(!1),
+    p=f||y||s.channel||t.integrations[0]?.name||"Instagram",
+    R=t.triggerExpandable?p:"all",
+    [F,$]=g.useState(()=>Object.fromEntries(t.integrations.map(m=>[m.name,!!m.connected]))),
+    G=g.useMemo(()=>t.workflow,[t]),
+    l=G[a],
+    C=(m,h,p,A)=>{
+      const N=G[m],H=m==="trigger",J=N.caption==="Задача",X=A==="question",Y=H?"#262635":J?"linear-gradient(180deg, #2F7BFF 0%, #8FB8FF 100%)":"#fff",Z=H?"rgba(255,255,255,0.12)":J?"rgba(59,130,246,0.22)":"rgba(38,38,51,0.05)",_=H?"0 16px 36px rgba(28,29,42,0.16)":J?"0 18px 38px rgba(59,130,246,0.18)":"0 1px 3px rgba(38,38,51,0.03)",ee=H?"#fff":"rgba(38,38,51,0.26)",te=H||J?"#fff":k.text,re=H?"rgba(255,255,255,0.68)":"rgba(38,38,51,0.46)",ne=H?"rgba(255,255,255,0.12)":"#F6F6F4",oe=H?"rgba(255,255,255,0.92)":"rgba(38,38,51,.78)";
+      return e.jsx("button",{onClick:()=>{i(m),m==="trigger"&&t.triggerExpandable&&L(V=>!V)},style:{position:"absolute",left:h,top:p,width:X?220:224,minHeight:X?92:114,padding:H||J?7:"14px 14px 12px",textAlign:"left",border:H||J?"none":a===m?"1.5px solid rgba(38,38,51,0.16)":"1px solid rgba(38,38,51,0.05)",borderRadius:H||J?30:28,background:Y,boxShadow:_,cursor:"pointer",fontFamily:"inherit"},children:e.jsxs("div",{children:[
+        e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:8,padding:H||J?"1px 4px 7px":0},children:[
+          e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8},children:[
+            e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:18,height:18,borderRadius:"50%",color:H?"#fff":N.icon,flexShrink:0},children:e.jsxs("svg",{width:18,height:18,viewBox:"0 0 18 18",fill:"none",stroke:"currentColor",strokeWidth:1.7,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("circle",{cx:"9",cy:"9",r:"2.2",fill:"currentColor",stroke:"none"}),e.jsx("path",{d:"M9 2.2v2.1M9 13.7v2.1M2.2 9h2.1M13.7 9h2.1M4.3 4.3l1.5 1.5M12.2 12.2l1.5 1.5M12.2 5.8l1.5-1.5M4.3 13.7l1.5-1.5"})]})}),
+            e.jsx("div",{style:{fontSize:12,color:ee,lineHeight:1.2},children:N.caption})
+          ]}),
+          (H||J)&&e.jsx("span",{style:{fontSize:24,lineHeight:1,color:"rgba(255,255,255,0.88)",marginTop:-3},children:"⋮"})
+        ]}),
+        e.jsxs("div",{style:{background:"#fff",borderRadius:H?26:J?28:X?22:26,padding:H?"15px 15px 13px":J?"15px 15px 13px":"0",minHeight:H||J?H?150:154:"auto",boxShadow:H?`inset 0 0 0 1px ${Z}`:J?`inset 0 0 0 1px ${Z}`:"none"},children:[
+          e.jsx("div",{style:{fontSize:H?15:J?14.5:14.5,lineHeight:1.12,fontWeight:550,color:te,whiteSpace:"pre-line"},children:N.title}),
+          !X&&e.jsx("div",{style:{marginTop:8,fontSize:11,lineHeight:1.14,color:re,whiteSpace:"pre-line"},children:H?N.text:J?N.text.split(".")[0]:null}),
+          !X&&e.jsx("div",{style:{marginTop:10,display:"inline-flex",alignItems:"center",gap:6,padding:"5px 9px",borderRadius:999,background:ne,fontSize:11,color:oe,fontWeight:500},children:N.chips[0]}),
+          m==="trigger"&&t.triggerExpandable&&e.jsxs("div",{style:{marginTop:7,fontSize:11,color:"rgba(38,38,51,0.42)",display:"flex",alignItems:"center",gap:6},children:[e.jsx("span",{children:D?"Свернуть каналы":"Показать каналы"}),e.jsx("span",{style:{fontSize:12,lineHeight:1},children:D?"▴":"▾"})]})
+        ]})
+      ]})},m)
+    },
+    V=(m,h,p)=>e.jsx("div",{style:{position:"absolute",left:m,top:h,width:160,minHeight:92,padding:"14px 14px 12px",border:"1px solid rgba(38,38,51,0.05)",borderRadius:24,background:"#fff",boxShadow:"0 1px 3px rgba(38,38,51,0.03)"},children:e.jsxs("div",{children:[
+      e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8},children:[
+        e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:"50%",background:"#F6F6F4",color:"#18C04C",fontSize:10,fontWeight:700},children:"•"}),
+        e.jsx("div",{style:{fontSize:11.5,color:"rgba(38,38,51,0.3)"},children:"Канал"})
+      ]}),
+      e.jsx("div",{style:{marginTop:14,fontSize:14,lineHeight:1.15,fontWeight:550,color:k.text},children:p})
+    ]})},p),
+    W=m=>m==="Instagram"
+      ?e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:52,height:52,borderRadius:16,flexShrink:0,background:"#fff",border:"1px solid rgba(38,38,51,0.08)"},children:e.jsxs("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",children:[e.defs({children:e.linearGradient({id:"igDept",x1:"0%",y1:"100%",x2:"100%",y2:"0%",children:[e.jsx("stop",{offset:"0%",stopColor:"#F9CE34"}),e.jsx("stop",{offset:"45%",stopColor:"#EE2A7B"}),e.jsx("stop",{offset:"100%",stopColor:"#6228D7"})]})}),e.rect({x:"3.5",y:"3.5",width:"17",height:"17",rx:"5",stroke:"url(#igDept)",strokeWidth:"2"}),e.circle({cx:"12",cy:"12",r:"3.8",stroke:"url(#igDept)",strokeWidth:"2"}),e.circle({cx:"17.2",cy:"6.8",r:"1.1",fill:"#EE2A7B"})]})})
+      :m==="Telegram"
+      ?e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:52,height:52,borderRadius:16,flexShrink:0,background:"#fff",border:"1px solid rgba(38,38,51,0.08)"},children:e.jsx("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",children:e.jsxs(e.Fragment,{children:[e.circle({cx:"12",cy:"12",r:"9",fill:"#27A7E7"}),e.path({d:"M7.2 11.8 16.9 8.1c.45-.17.84.1.7.76l-1.65 7.8c-.11.56-.43.69-.88.43l-2.52-1.86-1.21 1.17c-.14.14-.26.26-.54.26l.19-2.68 4.88-4.41c.21-.19-.05-.29-.32-.11l-6.03 3.8-2.6-.81c-.57-.18-.58-.57.12-.84Z",fill:"#fff"})]})})})
+      :m==="WhatsApp"
+      ?e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:52,height:52,borderRadius:16,flexShrink:0,background:"#fff",border:"1px solid rgba(38,38,51,0.08)"},children:e.jsxs("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",children:[e.path({d:"M20 11.5a8 8 0 0 1-11.84 7.03L4 20l1.55-4.04A8 8 0 1 1 20 11.5Z",stroke:"#22C55E",strokeWidth:"2"}),e.path({d:"M9.4 8.8c.2-.43.41-.44.6-.45h.5c.17 0 .45.06.68.57.23.5.77 1.73.84 1.86.07.12.12.27.02.43-.1.17-.15.27-.29.41-.15.14-.3.32-.43.43-.14.12-.29.25-.13.49.16.24.72 1.18 1.54 1.9 1.06.95 1.95 1.25 2.23 1.39.28.13.44.11.6-.07.17-.18.71-.82.9-1.1.19-.28.39-.23.66-.14.27.09 1.7.8 1.99.95.29.14.48.21.55.33.07.12.07.72-.17 1.41-.24.69-1.39 1.32-1.9 1.37-.49.05-1.1.07-1.79-.14-.42-.13-.95-.3-1.63-.59-2.88-1.24-4.76-4.14-4.91-4.34-.15-.2-1.17-1.55-1.17-2.95 0-1.4.74-2.08 1-2.36Z",fill:"#22C55E"})]})})
+      :m==="Google Calendar"
+      ?e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:52,height:52,borderRadius:16,flexShrink:0,background:"#fff",border:"1px solid rgba(38,38,51,0.08)"},children:e.jsxs("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",children:[e.rect({x:"4",y:"5",width:"16",height:"15",rx:"3",fill:"#4285F4"}),e.rect({x:"4",y:"5",width:"16",height:"4.2",rx:"3",fill:"#2B6DE9"}),e.path({d:"M8 3.5v4M16 3.5v4",stroke:"#fff",strokeWidth:"1.8",strokeLinecap:"round"}),e.path({d:"M8.4 13.1h3.2v4h-3.2z",fill:"#fff"})]})})
+      :e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:52,height:52,borderRadius:16,flexShrink:0,background:"#fff",border:"1px solid rgba(38,38,51,0.08)"},children:e.jsxs("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:"1.9",strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("path",{d:"M7 3.5h7l3 3V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z"}),e.jsx("path",{d:"M14 3.5v4h4"}),e.jsx("path",{d:"M9 11.2h6M9 14.4h6M9 17.6h4.2"})]})});
+  return e.jsx("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff"},children:
+    e.jsxs("div",{style:{maxWidth:1180,margin:"0 auto",padding:"30px 56px 88px"},children:[
+    e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:9,marginBottom:12,color:"rgba(38,38,51,0.42)",fontSize:13.5,lineHeight:1.2,fontWeight:450},children:[
+      e.jsx("span",{children:"Автоматизации"}),
+      e.jsx("span",{style:{color:"rgba(38,38,51,0.22)"},children:"/"}),
+      e.jsx("span",{style:{color:k.text,fontWeight:500},children:t.breadcrumb})
+    ]}),
+    e.jsx("div",{style:{marginBottom:16,fontSize:27,lineHeight:1.06,fontWeight:510,color:k.text,letterSpacing:"-0.04em"},children:t.title}),
+    e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:18,marginBottom:18,flexWrap:"wrap"},children:[
+      e.jsx("button",{onClick:()=>r("workflow"),style:{display:"inline-flex",alignItems:"center",gap:12,height:46,padding:"0 22px",border:"none",borderRadius:999,background:n==="workflow"?"rgba(38,38,51,0.045)":"transparent",color:n==="workflow"?k.text:"rgba(38,38,51,0.42)",fontSize:14,fontWeight:n==="workflow"?520:450,fontFamily:"inherit",cursor:"pointer"},children:e.jsxs(e.Fragment,{children:[e.jsx("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.9,strokeLinecap:"round",strokeLinejoin:"round",children:e.jsxs(e.Fragment,{children:[e.jsx("circle",{cx:"12",cy:"12",r:"8"}),e.jsx("path",{d:"M12 8l-2.5 5 5-2.5L12 8z"})]})}),"Воркфлоу"]})}),
+      e.jsx("button",{onClick:()=>r("integrations"),style:{display:"inline-flex",alignItems:"center",gap:12,height:46,padding:"0 22px",border:"none",borderRadius:999,background:n==="integrations"?"rgba(38,38,51,0.045)":"transparent",color:n==="integrations"?k.text:"rgba(38,38,51,0.42)",fontSize:14,fontWeight:n==="integrations"?520:450,fontFamily:"inherit",cursor:"pointer"},children:e.jsxs(e.Fragment,{children:[e.jsx("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.9,strokeLinecap:"round",strokeLinejoin:"round",children:e.jsxs(e.Fragment,{children:[e.jsx("path",{d:"M9 2v6"}),e.jsx("path",{d:"M15 2v6"}),e.jsx("path",{d:"M7 8h10v3a5 5 0 0 1-10 0V8z"}),e.jsx("path",{d:"M12 16v6"})]})}),"Интеграции"]})}),
+      e.jsx("button",{onClick:()=>r("team"),style:{display:"inline-flex",alignItems:"center",gap:12,height:46,padding:"0 22px",border:"none",borderRadius:999,background:n==="team"?"rgba(38,38,51,0.045)":"transparent",color:n==="team"?k.text:"rgba(38,38,51,0.42)",fontSize:14,fontWeight:n==="team"?520:450,fontFamily:"inherit",cursor:"pointer"},children:e.jsxs(e.Fragment,{children:[e.jsx("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:e.jsxs(e.Fragment,{children:[e.jsx("path",{d:"M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"}),e.jsx("circle",{cx:"10",cy:"7",r:"4"}),e.jsx("path",{d:"M20 8v6"}),e.jsx("path",{d:"M23 11h-6"})]})}),"Команда"]})})
+    ]}),
+    n==="workflow"&&e.jsx("div",{style:{minHeight:660,position:"relative",background:"#fff",backgroundImage:"radial-gradient(var(--dot) 0.8px, transparent 0.8px), radial-gradient(var(--dot) 0.8px, transparent 0.8px), radial-gradient(var(--dot) 0.8px, transparent 0.8px)",backgroundSize:"37px 37px, 53px 53px, 71px 71px",backgroundPosition:"0 0, 13px 19px, 29px 7px",border:"1px solid rgba(38,38,51,0.04)",borderRadius:28,overflow:"hidden",marginTop:12,padding:"36px 32px 30px"},children:e.jsx("div",{style:{position:"relative",width:1000,height:548,overflow:"visible"},children:e.jsx("div",{style:{position:"relative",width:1500,minHeight:760,transform:"scale(0.665)",transformOrigin:"top left"},children:e.jsxs("div",{style:{position:"relative",width:1500,minHeight:760},children:[
+      e.jsxs("svg",{width:"100%",height:"100%",viewBox:"0 0 1500 760",style:{position:"absolute",inset:0,pointerEvents:"none"},children:[
+        t.triggerExpandable&&D?e.jsxs(e.Fragment,{children:[
+          e.jsx("path",{d:"M 314 420 C 332 420, 350 420, 368 420",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+          e.jsx("path",{d:"M 314 470 C 332 470, 350 445, 368 420",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+          e.jsx("path",{d:"M 314 520 C 332 520, 350 470, 368 420",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+          e.jsx("circle",{cx:"314",cy:"420",r:"4",fill:"#16171E"}),
+          e.jsx("circle",{cx:"314",cy:"470",r:"4",fill:"#16171E"}),
+          e.jsx("circle",{cx:"314",cy:"520",r:"4",fill:"#16171E"}),
+          e.jsx("circle",{cx:"368",cy:"420",r:"4",fill:"#16171E"})
+        ]}):e.jsxs(e.Fragment,{children:[
+          e.jsx("path",{d:"M 272 380 C 300 380, 318 380, 346 380",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+          e.jsx("circle",{cx:"272",cy:"380",r:"4",fill:"#16171E"}),
+          e.jsx("circle",{cx:"346",cy:"380",r:"4",fill:"#16171E"})
+        ]}),
+        e.jsx("path",{d:"M 576 380 C 604 380, 622 380, 650 380",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+        e.jsx("circle",{cx:"576",cy:"380",r:"4",fill:"#16171E"}),
+        e.jsx("circle",{cx:"650",cy:"380",r:"4",fill:"#16171E"}),
+        e.jsx("path",{d:"M 880 380 C 908 380, 926 380, 954 380",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+        e.jsx("circle",{cx:"880",cy:"380",r:"4",fill:"#16171E"}),
+        e.jsx("circle",{cx:"954",cy:"380",r:"4",fill:"#16171E"}),
+        e.jsx("path",{d:"M 1148 320 C 1180 250, 1220 232, 1244 232",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+        e.jsx("path",{d:"M 1148 440 C 1180 510, 1220 528, 1244 528",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+        e.jsx("circle",{cx:"1148",cy:"320",r:"4",fill:"#16171E"}),
+        e.jsx("circle",{cx:"1148",cy:"440",r:"4",fill:"#16171E"}),
+        e.jsx("circle",{cx:"1244",cy:"232",r:"4",fill:"#16171E"}),
+        e.jsx("circle",{cx:"1244",cy:"528",r:"4",fill:"#16171E"}),
+        e.jsx("path",{d:"M 1292 232 C 1314 232, 1324 232, 1346 232",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+        e.jsx("path",{d:"M 1292 528 C 1314 528, 1324 528, 1346 528",stroke:"#16171E",strokeWidth:"2.2",fill:"none"}),
+        e.jsx("circle",{cx:"1292",cy:"232",r:"4",fill:"#16171E"}),
+        e.jsx("circle",{cx:"1346",cy:"232",r:"4",fill:"#16171E"}),
+        e.jsx("circle",{cx:"1292",cy:"528",r:"4",fill:"#16171E"}),
+        e.jsx("circle",{cx:"1346",cy:"528",r:"4",fill:"#16171E"})
+      ]}),
+      e.jsx("div",{style:{position:"absolute",left:68,top:154,display:"inline-flex",alignItems:"center",justifyContent:"center",height:22,padding:"0 12px",borderRadius:999,background:"#2A2B38",color:"#fff",fontSize:13.5,fontWeight:500,boxShadow:"0 0 0 3px #fff"},children:"Старт"}),
+      e.jsx("div",{style:{position:"absolute",left:1160,top:214,display:"inline-flex",alignItems:"center",justifyContent:"center",height:26,padding:"0 14px",borderRadius:999,background:"#2A2B38",color:"#fff",fontSize:16,fontWeight:500},children:"Да"}),
+      e.jsx("div",{style:{position:"absolute",left:1160,top:510,display:"inline-flex",alignItems:"center",justifyContent:"center",height:26,padding:"0 14px",borderRadius:999,background:"#2A2B38",color:"#fff",fontSize:16,fontWeight:500},children:"Нет"}),
+      C("trigger",84,182),
+      t.triggerExpandable&&D&&e.jsxs(e.Fragment,{children:[
+        V(148,354,"Instagram"),
+        V(148,444,"Telegram"),
+        V(148,534,"WhatsApp")
+      ]}),
+      C("task1",376,174),
+      C("task2",664,174),
+      C("condition",936,186,"question"),
+      C("yes",1208,164),
+      C("no",1208,452)
+    ]})})})}),
+    n==="integrations"&&e.jsxs("div",{style:{marginTop:12},children:[
+      e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap",marginBottom:18},children:[
+        e.jsx("button",{onClick:()=>Q("all"),style:{height:44,padding:"0 22px",border:"none",borderRadius:999,background:I==="all"?"rgba(38,38,51,0.045)":"transparent",color:I==="all"?k.text:"rgba(38,38,51,0.48)",fontSize:14,fontWeight:I==="all"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Все"}),
+        e.jsxs("button",{onClick:()=>Q("connected"),style:{height:44,padding:"0 22px",border:"none",borderRadius:999,background:I==="connected"?"rgba(38,38,51,0.045)":"transparent",color:I==="connected"?k.text:"rgba(38,38,51,0.48)",fontSize:14,fontWeight:I==="connected"?550:500,fontFamily:"inherit",cursor:"pointer"},children:["Подключённые ",t.integrations.filter(m=>F[m.name]).length]}),
+        e.jsx("button",{onClick:()=>Q("recommended"),style:{height:44,padding:"0 22px",border:"none",borderRadius:999,background:I==="recommended"?"rgba(38,38,51,0.045)":"transparent",color:I==="recommended"?k.text:"rgba(38,38,51,0.48)",fontSize:14,fontWeight:I==="recommended"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Можно подключить"})
+      ]}),
+      e.jsx("div",{style:{background:"#fff"},children:t.integrations.filter(m=>I==="all"?!0:I==="connected"?!!F[m.name]:!F[m.name]).map(m=>e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:18,padding:"18px 0"},children:[
+        W(m.name),
+        e.jsxs("div",{style:{minWidth:0,flex:1},children:[
+          e.jsx("div",{style:{fontSize:18,lineHeight:1.2,fontWeight:500,color:k.text},children:m.name}),
+          e.jsx("div",{style:{marginTop:5,fontSize:14,lineHeight:1.45,color:"rgba(38,38,51,0.5)"},children:m.desc})
+        ]}),
+        e.jsx("button",{onClick:()=>{const h=!F[m.name];$(p=>({...p,[m.name]:h})),h&&o&&o(s.name,m.name)},style:{position:"relative",width:46,height:28,border:"none",borderRadius:999,background:F[m.name]?"#5B66FF":"#E6E7EC",cursor:"pointer",padding:0,flexShrink:0,transition:"background 160ms ease",fontFamily:"inherit"},children:e.jsx("span",{style:{position:"absolute",top:3,left:F[m.name]?21:3,width:22,height:22,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(20,20,28,0.16)",transition:"left 160ms ease"}})})
+      ]},m.name))})
+    ]}),
+    n==="team"&&e.jsx("div",{style:{display:"grid",gridTemplateColumns:"repeat(3, minmax(0, 1fr))",gap:22,marginTop:12},children:t.team.map(m=>e.jsxs("div",{style:{padding:"22px 22px 20px",border:"1px solid rgba(38,38,51,0.08)",borderRadius:28,background:"#fff"},children:[
+      e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:56,height:56,borderRadius:18,background:"#fff",border:"1px solid rgba(38,38,51,0.08)",color:k.text},children:e.jsxs("svg",{width:20,height:20,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("path",{d:"M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"}),e.jsx("circle",{cx:"10",cy:"7",r:"4"}),e.jsx("path",{d:"M20 8v6"}),e.jsx("path",{d:"M23 11h-6"})]})}),
+      e.jsx("div",{style:{marginTop:18,fontSize:21,lineHeight:1.12,fontWeight:550,color:k.text},children:m.name}),
+      e.jsx("div",{style:{marginTop:8,fontSize:14,lineHeight:1.5,color:"rgba(38,38,51,0.5)",minHeight:64},children:m.desc}),
+      e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",height:30,padding:"0 12px",borderRadius:999,background:"rgba(38,38,51,0.06)",color:k.muted,fontSize:12,fontWeight:600},children:m.status})
+    ]},m.name))})
+  ]})})}

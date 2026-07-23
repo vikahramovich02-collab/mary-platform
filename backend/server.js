@@ -7,6 +7,7 @@ import cors from "cors";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runSalonBooking, collectReminders } from "./salon-workflow.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.N8N_PORT || process.env.PORT || 5678);
@@ -27,6 +28,16 @@ const TRANSCRIPTS_FILE = path.join(KB_DIR, "..", "transcripts.json");
 const TRANSCRIPTS_DIR = path.join(KB_DIR, "..", "audio");
 const TASKS_FILE = path.join(KB_DIR, "..", "tasks.json");
 const INBOX_STATE_FILE = path.join(KB_DIR, "..", "inbox-state.json");
+const SALON_BOOKINGS_FILE = path.join(KB_DIR, "..", "salon-bookings.json");
+
+function loadSalonBookings() {
+  try { return JSON.parse(fs.readFileSync(SALON_BOOKINGS_FILE, "utf8")); }
+  catch { return { bookings: [] }; }
+}
+function saveSalonBookings(data) {
+  fs.mkdirSync(path.dirname(SALON_BOOKINGS_FILE), { recursive: true });
+  fs.writeFileSync(SALON_BOOKINGS_FILE, JSON.stringify(data, null, 2), "utf8");
+}
 
 // ── Departments (отделы компании) ────────────────────────
 const DEFAULT_DEPARTMENTS = [
@@ -1414,6 +1425,33 @@ app.get("/health", (_req, res) => {
     },
     uptime: process.uptime(),
   });
+});
+
+// ── Исполнимый workflow салона: Direct → слот → запись → напоминание ──────
+app.get("/webhook/mary/workflows/salon/bookings", (_req, res) => {
+  res.json(loadSalonBookings());
+});
+app.post("/webhook/mary/workflows/salon/incoming", (req, res) => {
+  const { message, clientId, now } = req.body || {};
+  if (typeof message !== "string" || !message.trim()) return res.status(400).json({ error: "message required" });
+  const data = loadSalonBookings();
+  const result = runSalonBooking({ message, clientId, now, bookings: data.bookings });
+  if (result.appointment) {
+    // Повторная проверка перед записью: защищает от двух сообщений в один слот.
+    const collision = data.bookings.some(b => b.status === "confirmed" && b.masterId === result.appointment.masterId && b.startsAt === result.appointment.startsAt);
+    if (collision) return res.status(409).json({ status: "slot_unavailable", reply: "Это окно только что заняли. Подберу другое." });
+    data.bookings.push(result.appointment);
+    saveSalonBookings(data);
+  }
+  res.json(result);
+});
+app.post("/webhook/mary/workflows/salon/reminders/run", (req, res) => {
+  const data = loadSalonBookings();
+  const reminders = collectReminders({ bookings: data.bookings, now: req.body?.now });
+  const ids = new Set(reminders.map(r => r.appointmentId));
+  data.bookings = data.bookings.map(b => ids.has(b.id) ? { ...b, reminderStatus: "queued" } : b);
+  saveSalonBookings(data);
+  res.json({ reminders });
 });
 
 // ── Departments CRUD ─────────────────────────────────────

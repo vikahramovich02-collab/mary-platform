@@ -1,0 +1,49 @@
+function dm({depts:s,onConnect:d}){
+  const[c,o]=g.useState(""),[u,f]=g.useState("all");
+  const base=[
+    {id:"instagram",name:"Instagram",desc:"Сообщения в Direct и новые обращения",dept:s[0]?s[0].name:null,group:"Подключено",connected:s.some(m=>m.channel==="Instagram")},
+    {id:"telegram",name:"Telegram",desc:"Сообщения, каналы и входящие заявки",dept:s[0]?s[0].name:null,group:"Подключено",connected:s.some(m=>m.channel==="Telegram")},
+    {id:"whatsapp",name:"WhatsApp",desc:"Диалоги и быстрые повторные записи",dept:s[0]?s[0].name:null,group:"Можно подключить",connected:s.some(m=>m.channel==="WhatsApp")},
+    {id:"calendar",name:"Google Calendar",desc:"Свободные окна и занятость мастеров",dept:s[0]?s[0].name:null,group:"Можно подключить",connected:!1},
+    {id:"sheets",name:"Google Sheets",desc:"Таблицы, статусы и журнал записей",dept:s[0]?s[0].name:null,group:"Подключено",connected:!0},
+    {id:"crm",name:"Ваша CRM / таблица",desc:"Клиенты, статусы и история обращений",dept:s[0]?s[0].name:null,group:"Можно подключить",connected:!1}
+  ];
+  const[state,setState]=g.useState(()=>Object.fromEntries(base.map(m=>[m.id,m.connected])));
+  const q=c.trim().toLowerCase();
+  const items=base.map(m=>({...m,connected:state[m.id]??m.connected})).filter(m=>(u==="all"?!0:u==="connected"?m.connected:!m.connected)&&(!q||m.name.toLowerCase().includes(q)||m.desc.toLowerCase().includes(q)));
+  const connectedCount=Object.values(state).filter(Boolean).length;
+  const tabs=[
+    {id:"all",label:"Все"},
+    {id:"connected",label:"Подключённые "+connectedCount},
+    {id:"available",label:"Можно подключить"}
+  ];
+  const groups=u==="all"?["Подключено","Можно подключить"]:u==="connected"?["Подключено"]:["Можно подключить"];
+  return e.jsx("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff"},children:e.jsxs("div",{style:{maxWidth:1080,margin:"0 auto",padding:"56px 28px 88px"},children:[
+    e.jsxs("div",{style:{marginBottom:26},children:[
+      e.jsx("div",{style:{fontSize:24,lineHeight:1.08,fontWeight:600,color:k.text,letterSpacing:"-0.04em"},children:"Интеграции"}),
+      e.jsx("div",{style:{marginTop:10,maxWidth:700,fontSize:15,lineHeight:1.5,color:k.muted},children:"Подключи каналы и сервисы, чтобы Mary не просто отвечала в чате, а реально доводила процесс до результата."})
+    ]}),
+    e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:18,marginBottom:34,flexWrap:"wrap"},children:[
+      e.jsx("div",{style:{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"},children:tabs.map(m=>e.jsx("button",{onClick:()=>f(m.id),style:{display:"inline-flex",alignItems:"center",justifyContent:"center",height:54,padding:"0 28px",border:"none",borderRadius:999,background:u===m.id?"rgba(38,38,51,0.045)":"transparent",boxShadow:"none",color:u===m.id?k.text:"rgba(38,38,51,0.42)",fontSize:18,fontWeight:u===m.id?550:500,fontFamily:"inherit",cursor:"pointer",transition:"all 160ms ease"},children:m.label},m.id))}),
+      e.jsxs("label",{style:{width:"min(100%, 320px)",display:"flex",alignItems:"center",gap:10,padding:"0 14px",height:42,borderRadius:15,border:"1px solid rgba(38,38,51,0.10)",background:"#fff",color:"rgba(38,38,51,0.42)"},children:[
+        e.jsxs("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("circle",{cx:"11",cy:"11",r:"7"}),e.jsx("path",{d:"m20 20-3.5-3.5"})]}),
+        e.jsx("input",{value:c,onChange:m=>o(m.target.value),placeholder:"Искать интеграции",style:{flex:1,border:"none",outline:"none",background:"transparent",color:k.text,fontSize:15,fontFamily:"inherit"}})
+      ]})
+    ]}),
+    items.length===0?e.jsx("div",{style:{padding:"30px 8px",color:"rgba(38,38,51,0.5)",fontSize:15},children:"Ничего не найдено. Попробуй другой запрос или переключи фильтр."}):groups.map(group=>{
+      const rows=items.filter(m=>group==="Подключено"?m.connected:!m.connected);
+      if(!rows.length)return null;
+      return e.jsxs("section",{style:{marginBottom:28},children:[
+        e.jsx("div",{style:{fontSize:15.5,fontWeight:500,color:k.text,marginBottom:10,paddingBottom:14,borderBottom:"1px solid rgba(38,38,51,0.08)"},children:group}),
+        e.jsx("div",{style:{display:"flex",flexDirection:"column"},children:rows.map((m,idx)=>e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:18,padding:"18px 0",borderBottom:idx===rows.length-1?"none":"1px solid rgba(38,38,51,0.07)"},children:[
+          e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:52,height:52,borderRadius:16,flexShrink:0,background:"#fff",border:"1px solid rgba(38,38,51,0.08)",color:k.text},children:wc}),
+          e.jsxs("div",{style:{minWidth:0,flex:1},children:[
+            e.jsx("div",{style:{fontSize:18,lineHeight:1.2,fontWeight:500,color:k.text},children:m.name}),
+            e.jsx("div",{style:{marginTop:5,fontSize:14,lineHeight:1.45,color:"rgba(38,38,51,0.5)"},children:m.desc})
+          ]}),
+          e.jsx("button",{onClick:()=>{const next=!(state[m.id]??m.connected);setState(v=>({...v,[m.id]:next}));next&&m.dept&&d(m.dept,m.name)},style:{position:"relative",width:56,height:34,border:"none",borderRadius:999,background:(state[m.id]??m.connected)?"#5B66FF":"#E3E5EB",cursor:"pointer",padding:0,flexShrink:0,transition:"background 160ms ease",fontFamily:"inherit"},children:e.jsx("span",{style:{position:"absolute",top:4,left:(state[m.id]??m.connected)?26:4,width:26,height:26,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(20,20,28,0.16)",transition:"left 160ms ease"}})})
+        ]},m.id))})
+      ]},group)
+    })
+  ]})})
+}

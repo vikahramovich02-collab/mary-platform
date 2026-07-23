@@ -1,0 +1,248 @@
+function cm({depts:s,onOpenCRM:d,onOpenInbox:l}){
+  const[m,h]=g.useState("overview"),
+    [j,C]=g.useState("all"),
+    u=[
+      {id:"price",kind:"ingest",name:"Прайс_услуг.xlsx",dept:"booking",type:"Таблица",status:"Основное",statusBg:"rgba(38,38,51,0.055)",statusColor:k.text,text:"Услуги, цены, длительность и категории для первичного ответа Mary.",used:["Маникюр — 40 мин","Педикюр — 60 мин","Брови — 25 мин"],missing:"Не хватает связок «что предлагать следом», поэтому Mary пока не всегда делает upsell.",effect:"Mary отвечает по цене и длительности, но продаёт следующий шаг не во всех сценариях."},
+      {id:"faq",kind:"ingest",name:"FAQ_записи.docx",dept:"booking",type:"Документ",status:"В работе",statusBg:"rgba(91,102,255,0.12)",statusColor:"#4B57F5",text:"Частые вопросы клиентов: перенос, опоздание, отмена, подтверждение визита.",used:["Перенос возможен","Опоздание до 15 минут","Подтверждение за день"],missing:"Нет чёткой развилки, когда Mary может сама перенести запись, а когда должна эскалировать.",effect:"Часть диалогов всё ещё поднимается в CRM как спорная ручная проверка."},
+      {id:"policy",kind:"ingest",name:"Правила_отмены.pdf",dept:"return",type:"PDF",status:"Не хватает деталей",statusBg:"rgba(245,158,11,0.14)",statusColor:"#A86600",text:"Есть общая политика, но нет чётких исключений по поздней отмене и no-show.",used:["Отмена заранее","Штраф при no-show"],missing:"Нет исключений для постоянных клиентов и случаев болезни.",effect:"Mary осторожничает и чаще зовёт администратора, чем могла бы."},
+      {id:"scripts",kind:"ingest",name:"Скрипты_админа.txt",dept:"support",type:"Текст",status:"Черновик",statusBg:"rgba(38,38,51,0.055)",statusColor:"rgba(38,38,51,0.62)",text:"Формулировки для сложных кейсов, когда Mary передаёт диалог человеку.",used:["Извиниться без обещаний","Передать контекст сотруднику"],missing:"Нужны короткие шаблоны под возврат денег и конфликт по мастеру.",effect:"Поддержка отвечает дольше, потому что часть сообщений всё ещё дописывается вручную."},
+      {id:"escalation",kind:"ingest",name:"Эскалации_и_роли.md",dept:"shared",type:"Документ",status:"Общее",statusBg:"rgba(38,38,51,0.055)",statusColor:k.text,text:"Общие правила, когда Mary может закрыть кейс сама, а когда обязана передать человеку.",used:["Передача администратору","Передача в поддержку","Ручной апрув"],missing:"Нужно ещё детальнее развести скидки, возвраты и исключения.",effect:"Этот слой используют сразу несколько отделов, чтобы эскалации были единообразными."}
+    ],
+    f=[
+      {id:"services",kind:"artifact",title:"Карта услуг",chip:"из прайса",dept:"booking",text:"Mary собрала единый слой: услуга, цена, длительность, ограничения и что предлагать рядом.",meta:"Обновлено 18 мин назад",used:["Ответ по цене","Подбор длительности","Фильтр по категории"],missing:"Нужны более точные апселлы и пакетные предложения.",effect:"Работает в отделе «Запись клиентов» как основной слой ответа."},
+      {id:"responses",kind:"artifact",title:"Готовые ответы",chip:"из FAQ",dept:"support",text:"Набор ответов на частые вопросы без лишнего тона и обещаний, которых нельзя дать клиенту.",meta:"12 ответов",used:["Перенос","Подтверждение","Подготовка к визиту"],missing:"Нет отдельного слоя под конфликтные обращения и возвраты.",effect:"Mary быстро отвечает в чате, но сложные кейсы всё ещё уходят человеку."},
+      {id:"rules",kind:"artifact",title:"Правила записи",chip:"из правил",dept:"booking",text:"Что Mary может подтверждать сама, а где обязана звать администратора.",meta:"3 ручных исключения",used:["Подтверждение слота","Проверка календаря","Сигнал эскалации"],missing:"Надо описать поздние отмены и ручные скидки.",effect:"Это место напрямую влияет на ручные задачи в CRM и Входящих."},
+      {id:"handoff",kind:"artifact",title:"Сигналы эскалации",chip:"из диалогов",dept:"shared",text:"Mary уже вынесла в отдельный слой, какие кейсы уходят человеку: скидки, переносы, конфликт по слоту.",meta:"4 триггера",used:["Скидка","Перенос","Нет окна"],missing:"Нужно добавить правила для жалоб и пост-сервисных претензий.",effect:"Слой управляет тем, что Mary поднимает наверх в операционные разделы."},
+      {id:"return-playbook",kind:"artifact",title:"Сценарий возврата клиентов",chip:"из истории",dept:"return",text:"Mary понимает, кому можно мягко напомнить о визите, когда звать обратно и какой оффер показать.",meta:"7 триггеров возврата",used:["Спящий клиент","Повтор через 30 дней","Напоминание о мастере"],missing:"Нужны ещё отдельные правила по пакетам и абонементам.",effect:"Даёт Mary отдельный отдел на возврат и реактивацию без ручной сегментации."}
+    ],
+    y=[
+      {id:"gap1",kind:"gap",title:"Нет точных правил переноса",dept:"booking",text:"Mary знает, что перенос возможен, но не понимает, когда можно делать это без подтверждения администратора.",tag:"CRM",hint:"Из-за этого часть переносов уходит в CRM как ручная задача.",effect:"В CRM висит ручной хвост по записям, которые можно было бы закрывать автоматически.",actions:[{label:"Открыть CRM",target:"crm"},{label:"Открыть Входящие",target:"inbox"}]},
+      {id:"gap2",kind:"gap",title:"Не описаны скидки и исключения",dept:"return",text:"Из-за этого Mary правильно собирает контекст, но не может закрыть спор по цене самостоятельно.",tag:"Входящие",hint:"Чаще всего всплывает у постоянных клиентов и акций прошлого месяца.",effect:"Команда тратит время на повторяющиеся апрувы, вместо того чтобы дать Mary правило.",actions:[{label:"Открыть Входящие",target:"inbox"},{label:"Открыть CRM",target:"crm"}]},
+      {id:"gap3",kind:"gap",title:"Нет живых шаблонов для поддержки",dept:"support",text:"Есть общие ответы, но нет коротких шаблонов под возврат денег, опоздание и конфликт по мастеру.",tag:"Поддержка",hint:"Поддержка отвечает вручную дольше, чем могла бы Mary.",effect:"Эскалации висят дольше и Mary не может быстро закрыть клиентский кейс.",actions:[{label:"Открыть Входящие",target:"inbox"},{label:"Открыть CRM",target:"crm"}]},
+      {id:"gap4",kind:"gap",title:"Общие правила эскалации расходятся",dept:"shared",text:"В разных отделах Mary по-разному понимает, когда уже пора звать человека, а когда можно дожать сценарий самой.",tag:"Общее",hint:"Это даёт лишние ручные касания и делает опыт неровным между отделами.",effect:"Нужен единый общий слой, чтобы во всех отделах работала одна логика передачи кейса.",actions:[{label:"Открыть CRM",target:"crm"},{label:"Открыть Входящие",target:"inbox"}]}
+    ],
+    b=[
+      {title:"Что мы даём Mary",text:"Файлы, таблицы, прайсы, регламенты и любые материалы, из которых Mary берёт факты."},
+      {title:"Что Mary собирает поверх них",text:"Не сырые документы, а рабочие слои: карта услуг, правила ответа, эскалации и готовые шаблоны."},
+      {title:"Что ещё мешает отделу",text:"Пробелы в знаниях. Именно они потом всплывают во Входящих и в CRM как места, где нужен человек."}
+    ],
+    A=[
+      {id:"overview",label:"Обзор"},
+      {id:"ingest",label:"Файлы"},
+      {id:"artifacts",label:"Артефакты"},
+      {id:"gaps",label:"Пробелы"}
+    ],
+    p=[
+      {id:"all",label:"Все отделы"},
+      {id:"shared",label:"Общие знания"},
+      {id:"booking",label:"Запись клиентов"},
+      {id:"return",label:"Возврат клиентов"},
+      {id:"support",label:"Поддержка клиентов"}
+    ],
+    F=I=>p.find(x=>x.id===I)?.label||"Общий слой",
+    W=I=>j==="all"?!0:I.dept===j||Array.isArray(I.depts)&&I.depts.includes(j),
+    U=u.filter(W),
+    D=f.filter(W),
+    E=y.filter(W),
+    o=[
+      {label:"На входе",value:String(U.length),sub:"файлов и правил"},
+      {label:"Собрала Mary",value:String(D.length),sub:"рабочих слоёв"},
+      {label:"Нужно добить",value:String(E.length),sub:"проблемных места"}
+    ],
+    N=m==="ingest"?U:m==="artifacts"?D:m==="gaps"?E:D,
+    [M,S]=g.useState(N[0]||null),
+    [V,T]=g.useState(null);
+  g.useEffect(()=>{const I=m==="ingest"?U:m==="artifacts"?D:m==="gaps"?E:D;S(I[0]||null),T(null)},[m,j]);
+  const Z=I=>{S(I),T(I)},
+    X=I=>{if(I==="crm"){d&&d();return}I==="inbox"&&l&&l()},
+    Y=(I,x,M)=>e.jsxs("div",{style:{padding:"20px 22px",borderRadius:24,border:"1px solid rgba(38,38,51,0.07)",background:"#fff",boxShadow:"0 1px 2px rgba(38,38,51,0.02)"},children:[
+      e.jsx("div",{style:{fontSize:13.5,color:"rgba(38,38,51,0.4)"},children:I}),
+      e.jsx("div",{style:{marginTop:10,fontSize:28,lineHeight:1,fontWeight:550,color:k.text},children:x}),
+      e.jsx("div",{style:{marginTop:9,fontSize:13,lineHeight:1.4,color:"rgba(38,38,51,0.42)"},children:M})
+    ]}),
+    H=(I,x)=>e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:18,marginBottom:18},children:[
+      e.jsx("div",{style:{fontSize:14.5,fontWeight:550,color:k.text,whiteSpace:"nowrap"},children:I}),
+      e.jsx("div",{style:{height:1,flex:1,background:"rgba(38,38,51,0.08)"}}),
+      x&&e.jsx("div",{style:{fontSize:12.5,color:"rgba(38,38,51,0.42)",whiteSpace:"nowrap"},children:x})
+    ]}),
+    R=(I,x)=>e.jsxs("div",{style:{padding:"18px 18px 16px",borderRadius:24,border:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+      e.jsx("div",{style:{fontSize:18,lineHeight:1.15,fontWeight:500,color:k.text},children:I}),
+      e.jsx("div",{style:{marginTop:10,fontSize:13.5,lineHeight:1.5,color:"rgba(38,38,51,0.46)"},children:x})
+    ]}),
+    B=I=>e.jsxs("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:52,height:52,borderRadius:16,flexShrink:0,background:"#fff",border:"1px solid rgba(38,38,51,0.08)",color:k.text},children:[
+      I==="Таблица"&&e.jsxs("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("rect",{x:"4",y:"4",width:"16",height:"16",rx:"2"}),e.jsx("path",{d:"M4 10h16"}),e.jsx("path",{d:"M10 4v16"})]}),
+      I==="Документ"&&e.jsxs("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("path",{d:"M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"}),e.jsx("path",{d:"M14 2v5h5"}),e.jsx("path",{d:"M9 13h6"}),e.jsx("path",{d:"M9 17h4"})]}),
+      I==="PDF"&&e.jsxs("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("path",{d:"M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z"}),e.jsx("path",{d:"M14 2v5h5"}),e.jsx("path",{d:"M8.5 16.5h1.5a1.5 1.5 0 0 0 0-3H8.5z"}),e.jsx("path",{d:"M13 13.5v3"}),e.jsx("path",{d:"M13 16.5h1.7"}),e.jsx("path",{d:"M18 16.5h-1.6v-3H18"})]}),
+      I==="Текст"&&e.jsxs("svg",{width:22,height:22,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("path",{d:"M4 6h16"}),e.jsx("path",{d:"M4 12h16"}),e.jsx("path",{d:"M4 18h10"})]})
+    ]}),
+    G=I=>e.jsxs("div",{onClick:()=>S(I),style:{display:"flex",alignItems:"flex-start",gap:18,padding:"18px 0",borderBottom:"1px solid rgba(38,38,51,0.07)",cursor:"pointer"},children:[
+      B(I.type),
+      e.jsxs("div",{style:{minWidth:0,flex:1},children:[
+        e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"},children:[
+          e.jsx("div",{style:{fontSize:17,lineHeight:1.18,fontWeight:500,color:k.text},children:I.name}),
+          e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:26,padding:"0 10px",borderRadius:999,background:I.statusBg,color:I.statusColor,fontSize:12,fontWeight:500},children:I.status})
+        ]}),
+        e.jsx("div",{style:{marginTop:7},children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:26,padding:"0 10px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.62)",fontSize:12,fontWeight:500},children:F(I.dept)})}),
+        e.jsx("div",{style:{marginTop:5,fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:I.text}),
+        e.jsx("button",{type:"button",onClick:x=>{x.stopPropagation(),Z(I)},style:{marginTop:12,height:32,padding:"0 13px",borderRadius:999,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:k.text,fontSize:12.5,fontWeight:500,fontFamily:"inherit",cursor:"pointer"},children:"Открыть"})
+      ]})
+    ]},I.id),
+    J=I=>e.jsxs("div",{onClick:()=>S(I),style:{padding:"20px",borderRadius:24,border:`1px solid ${M&&M.id===I.id?"rgba(38,38,51,0.12)":"rgba(38,38,51,0.07)"}`,background:"#fff",cursor:"pointer"},children:[
+      e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12},children:[
+        e.jsx("div",{style:{fontSize:18,lineHeight:1.15,fontWeight:500,color:k.text},children:I.title}),
+        e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:28,padding:"0 11px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.58)",fontSize:12.5,fontWeight:500,whiteSpace:"nowrap"},children:I.chip})
+      ]}),
+      e.jsx("div",{style:{marginTop:10},children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:26,padding:"0 10px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.62)",fontSize:12,fontWeight:500},children:F(I.dept)})}),
+      e.jsx("div",{style:{marginTop:10,fontSize:13.5,lineHeight:1.5,color:"rgba(38,38,51,0.46)"},children:I.text}),
+      e.jsxs("div",{style:{marginTop:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12},children:[
+        e.jsx("div",{style:{fontSize:12.5,color:"rgba(38,38,51,0.38)"},children:I.meta}),
+        e.jsx("button",{type:"button",onClick:x=>{x.stopPropagation(),Z(I)},style:{height:32,padding:"0 13px",borderRadius:999,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:k.text,fontSize:12.5,fontWeight:500,fontFamily:"inherit",cursor:"pointer"},children:"Открыть"})
+      ]})
+    ]},I.id),
+    K=I=>e.jsxs("div",{onClick:()=>S(I),style:{padding:"16px 0",borderBottom:"1px solid rgba(38,38,51,0.07)",cursor:"pointer"},children:[
+      e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:6,flexWrap:"wrap"},children:[
+        e.jsx("div",{style:{fontSize:15,fontWeight:500,color:k.text},children:I.title}),
+        e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:24,padding:"0 9px",borderRadius:999,background:"rgba(245,158,11,0.12)",color:"#A86600",fontSize:11.5,fontWeight:600},children:I.tag}),
+        e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:24,padding:"0 9px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.58)",fontSize:11.5,fontWeight:500},children:F(I.dept)})
+      ]}),
+      e.jsx("div",{style:{fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:I.text}),
+      e.jsxs("div",{style:{marginTop:12,display:"flex",gap:8,flexWrap:"wrap"},children:[
+        I.actions&&I.actions.map(x=>e.jsx("button",{type:"button",onClick:M=>{M.stopPropagation(),X(x.target)},style:{height:32,padding:"0 13px",borderRadius:999,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:k.text,fontSize:12.5,fontWeight:500,fontFamily:"inherit",cursor:"pointer"},children:x.label},x.label)),
+        e.jsx("button",{type:"button",onClick:x=>{x.stopPropagation(),Z(I)},style:{height:32,padding:"0 13px",borderRadius:999,border:"1px solid rgba(38,38,51,0.08)",background:"rgba(38,38,51,0.05)",color:k.text,fontSize:12.5,fontWeight:500,fontFamily:"inherit",cursor:"pointer"},children:"Развернуть"})
+      ]})
+    ]},I.id),
+    q=()=>M?e.jsxs("div",{style:{padding:"22px 22px 20px",borderRadius:28,border:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+      e.jsx("div",{style:{fontSize:13,fontWeight:600,letterSpacing:".02em",textTransform:"uppercase",color:"rgba(38,38,51,0.36)"},children:M.kind==="ingest"?"Файл":M.kind==="artifact"?"Артефакт":"Пробел"}),
+      e.jsx("div",{style:{marginTop:10,fontSize:20,lineHeight:1.15,fontWeight:550,color:k.text},children:M.name||M.title}),
+      e.jsx("div",{style:{marginTop:10},children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:28,padding:"0 11px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.62)",fontSize:12.5,fontWeight:500},children:F(M.dept)})}),
+      e.jsx("div",{style:{marginTop:8,fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:M.text}),
+      M.used?e.jsxs("div",{style:{marginTop:16},children:[
+        e.jsx("div",{style:{fontSize:12.5,fontWeight:600,color:"rgba(38,38,51,0.42)",textTransform:"uppercase",letterSpacing:".02em"},children:"Что Mary уже использует"}),
+        e.jsx("div",{style:{marginTop:10,display:"flex",gap:8,flexWrap:"wrap"},children:M.used.map(I=>e.jsx("span",{style:{display:"inline-flex",alignItems:"center",minHeight:28,padding:"6px 10px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:k.text,fontSize:12.5,fontWeight:500},children:I},I))})
+      ]}):null,
+      M.missing?e.jsxs("div",{style:{marginTop:16,padding:"14px 14px 12px",borderRadius:18,background:"#FFF9F2",border:"1px solid rgba(245,158,11,0.18)"},children:[
+        e.jsx("div",{style:{fontSize:12.5,fontWeight:600,color:"#A86600",textTransform:"uppercase",letterSpacing:".02em"},children:"Чего не хватает"}),
+        e.jsx("div",{style:{marginTop:8,fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.58)"},children:M.missing})
+      ]}):null,
+      M.hint?e.jsxs("div",{style:{marginTop:16,padding:"14px 14px 12px",borderRadius:18,background:"rgba(38,38,51,0.035)"},children:[
+        e.jsx("div",{style:{fontSize:12.5,fontWeight:600,color:"rgba(38,38,51,0.42)",textTransform:"uppercase",letterSpacing:".02em"},children:"Что это ломает"}),
+        e.jsx("div",{style:{marginTop:8,fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.58)"},children:M.hint||M.effect})
+      ]}):null,
+      e.jsx("button",{type:"button",onClick:()=>T(M),style:{marginTop:16,height:34,padding:"0 14px",borderRadius:999,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:k.text,fontSize:13,fontWeight:500,fontFamily:"inherit",cursor:"pointer"},children:"Открыть глубже"})
+    ]}):null;
+  return e.jsxs("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff",position:"relative"},children:[
+    e.jsx("div",{style:{maxWidth:1180,margin:"0 auto",padding:"36px 56px 88px"},children:e.jsxs("div",{children:[
+      e.jsxs("div",{style:{marginBottom:24},children:[
+        e.jsx("div",{style:{fontSize:28,lineHeight:1.06,fontWeight:600,color:k.text,letterSpacing:"-0.04em"},children:"База знаний"}),
+        e.jsx("div",{style:{marginTop:10,maxWidth:620,fontSize:15,lineHeight:1.5,color:k.muted},children:"Что загрузили в Mary, что она уже собрала сама и где пока не хватает знаний."})
+      ]}),
+      e.jsx("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",columnGap:20,rowGap:20,marginBottom:28},children:o.map(I=>e.jsx(e.Fragment,{children:Y(I.label,I.value,I.sub)},I.label))}),
+      e.jsx("div",{style:{display:"inline-flex",alignItems:"center",gap:4,padding:0,borderRadius:999,background:"transparent",marginBottom:18,flexWrap:"wrap"},children:p.map(I=>e.jsx("button",{onClick:()=>C(I.id),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 16px",border:"none",borderRadius:999,background:j===I.id?"rgba(38,38,51,0.055)":"transparent",color:j===I.id?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:j===I.id?550:500,fontFamily:"inherit",cursor:"pointer"},children:I.label},I.id))}),
+      e.jsxs("div",{style:{display:"inline-flex",alignItems:"center",gap:4,padding:0,borderRadius:999,background:"transparent",marginBottom:28},children:A.map(I=>e.jsx("button",{onClick:()=>h(I.id),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 16px",border:"none",borderRadius:999,background:m===I.id?"rgba(38,38,51,0.055)":"transparent",color:m===I.id?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:m===I.id?550:500,fontFamily:"inherit",cursor:"pointer"},children:I.label},I.id))}),
+      m==="overview"&&e.jsxs("div",{style:{display:"grid",rowGap:26},children:[
+        e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",columnGap:24,rowGap:24},children:[
+          e.jsxs("button",{type:"button",onClick:()=>h("ingest"),style:{padding:"22px 22px 20px",borderRadius:26,border:"1px solid rgba(38,38,51,0.07)",background:"#fff",cursor:"pointer",textAlign:"left",fontFamily:"inherit"},children:[
+            e.jsx("div",{style:{fontSize:13,fontWeight:600,color:"rgba(38,38,51,0.36)",textTransform:"uppercase",letterSpacing:".02em"},children:"Файлы"}),
+            e.jsx("div",{style:{marginTop:12,fontSize:28,lineHeight:1,fontWeight:550,color:k.text},children:"12"}),
+            e.jsx("div",{style:{marginTop:8,fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:"Прайсы, FAQ, правила и скрипты, которые уже загружены в Mary."}),
+            e.jsx("div",{style:{marginTop:16,fontSize:13.5,fontWeight:500,color:k.text},children:"Открыть файлы"})
+          ]}),
+          e.jsxs("button",{type:"button",onClick:()=>h("artifacts"),style:{padding:"22px 22px 20px",borderRadius:26,border:"1px solid rgba(38,38,51,0.07)",background:"#fff",cursor:"pointer",textAlign:"left",fontFamily:"inherit"},children:[
+            e.jsx("div",{style:{fontSize:13,fontWeight:600,color:"rgba(38,38,51,0.36)",textTransform:"uppercase",letterSpacing:".02em"},children:"Артефакты"}),
+            e.jsx("div",{style:{marginTop:12,fontSize:28,lineHeight:1,fontWeight:550,color:k.text},children:"5"}),
+            e.jsx("div",{style:{marginTop:8,fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:"Mary уже собрала рабочие слои: ответы, правила и карту услуг."}),
+            e.jsx("div",{style:{marginTop:16,fontSize:13.5,fontWeight:500,color:k.text},children:"Открыть артефакты"})
+          ]}),
+          e.jsxs("button",{type:"button",onClick:()=>h("gaps"),style:{padding:"22px 22px 20px",borderRadius:26,border:"1px solid rgba(245,158,11,0.18)",background:"#FFF9F2",cursor:"pointer",textAlign:"left",fontFamily:"inherit"},children:[
+            e.jsx("div",{style:{fontSize:13,fontWeight:600,color:"#A86600",textTransform:"uppercase",letterSpacing:".02em"},children:"Пробелы"}),
+            e.jsx("div",{style:{marginTop:12,fontSize:28,lineHeight:1,fontWeight:550,color:"#A86600"},children:"3"}),
+            e.jsx("div",{style:{marginTop:8,fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.56)"},children:"Именно эти пробелы потом всплывают во Входящих и в CRM как ручная работа."}),
+            e.jsx("div",{style:{marginTop:16,fontSize:13.5,fontWeight:500,color:"#A86600"},children:"Открыть пробелы"})
+          ]})
+        ]}),
+        e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"minmax(0,1fr) 340px",columnGap:24,rowGap:24},children:[
+          e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",columnGap:24,rowGap:24},children:[
+            e.jsxs("div",{style:{padding:"24px 24px 10px",borderRadius:30,border:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+              H("Последние файлы","что недавно дали Mary"),
+              U.slice(0,3).map(G)
+            ]}),
+            e.jsxs("div",{style:{padding:"24px 24px 10px",borderRadius:30,border:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+              H("Что уже собрано","что Mary уже использует в работе"),
+              D.slice(0,3).map(I=>e.jsxs("div",{onClick:()=>S(I),style:{padding:"16px 0",borderBottom:"1px solid rgba(38,38,51,0.07)",cursor:"pointer"},children:[
+                e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10},children:[
+                  e.jsx("div",{style:{fontSize:15.5,fontWeight:500,color:k.text},children:I.title}),
+                  e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:24,padding:"0 9px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.58)",fontSize:11.5,fontWeight:500},children:I.chip})
+                ]}),
+                e.jsx("div",{style:{marginTop:6},children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:24,padding:"0 9px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.58)",fontSize:11.5,fontWeight:500},children:F(I.dept)})}),
+                e.jsx("div",{style:{marginTop:6,fontSize:13,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:I.text})
+              ]},I.id))
+            ]})
+          ]}),
+          e.jsxs("div",{style:{display:"grid",rowGap:16,alignContent:"start",position:"sticky",top:24,alignSelf:"start"},children:[
+            e.jsxs("div",{style:{padding:"18px 18px 16px",borderRadius:24,border:"1px solid rgba(245,158,11,0.18)",background:"#FFF9F2"},children:[
+              e.jsx("div",{style:{fontSize:18,lineHeight:1.15,fontWeight:500,color:k.text},children:"Что добить сейчас"}),
+              e.jsx("div",{style:{marginTop:10,fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:"Три пробела сейчас сильнее всего мешают Mary работать автономно."}),
+              e.jsx("div",{style:{marginTop:12},children:E.slice(0,2).map(K)})
+            ]}),
+            q()
+          ]})
+        ]})
+      ]}),
+      m==="ingest"&&e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"minmax(0,1fr) 340px",columnGap:24,rowGap:24},children:[
+          e.jsxs("div",{style:{padding:"24px 24px 8px",borderRadius:30,border:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+          e.jsx("div",{style:{fontSize:18,lineHeight:1.1,fontWeight:500,color:k.text},children:"Что загружаем в Mary"}),
+          e.jsx("div",{style:{marginTop:8,fontSize:14,lineHeight:1.5,color:"rgba(38,38,51,0.46)"},children:"Сырой входящий слой: прайсы, правила, FAQ, скрипты и документы, из которых Mary потом собирает рабочий контекст отдела."}),
+          e.jsx("div",{style:{marginTop:14},children:U.map(G)})
+        ]}),
+        e.jsxs("div",{style:{display:"grid",rowGap:16,alignContent:"start"},children:[q(),R(b[0].title,b[0].text),R("Что Mary достаёт из источников","Факты, ограничения, формулировки, исключения, триггеры эскалации и всё, что помогает ей отвечать без фантазии.")]})
+      ]}),
+      m==="artifacts"&&e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"minmax(0,1fr) 340px",columnGap:24,rowGap:24},children:[
+        e.jsxs("div",{children:[
+          e.jsx("div",{style:{marginBottom:16},children:H("Что Mary уже собрала","рабочие слои поверх сырых материалов")}),
+          e.jsx("div",{style:{display:"grid",gridTemplateColumns:"repeat(2,minmax(0,1fr))",columnGap:24,rowGap:24},children:D.map(J)})
+        ]}),
+        e.jsxs("div",{style:{display:"grid",rowGap:16,alignContent:"start"},children:[q(),R(b[1].title,b[1].text),R("Что это даёт в продукте","Здесь видно уже не исходный файл, а оформленный слой знаний, которым Mary реально пользуется в ответах, записи и эскалациях.")]})
+      ]}),
+      m==="gaps"&&e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"minmax(0,1fr) 340px",columnGap:24,rowGap:24},children:[
+        e.jsxs("div",{style:{padding:"24px 24px 8px",borderRadius:30,border:"1px solid rgba(245,158,11,0.22)",background:"#FFF9F2"},children:[
+          e.jsx("div",{style:{fontSize:18,lineHeight:1.1,fontWeight:500,color:k.text},children:"Где знаний пока не хватает"}),
+          e.jsx("div",{style:{marginTop:8,fontSize:14,lineHeight:1.5,color:"rgba(38,38,51,0.46)"},children:"Это реальные точки, где Mary упирается в границу знаний и передаёт кейс человеку."}),
+          e.jsx("div",{style:{marginTop:14},children:E.map(K)})
+        ]}),
+        e.jsxs("div",{style:{display:"grid",rowGap:16,alignContent:"start"},children:[q(),R(b[2].title,b[2].text),R("Что это даёт продукту","База знаний перестаёт быть архивом и становится слоем управления качеством: видно, что Mary знает, что уже собрала и где её надо докормить.")]})
+      ]})
+    ]})}),
+    V&&e.jsxs("div",{style:{position:"fixed",inset:0,zIndex:40,background:"rgba(20,20,28,0.16)",backdropFilter:"blur(4px)",display:"flex",justifyContent:"flex-end"},children:[
+      e.jsx("div",{onClick:()=>T(null),style:{flex:1}}),
+      e.jsxs("div",{style:{width:440,maxWidth:"calc(100vw - 28px)",height:"100%",background:"#fff",borderLeft:"1px solid rgba(38,38,51,0.08)",boxShadow:"-10px 0 32px rgba(20,20,28,0.08)",padding:"28px 28px 32px",overflow:"auto"},children:[
+        e.jsxs("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:16},children:[
+          e.jsxs("div",{children:[
+            e.jsx("div",{style:{fontSize:13,fontWeight:600,letterSpacing:".02em",textTransform:"uppercase",color:"rgba(38,38,51,0.36)"},children:V.kind==="ingest"?"Исходный материал":V.kind==="artifact"?"Собранный артефакт":"Пробел знаний"}),
+            e.jsx("div",{style:{marginTop:10,fontSize:24,lineHeight:1.12,fontWeight:600,color:k.text},children:V.name||V.title}),
+            e.jsx("div",{style:{marginTop:8,fontSize:14,lineHeight:1.55,color:"rgba(38,38,51,0.48)"},children:V.text})
+          ]}),
+          e.jsx("button",{type:"button",onClick:()=>T(null),style:{width:34,height:34,borderRadius:999,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:k.text,fontSize:18,lineHeight:1,cursor:"pointer"},children:"×"})
+        ]}),
+        V.status&&e.jsx("div",{style:{marginTop:18},children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:30,padding:"0 12px",borderRadius:999,background:V.statusBg||"rgba(38,38,51,0.05)",color:V.statusColor||k.text,fontSize:12.5,fontWeight:500},children:V.status})}),
+        V.chip&&e.jsx("div",{style:{marginTop:18},children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:30,padding:"0 12px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.62)",fontSize:12.5,fontWeight:500},children:V.chip})}),
+        e.jsxs("div",{style:{marginTop:22,padding:"16px 16px 14px",borderRadius:20,background:"rgba(38,38,51,0.03)"},children:[
+          e.jsx("div",{style:{fontSize:12.5,fontWeight:600,color:"rgba(38,38,51,0.42)",textTransform:"uppercase",letterSpacing:".02em"},children:"Что это даёт Mary"}),
+          e.jsx("div",{style:{marginTop:8,fontSize:14,lineHeight:1.55,color:"rgba(38,38,51,0.58)"},children:V.effect||V.hint||"Этот слой напрямую влияет на то, как Mary отвечает и когда зовёт человека."})
+        ]}),
+        V.used&&e.jsxs("div",{style:{marginTop:20},children:[
+          e.jsx("div",{style:{fontSize:12.5,fontWeight:600,color:"rgba(38,38,51,0.42)",textTransform:"uppercase",letterSpacing:".02em"},children:"Что Mary уже использует"}),
+          e.jsx("div",{style:{marginTop:10,display:"flex",gap:8,flexWrap:"wrap"},children:V.used.map(I=>e.jsx("span",{style:{display:"inline-flex",alignItems:"center",minHeight:30,padding:"6px 10px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:k.text,fontSize:12.5,fontWeight:500},children:I},I))})
+        ]}),
+        V.missing&&e.jsxs("div",{style:{marginTop:20,padding:"16px 16px 14px",borderRadius:20,background:"#FFF9F2",border:"1px solid rgba(245,158,11,0.18)"},children:[
+          e.jsx("div",{style:{fontSize:12.5,fontWeight:600,color:"#A86600",textTransform:"uppercase",letterSpacing:".02em"},children:"Чего не хватает"}),
+          e.jsx("div",{style:{marginTop:8,fontSize:14,lineHeight:1.55,color:"rgba(38,38,51,0.58)"},children:V.missing})
+        ]}),
+        e.jsxs("div",{style:{marginTop:20,padding:"16px 16px 14px",borderRadius:20,border:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+          e.jsx("div",{style:{fontSize:12.5,fontWeight:600,color:"rgba(38,38,51,0.42)",textTransform:"uppercase",letterSpacing:".02em"},children:"Куда это влияет"}),
+          e.jsx("div",{style:{marginTop:8,fontSize:14,lineHeight:1.55,color:"rgba(38,38,51,0.58)"},children:V.kind==="gap"?"Здесь видно, почему конкретный пробел поднимает ручную работу в соседние операционные разделы.":"Этот материал уже участвует в ответах, записях и эскалациях Mary."})
+        ]}),
+        V.actions&&e.jsxs("div",{style:{marginTop:20,display:"flex",gap:10,flexWrap:"wrap"},children:V.actions.map(I=>e.jsx("button",{type:"button",onClick:()=>X(I.target),style:{height:38,padding:"0 16px",borderRadius:999,border:"1px solid rgba(38,38,51,0.08)",background:I.target==="crm"?"rgba(38,38,51,0.05)":"#fff",color:k.text,fontSize:13,fontWeight:500,fontFamily:"inherit",cursor:"pointer"},children:I.label},I.label))})
+      ]})
+    ]})
+  ]})
+}

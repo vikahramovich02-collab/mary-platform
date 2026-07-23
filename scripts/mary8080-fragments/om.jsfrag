@@ -1,0 +1,97 @@
+function om({depts:s,onOpenDept:d,spotDept:c}){
+  const[o,u]=g.useState(""),
+    [n,r]=g.useState("all"),
+    f=o.trim().toLowerCase(),
+    b=s.filter(v=>v.channel).length,
+    y=s.map(v=>({
+      id:v.id,
+      source:"live",
+      openName:v.name,
+      title:v.name==="Записи"?"Запись клиентов":v.name,
+      status:v.channel?"Подключён":"Черновик",
+      description:v.name==="Записи"
+        ?"Mary принимает обращение, уточняет детали и доводит клиента до подтверждённого визита."
+        :v.name==="Возврат клиентов"
+          ?"Mary возвращает спящих клиентов, напоминает о визите и доводит до повторной записи."
+          :"Mary отвечает на частые вопросы, собирает контекст и передаёт сложные случаи без потери диалога.",
+      steps:((v.automations||[])[0]?.blocks)||4,
+      category:"connected"
+    })),
+    m=[
+      {id:"return",source:"recommended",openName:"Возврат клиентов",title:"Возврат клиентов",status:"Рекомендуем",description:"Mary возвращает спящих клиентов, напоминает о визите и доводит до повторной записи.",steps:5,category:"recommended"},
+      {id:"support",source:"recommended",openName:"Поддержка клиентов",title:"Поддержка клиентов",status:"Рекомендуем",description:"Mary отвечает на частые вопросы, собирает контекст и передаёт сложные случаи без потери диалога.",steps:4,category:"recommended"}
+    ],
+    h=[...y,...m].filter(v=>{
+      const p=[v.title,v.description].join(" ").toLowerCase();
+      if(n==="connected"&&v.category!=="connected")return!1;
+      if(n==="recommended"&&v.category!=="recommended")return!1;
+      return !f||p.includes(f);
+    }),
+    p=h.filter(v=>v.category==="connected"),
+    A=h.filter(v=>v.category==="recommended"),
+    G=v=>v.id==="support"||v.openName==="Поддержка клиентов"
+      ?e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:56,height:56,borderRadius:18,flexShrink:0,background:"#FAFAFF",border:"1px solid rgba(93,102,255,0.18)",color:"#5B66FF"},children:e.jsxs("svg",{width:25,height:25,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.9,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("path",{d:"M7 8.5A2.5 2.5 0 0 1 9.5 6h8A2.5 2.5 0 0 1 20 8.5v5A2.5 2.5 0 0 1 17.5 16H11l-4 3v-3.5A2.5 2.5 0 0 1 4.5 13v-4.5A2.5 2.5 0 0 1 7 6"}),e.jsx("path",{d:"M10 10h7"}),e.jsx("path",{d:"M10 13h4.5"})]})})
+      :v.id==="return"||v.openName==="Возврат клиентов"
+      ?e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:56,height:56,borderRadius:18,flexShrink:0,background:"#F8FFFB",border:"1px solid rgba(25,183,107,0.18)",color:"#19B76B"},children:e.jsxs("svg",{width:25,height:25,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.9,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("path",{d:"M8 7H4v4"}),e.jsx("path",{d:"M4.8 10.6A8 8 0 1 0 8.2 6.4"}),e.jsx("path",{d:"M4 7l4 4"})]})})
+      :e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:56,height:56,borderRadius:18,flexShrink:0,background:"#FFFBF5",border:"1px solid rgba(246,176,55,0.18)",color:"#D98A13"},children:e.jsxs("svg",{width:25,height:25,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.9,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("circle",{cx:"12",cy:"12",r:"3.1"}),e.jsx("path",{d:"M12 3.5v3"}),e.jsx("path",{d:"M12 17.5v3"}),e.jsx("path",{d:"M3.5 12h3"}),e.jsx("path",{d:"M17.5 12h3"}),e.jsx("path",{d:"M6.3 6.3 8.4 8.4"}),e.jsx("path",{d:"M15.6 15.6l2.1 2.1"}),e.jsx("path",{d:"M15.6 8.4l2.1-2.1"}),e.jsx("path",{d:"M6.3 17.7l2.1-2.1"})]})}),
+    C=v=>{
+      const p=c&&c.toLowerCase()===v.openName?.toLowerCase();
+      const A=v.category==="connected"
+        ?v.openName==="Записи"||v.openName==="Запись клиентов"
+          ?{label:"Активен",bg:"rgba(31,183,110,0.1)",color:"#14945B",border:"1px solid rgba(20,148,91,0.14)"}
+          :{label:"В работе",bg:"rgba(38,38,51,0.05)",color:k.text,border:"1px solid rgba(38,38,51,0.08)"}
+        :null;
+      return e.jsxs("div",{onClick:()=>d(v.openName),style:{display:"flex",alignItems:"center",gap:16,minHeight:86,padding:"16px 18px",borderRadius:30,background:p?"rgba(38,38,51,0.03)":"transparent",cursor:"pointer",transition:"background 140ms ease, box-shadow 140ms ease"},onMouseEnter:E=>{E.currentTarget.style.background="rgba(38,38,51,0.03)"},onMouseLeave:E=>{E.currentTarget.style.background=p?"rgba(38,38,51,0.03)":"transparent"},children:[
+        G(v),
+        e.jsxs("div",{style:{minWidth:0,flex:1},children:[
+          e.jsx("div",{style:{fontSize:17,lineHeight:1.18,fontWeight:500,color:k.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"},children:v.title}),
+          e.jsx("div",{style:{marginTop:5,fontSize:12.5,lineHeight:1.34,color:"rgba(38,38,51,0.42)",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"},children:v.description})
+        ]}),
+        e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:12,flexShrink:0},children:[
+          e.jsx("button",{type:"button",onClick:E=>{E.stopPropagation(),d(v.openName)},style:{height:36,padding:"0 16px",border:v.category==="connected"?A.border:"1px solid rgba(38,38,51,0.08)",borderRadius:999,background:v.category==="connected"?A.bg:"#fff",color:v.category==="connected"?A.color:k.text,fontSize:12.5,fontWeight:500,fontFamily:"inherit",cursor:"pointer",whiteSpace:"nowrap"},children:v.category==="connected"?A.label:"Собрать"}),
+          e.jsx("span",{style:{color:"rgba(38,38,51,0.28)",fontSize:22,lineHeight:1},children:"···"})
+        ]})
+      ]},v.id)
+    };
+  return e.jsx("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff"},children:
+    e.jsxs("div",{style:{maxWidth:1180,margin:"0 auto",padding:"36px 56px 88px"},children:[
+      e.jsxs("div",{style:{marginBottom:28},children:[
+        e.jsx("div",{style:{fontSize:28,lineHeight:1.06,fontWeight:600,color:k.text,letterSpacing:"-0.04em"},children:"Автоматизации"}),
+        e.jsx("div",{style:{marginTop:10,maxWidth:760,fontSize:15,lineHeight:1.5,color:k.muted},children:"Здесь собраны отделы, которые Mary уже может вести сама."})
+      ]}),
+      e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:18,marginBottom:30,flexWrap:"wrap"},children:[
+        e.jsxs("div",{style:{display:"inline-flex",alignItems:"center",gap:4,padding:0,borderRadius:999,background:"transparent",flexWrap:"wrap"},children:[
+          e.jsx("button",{onClick:()=>r("all"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 16px",border:"none",borderRadius:999,background:n==="all"?"rgba(38,38,51,0.055)":"transparent",color:n==="all"?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:n==="all"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Все"}),
+          e.jsx("button",{onClick:()=>r("connected"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 16px",border:"none",borderRadius:999,background:n==="connected"?"rgba(38,38,51,0.055)":"transparent",color:n==="connected"?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:n==="connected"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Подключённые"}),
+          e.jsx("button",{onClick:()=>r("recommended"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 16px",border:"none",borderRadius:999,background:n==="recommended"?"rgba(38,38,51,0.055)":"transparent",color:n==="recommended"?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:n==="recommended"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Рекомендуемые"})
+        ]}),
+        e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,width:"min(100%, 330px)"},children:[
+          e.jsx("button",{type:"button",style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:40,height:40,borderRadius:14,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:"rgba(38,38,51,0.42)",cursor:"pointer",flexShrink:0},children:e.jsxs("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("path",{d:"M4 6h16"}),e.jsx("path",{d:"M7 12h10"}),e.jsx("path",{d:"M10 18h4"})]})}),
+          e.jsxs("label",{style:{flex:1,display:"flex",alignItems:"center",gap:10,padding:"0 12px",height:40,borderRadius:14,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:"rgba(38,38,51,0.36)"},children:[
+            e.jsxs("svg",{width:15,height:15,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("circle",{cx:"11",cy:"11",r:"7"}),e.jsx("path",{d:"m20 20-3.5-3.5"})]}),
+            e.jsx("input",{value:o,onChange:v=>u(v.target.value),placeholder:"Искать отдел",style:{flex:1,border:"none",outline:"none",background:"transparent",color:k.text,fontSize:14,fontFamily:"inherit"}})
+          ]})
+        ]})
+      ]}),
+      h.length===0
+        ?e.jsx("div",{style:{padding:"30px 8px",color:"rgba(38,38,51,0.5)",fontSize:15},children:"Ничего не найдено. Попробуй другой запрос."})
+        :e.jsxs(e.Fragment,{children:[
+          p.length>0&&e.jsxs(e.Fragment,{children:[
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:18,marginBottom:20},children:[
+              e.jsx("div",{style:{fontSize:18,lineHeight:1.1,fontWeight:500,color:k.text,whiteSpace:"nowrap"},children:"Подключённые"}),
+              e.jsx("div",{style:{height:1,flex:1,background:"rgba(38,38,51,0.08)"}})
+            ]}),
+            e.jsx("div",{style:{display:"grid",gridTemplateColumns:"repeat(2, minmax(0, 1fr))",columnGap:42,rowGap:24},children:p.map(C)}),
+            A.length>0&&e.jsx("div",{style:{height:34}})
+          ]}),
+          A.length>0&&e.jsxs(e.Fragment,{children:[
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:18,marginBottom:20},children:[
+              e.jsx("div",{style:{fontSize:18,lineHeight:1.1,fontWeight:500,color:k.text,whiteSpace:"nowrap"},children:"Рекомендуемые"}),
+              e.jsx("div",{style:{height:1,flex:1,background:"rgba(38,38,51,0.08)"}})
+            ]}),
+            e.jsx("div",{style:{display:"grid",gridTemplateColumns:"repeat(2, minmax(0, 1fr))",columnGap:42,rowGap:24},children:A.map(C)})
+          ]})
+        ]})
+    ]})
+  })
+}

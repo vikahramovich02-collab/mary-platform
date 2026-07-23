@@ -5,7 +5,7 @@ import { ic } from "../icons.jsx";
 import { usePeople, MOCK_PEOPLE } from "../people.js";
 import { ChatPanel, zoomBtn } from "../chat-panel.jsx";
 import { PageShell, StatCard } from "./home-inbox-pages.jsx";
-import { AutomationCanvas, SAMPLE_AUTOMATION } from "../automation-canvas.jsx";
+import { AutomationCanvas, SAMPLE_AUTOMATION, SALON_BOOKING_AUTOMATION, SALON_REMINDER_AUTOMATION } from "../automation-canvas.jsx";
 
 export function TeamPage() {
   const [people, setPeople] = useState([]);
@@ -359,6 +359,8 @@ function CanvasLegend() {
 export function BizprocPage({ onNavigate }) {
   const [opened, setOpened] = useState(null);
   const flows = [
+    { id: "salon-direct", name: "Запись из Direct", dept: "Клиенты · салон", status: "active", steps: 6, canvas: SALON_BOOKING_AUTOMATION },
+    { id: "salon-reminder", name: "Напоминание о визите", dept: "Клиенты · салон", status: "active", steps: 3, canvas: SALON_REMINDER_AUTOMATION },
     { id: "procure",     name: "Закупка по заявке",          dept: "Снабжение", status: "active", steps: 5, canvas: SAMPLE_AUTOMATION },
     { id: "smm-content", name: "Контент в Telegram-канал", dept: "СММ", status: "active",  steps: 5, channel: "tg-kanal" },
     { id: "smm-inst",    name: "Контент в Instagram",       dept: "СММ", status: "draft",   steps: 0, channel: null },
