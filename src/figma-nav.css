@@ -591,6 +591,8 @@ body,
   top: auto;
   bottom: 154px;
   background: #fff;
+  z-index: 50;
+  pointer-events: auto;
 }
 .journey-page .journey-answers::before {
   content: "";
