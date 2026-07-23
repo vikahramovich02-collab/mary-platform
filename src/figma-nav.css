@@ -27,7 +27,7 @@ body,
 }
 .journey-page .journey-thread {
   width: 864px;
-  margin: 16px auto 0;
+  margin: 104px auto 0;
   padding-bottom: 420px;
   background: #fff;
 }
@@ -583,13 +583,13 @@ body,
 }
 .journey-page .journey-start-cta {
   top: auto;
-  bottom: 154px;
+  bottom: 134px;
   text-align: center;
   padding: 0;
 }
 .journey-page .journey-answers {
   top: auto;
-  bottom: 154px;
+  bottom: 126px;
   background: #fff;
   z-index: 50;
   pointer-events: auto;
@@ -607,7 +607,8 @@ body,
 }
 .journey-page .journey-input {
   top: auto;
-  bottom: 84px;
+  bottom: 56px;
+  z-index: 60;
 }
 .journey-page .journey-input::before {
   content: "";
@@ -628,7 +629,8 @@ body,
 }
 .journey-page .journey-safety {
   top: auto;
-  bottom: 40px;
+  bottom: 12px;
+  z-index: 55;
 }
 .journey-page .journey-answers button {
   display: block !important;

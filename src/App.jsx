@@ -14,7 +14,7 @@ const specialists = [
 const chatSteps = [
   {
     id: "name",
-    prompt: "Давайте начнём подбор специалиста для вас.\n\nКак к вам можно обращаться?",
+    prompt: "Как к вам можно обращаться?",
     options: ["Пропустить"],
     freeTextMode: "name",
   },
@@ -70,13 +70,52 @@ function FigmaAssistantBlock({ className = "", text, time = "10:45" }) { return 
 function JourneyUserMessage({ className = "", text, time = "10:45" }) { return <div className={`journey-user-message ${className}`.trim()}><div className="journey-user-bubble">{text}</div><time>{time}</time></div>; }
 function JourneyRecommendationCard({ person, onOpen }) { return <article className="journey-recommendation-card"><div className="journey-recommendation-card__top"><div className="journey-recommendation-card__person"><Avatar person={person} /><div><h3>{person.name}</h3><p>{person.role}</p><div className="journey-recommendation-card__badges"><MetaBadge type="fit">{person.fit}</MetaBadge><MetaBadge type="experience">{person.experience}</MetaBadge></div></div></div><div className="journey-recommendation-card__meta"><span>{person.price.toLocaleString("ru-RU")} ₽ · 50 минут</span><span>{person.slots.length ? "Ближайшая запись: сегодня, 18:30" : "Нет ближайших слотов"}</span></div></div><p className="journey-recommendation-card__quote">«{person.quote}»</p><div className="journey-recommendation-card__actions"><button className="journey-recommendation-card__link" type="button" onClick={onOpen}>Подробнее о психологе</button><Button onClick={onOpen}>{person.slots.length ? "Выбрать время" : "Посмотреть профиль"}</Button></div></article>; }
 function ProfileModal({ person, onClose, onChoose, onNext }) {
-  const [selectedSlot, setSelectedSlot] = useState(person.slots[0] || "");
   const days = [
-    { dow: "пн", date: "3" }, { dow: "вт", date: "4" }, { dow: "ср", date: "5" }, { dow: "чт", date: "6" },
-    { dow: "пт", date: "7", selected: true }, { dow: "сб", date: "8" }, { dow: "вс", date: "9", muted: true },
-    { dow: "", date: "10" }, { dow: "", date: "11" }, { dow: "", date: "12" }, { dow: "", date: "13" },
-    { dow: "", date: "14" }, { dow: "", date: "15" }, { dow: "", date: "16", muted: true },
+    { dow: "пн", date: "3", label: "Пн, 3 августа" },
+    { dow: "вт", date: "4", label: "Вт, 4 августа" },
+    { dow: "ср", date: "5", label: "Ср, 5 августа" },
+    { dow: "чт", date: "6", label: "Чт, 6 августа" },
+    { dow: "пт", date: "7", label: "Пт, 7 августа" },
+    { dow: "сб", date: "8", label: "Сб, 8 августа" },
+    { dow: "вс", date: "9", label: "Вс, 9 августа", muted: true },
+    { dow: "", date: "10", label: "Пн, 10 августа" },
+    { dow: "", date: "11", label: "Вт, 11 августа" },
+    { dow: "", date: "12", label: "Ср, 12 августа" },
+    { dow: "", date: "13", label: "Чт, 13 августа" },
+    { dow: "", date: "14", label: "Пт, 14 августа" },
+    { dow: "", date: "15", label: "Сб, 15 августа" },
+    { dow: "", date: "16", label: "Вс, 16 августа", muted: true },
   ];
+  const slotsByDay = useMemo(() => {
+    if (!person.slots.length) {
+      return Object.fromEntries(days.map((day) => [day.date, []]));
+    }
+    const pool = person.slots;
+    return {
+      "3": pool.slice(0, 2),
+      "4": pool.slice(1, 3),
+      "5": pool.slice(0, 1),
+      "6": pool.slice(2, 4),
+      "7": pool,
+      "8": pool.slice(0, 2),
+      "9": [],
+      "10": pool.slice(1, 2),
+      "11": pool.slice(0, 3),
+      "12": pool.slice(2, 4),
+      "13": pool.slice(0, 2),
+      "14": pool.slice(1, 4),
+      "15": pool.slice(0, 1),
+      "16": [],
+    };
+  }, [person.slots]);
+  const initialDayIndex = Math.max(0, days.findIndex((day) => day.date === "7"));
+  const [selectedDayIndex, setSelectedDayIndex] = useState(initialDayIndex);
+  const selectedDay = days[selectedDayIndex];
+  const availableSlots = slotsByDay[selectedDay.date] || [];
+  const [selectedSlot, setSelectedSlot] = useState(availableSlots[0] || "");
+  useEffect(() => {
+    setSelectedSlot(availableSlots[0] || "");
+  }, [selectedDayIndex, person.id]);
   return <div className="profile-modal-overlay" role="dialog" aria-modal="true" aria-label={`Профиль психолога ${person.name}`}>
     <div className="profile-modal">
       <button className="profile-modal__close" type="button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
@@ -109,15 +148,15 @@ function ProfileModal({ person, onClose, onChoose, onNext }) {
           <button type="button" aria-label="Следующая неделя">›</button>
         </div>
         <div className="profile-modal__calendar-grid">
-          {days.map((day) => <button key={`${day.dow}-${day.date}`} type="button" className={`${day.selected ? "is-selected" : ""} ${day.muted ? "is-muted" : ""}`.trim()}><small>{day.dow}</small><span>{day.date}</span></button>)}
+          {days.map((day, index) => <button key={`${day.dow}-${day.date}`} type="button" disabled={day.muted} aria-pressed={selectedDayIndex === index} className={`${selectedDayIndex === index ? "is-selected" : ""} ${day.muted ? "is-muted" : ""}`.trim()} onClick={() => !day.muted && setSelectedDayIndex(index)}><small>{day.dow}</small><span>{day.date}</span></button>)}
         </div>
         <div className="profile-modal__slots">
           <h4>Выберите время</h4>
-          <div>{person.slots.length ? person.slots.map((slot) => <button key={slot} type="button" className={selectedSlot === slot ? "is-selected" : ""} onClick={() => setSelectedSlot(slot)}>{slot}</button>) : <button type="button" className="is-selected">Нет слотов</button>}</div>
+          <div>{availableSlots.length ? availableSlots.map((slot) => <button key={slot} type="button" className={selectedSlot === slot ? "is-selected" : ""} onClick={() => setSelectedSlot(slot)}>{slot}</button>) : <button type="button" className="is-selected">Нет слотов</button>}</div>
         </div>
       </section>
       <div className="profile-modal__footer">
-        <Button disabled={!selectedSlot || !person.slots.length} onClick={() => onChoose(selectedSlot)}>Выбрать время</Button>
+        <Button disabled={!selectedSlot || !availableSlots.length} onClick={() => onChoose({ slot: selectedSlot, day: selectedDay })}>Выбрать время</Button>
         <Button variant="quiet" onClick={onNext}>Посмотреть других</Button>
       </div>
     </div>
@@ -133,9 +172,9 @@ function PlatformNav({ onStart }) { return <header className="source-header"><na
 function Landing({ onBook }) {
   const [modalPerson, setModalPerson] = useState(null);
   const openPerson = ({ person }) => setModalPerson(person);
-  const chooseInModal = (slot) => {
+  const chooseInModal = ({ slot, day }) => {
     if (!modalPerson) return;
-    onBook({ person: modalPerson, day: { label: "Сегодня", date: "23 июл" }, slot });
+    onBook({ person: modalPerson, day: { label: day.label, date: `${day.date} авг` }, slot });
   };
   const nextInModal = () => setModalPerson((prev) => {
     if (!prev) return prev;
@@ -150,8 +189,6 @@ function AssistantLabel() { return <div className="assistant-label"><span classN
 
 function Chat({ onDone, onHome, embedded = false }) {
   const flow = chatSteps;
-  const landingIntroText = "Здравствуйте! Я ИИ-помощник InTreatment.\n\nПомогу подобрать специалиста, с которым будет спокойно начать. Это займёт около 3 минут — можно выбирать варианты или писать своими словами.";
-  const chatIntroText = landingIntroText;
   const [step, setStep] = useState(0);
   const [messages, setMessages] = useState([]);
   const [answers, setAnswers] = useState([]);
@@ -302,7 +339,7 @@ function Chat({ onDone, onHome, embedded = false }) {
     setVisitorName("");
     setPostMatchMode(false);
     setMessages([
-      { role: "assistant", text: `${chatIntroText}\n\n${flow[0].prompt}` },
+      { role: "assistant", text: flow[0].prompt },
     ]);
   };
 
