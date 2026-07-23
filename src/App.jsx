@@ -339,7 +339,7 @@ function Chat({ onDone, onHome, embedded = false }) {
     setVisitorName("");
     setPostMatchMode(false);
     setMessages([
-      { role: "assistant", text: flow[0].prompt },
+      { role: "assistant", text: "Как к вам можно обращаться?" },
     ]);
   };
 
