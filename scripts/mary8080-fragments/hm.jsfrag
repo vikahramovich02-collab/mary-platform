@@ -1,8 +1,20 @@
 function hm({items:s,onResolve:d}){const[c,o]=g.useState("needs");return e.jsx("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff"},children:e.jsxs("div",{style:{maxWidth:1080,margin:"0 auto",padding:"56px 28px 88px"},children:[e.jsxs("div",{style:{marginBottom:26},children:[e.jsx("div",{style:{fontSize:32,lineHeight:1.04,fontWeight:600,color:k.text,letterSpacing:"-0.04em"},children:"Входящие"}),e.jsx("div",{style:{marginTop:12,maxWidth:720,fontSize:17,lineHeight:1.5,color:k.muted},children:"Здесь только то, что действительно требует твоего решения: спорные случаи, апрувы и эскалации от Mary."})]}),e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:18,marginBottom:30,flexWrap:"wrap"},children:[e.jsxs("div",{style:{display:"inline-flex",alignItems:"center",gap:4,padding:4,borderRadius:20,background:"rgba(38,38,51,0.04)"},children:[e.jsxs("button",{onClick:()=>o("needs"),style:{border:"none",borderRadius:14,padding:"0 18px",height:34,background:c==="needs"?"#fff":"transparent",boxShadow:c==="needs"?"0 1px 2px rgba(38,38,51,0.06)":"none",color:c==="needs"?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:c==="needs"?550:500,fontFamily:"inherit",cursor:"pointer"},children:["Требуют решения ",s.length]}),e.jsx("button",{onClick:()=>o("quiet"),style:{border:"none",borderRadius:14,padding:"0 18px",height:34,background:c==="quiet"?"#fff":"transparent",boxShadow:c==="quiet"?"0 1px 2px rgba(38,38,51,0.06)":"none",color:c==="quiet"?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:c==="quiet"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Без рутины"})]}),e.jsx("div",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",minWidth:92,height:40,padding:"0 14px",background:"#fff",border:"1px solid rgba(38,38,51,0.08)",borderRadius:14,color:k.text,fontSize:14,fontWeight:500},children:c==="quiet"?"Тихо":s.length===0?"Пусто":"Есть новые"})]}),c==="quiet"?e.jsxs("div",{style:{padding:"20px 0",display:"flex",flexDirection:"column",gap:14},children:[e.jsx("div",{style:{fontSize:15.5,color:k.text,fontWeight:500},children:"Рутину Mary закрывает сама"}),e.jsx("div",{style:{fontSize:14.5,lineHeight:1.6,color:k.muted,maxWidth:720},children:"Здесь ничего не должно копиться. В эту вкладку попадает только сигнал, что процесс идёт без твоего участия: напоминания ушли, клиент записан, спорных случаев нет."}),e.jsx("div",{style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 14px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:k.text,fontSize:13.5,fontWeight:500},children:"Сейчас всё работает штатно"})]}):s.length===0?e.jsx("div",{style:{padding:"36px 0",fontSize:15,color:k.muted},children:"Пусто — значит, всё идёт штатно."}):e.jsx("div",{style:{display:"flex",flexDirection:"column",gap:18},children:s.map(n=>e.jsxs("div",{style:{background:"#fff",border:"1px solid rgba(38,38,51,0.07)",borderRadius:22,padding:18,boxShadow:"0 1px 2px rgba(38,38,51,0.025)"},children:[e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:12,flexWrap:"wrap"},children:[e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"},children:[e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",height:28,padding:"0 12px",borderRadius:999,background:"rgba(38,38,51,0.06)",color:k.text,fontSize:12,fontWeight:600},children:n.kind}),e.jsx("span",{style:{fontSize:13,color:k.muted},children:n.from})]}),e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",height:28,padding:"0 12px",borderRadius:999,background:"rgba(38,38,51,0.04)",color:k.muted,fontSize:12,fontWeight:500},children:"Ждёт тебя"})]}),e.jsx("div",{style:{fontSize:15.5,lineHeight:1.55,color:k.text,marginBottom:16},children:n.text}),e.jsx("div",{style:{display:"flex",gap:8,flexWrap:"wrap"},children:n.actions.map((r,l)=>e.jsx("button",{onClick:()=>d(n.id,r),style:{height:36,padding:"0 14px",borderRadius:12,fontFamily:"inherit",fontSize:13,fontWeight:500,cursor:"pointer",background:l===0?k.text:"#fff",color:l===0?"#fff":k.text,border:l===0?"none":"1px solid rgba(38,38,51,0.12)"},children:r},l))})]},n.id))})]})})}
-function crmPage({depts:s,onOpenDept:d}){
-  const[c,o]=g.useState("overview"),
+function crmPage({depts:s,onOpenDept:d,initialTab:l}){
+  const[c,o]=g.useState(l||"overview"),
     [L,ie]=g.useState("all"),
     [ce,ue]=g.useState("all"),
+    [clientSearch,setClientSearch]=g.useState(""),
+    [clientPage,setClientPage]=g.useState(1),
+    [clientDialog,setClientDialog]=g.useState(null),
+    [clientOverlay,setClientOverlay]=g.useState(null),
+    [clientDraft,setClientDraft]=g.useState("Даниела, спасибо за фотографии. Мы проверили заказ №58625 и готовы согласовать замену товара или возврат. Напишите, пожалуйста, какой вариант вам удобнее."),
+    [clientSendConfirm,setClientSendConfirm]=g.useState(!1),
+    [clientSent,setClientSent]=g.useState(!1),
+    [clientHandoff,setClientHandoff]=g.useState(!1),
+    [clientCreated,setClientCreated]=g.useState(null),
+    [clientMaryInput,setClientMaryInput]=g.useState(""),
+    [clientMore,setClientMore]=g.useState(!1),
+    [clientPanelSection,setClientPanelSection]=g.useState(null),
     [de,Gt]=g.useState("all"),
     [he,ye]=g.useState("all"),
     u=s.find(m=>m.name==="Записи")||s[0]||null,
@@ -43,11 +55,12 @@ function crmPage({depts:s,onOpenDept:d}){
       {name:"Mary",role:"AI-сотрудник",state:"Основной поток",detail:"закрывает первичный диалог и рутину без команды",load:"18 активных диалогов",chip:"rgba(38,38,51,0.055)",chipText:"rgba(38,38,51,0.68)"}
     ],
     V=[
-      {name:"Марина Иванова",contact:"@marina_nails · +375 29 440-18-22",channel:"Instagram",state:"Нужен человек",owner:"Администратор",service:"Маникюр + снятие",last:"Просит скидку, Mary собрала контекст",chip:"#FFF4E8",chipText:"#A86600"},
-      {name:"Анна Петрова",contact:"@annapetrova · +375 29 701-11-03",channel:"Telegram",state:"Ведёт Mary",owner:"Mary",service:"Маникюр, сегодня 18:30",last:"Слот подтверждён, напоминание отправлено",chip:"rgba(38,38,51,0.05)",chipText:"rgba(38,38,51,0.64)"},
-      {name:"Ольга Ким",contact:"+375 33 201-89-10",channel:"WhatsApp",state:"Нужен перенос",owner:"Команда",service:"Окрашивание, завтра",last:"Клиент просит перенести запись на утро",chip:"#FFF4E8",chipText:"#A86600"},
-      {name:"Екатерина С.",contact:"@katya_cut · +375 29 144-07-51",channel:"Instagram",state:"Новый клиент",owner:"Mary",service:"Стрижка + укладка",last:"Mary уточняет длину волос и время визита",chip:"rgba(38,38,51,0.05)",chipText:"rgba(38,38,51,0.64)"},
-      {name:"Виктория Н.",contact:"@viktoriya_brows",channel:"Telegram",state:"Ждёт ответ",owner:"Mary",service:"Брови, пятница",last:"Отправлены два слота на выбор",chip:"rgba(38,38,51,0.05)",chipText:"rgba(38,38,51,0.64)"}
+      {clientId:"client-58625",conversationId:"conversation-58625",orderId:"order-58625",initials:"ДД",name:"Даниела Дорофеева",contact:"Telegram · @dorofeeva_daniela",context:"Жалоба на дефект заказа №58625",owner:"Ярослава",ownerMeta:"передал Агент поддержки",last:"Сегодня, 15:42",state:"Нужен ответ",group:"needs"},
+      {clientId:"client-22104",conversationId:"conversation-22104",initials:"ОД",name:"Оксана Дранёвич",contact:"Instagram · @oksana_dranevich",context:"Уточняет срок готовности",owner:"Агент поддержки",ownerMeta:"ведёт диалог сам",last:"Сегодня, 15:31",state:"Отвечает агент",group:"agent"},
+      {clientId:"client-18442",conversationId:"conversation-18442",initials:"ДШ",name:"Дарья Шакалида",contact:"Instagram · @daria_shakalida",context:"Изменить адрес доставки",owner:"Агент заказов",ownerMeta:"ждёт подтверждения",last:"Сегодня, 14:58",state:"Ждёт подтверждения",group:"agent"},
+      {clientId:"client-73129",conversationId:"conversation-73129",initials:"КЕ",name:"Кобец Екатерина",contact:"Instagram · @kobets_ekaterina",context:"Оплата подтверждена",owner:"Анастасия",ownerMeta:"ответственный менеджер",last:"Вчера, 18:20",state:"В работе",group:"working"},
+      {clientId:"client-64018",conversationId:"conversation-64018",initials:"КК",name:"Катерина Ковальчук",contact:"Telegram · @kovalchuk_k",context:"Ожидает подтверждение макета",owner:"Вероника",ownerMeta:"ответственный менеджер",last:"Вчера, 17:45",state:"В работе",group:"working"},
+      {clientId:"client-90417",conversationId:"conversation-90417",initials:"ОС",name:"Ольга Чащина",contact:"Instagram · @olga_chashchina",context:"Заказ передан в производство",owner:"Агент заказов",ownerMeta:"ведёт диалог сам",last:"23 июля, 16:22",state:"Ведёт агент",group:"agent"}
     ],
     T=[
       {time:"10:00",title:"Маникюр · Ангелина",state:"Подтверждено"},
@@ -70,7 +83,7 @@ function crmPage({depts:s,onOpenDept:d}){
       {title:"Не найден слот у мастера",text:"Mary собрала пожелания клиента, но в календаре нет подтверждённого окна.",tag:"Журнал записи"},
       {title:"Клиент просит перенос",text:"Запись нужно перевести на завтра вручную, потому что клиент изменил время после подтверждения.",tag:"Связаться"}
     ],
-    pe=(L==="all"?V:L==="mary"?V.filter(m=>m.owner==="Mary"):L==="human"?V.filter(m=>m.owner!=="Mary"):V.filter(m=>m.state==="Новый клиент")).filter(m=>ce==="all"?!0:m.channel===ce),
+    pe=(clientCreated?[clientCreated,...V]:V).filter(m=>L==="all"?!0:m.group===L).filter(m=>ce==="all"?!0:m.owner===ce).filter(m=>{const h=clientSearch.trim().toLowerCase();return!h||`${m.name} ${m.contact} ${m.context}`.toLowerCase().includes(h)}),
     me=(de==="all"?Z:de==="confirmed"?Z.filter(m=>m.status==="Подтверждено"||m.status==="Записано"):de==="waiting"?Z.filter(m=>m.status==="Ждёт ответ"):Z.filter(m=>m.status==="Нужен человек"||m.status==="Нужен звонок")).filter(m=>he==="all"?!0:m.source===he),
     H=(m,h,p)=>e.jsxs("div",{style:{padding:"20px 22px",borderRadius:24,border:"1px solid rgba(38,38,51,0.07)",background:"#fff",boxShadow:"0 1px 2px rgba(38,38,51,0.02)"},children:[
       e.jsx("div",{style:{fontSize:13.5,color:"rgba(38,38,51,0.4)"},children:m}),
@@ -100,13 +113,25 @@ function crmPage({depts:s,onOpenDept:d}){
       h&&e.jsx("div",{style:{fontSize:12.5,color:"rgba(38,38,51,0.42)",whiteSpace:"nowrap"},children:h})
     ]}),
     O=(m,h)=>e.jsx("div",{style:{fontSize:12.5,fontWeight:550,color:"rgba(38,38,51,0.38)",textTransform:"uppercase",letterSpacing:".03em",padding:h||"0 0 10px"},children:m}),
+    clientTone=m=>({
+      "Нужен ответ":{bg:"#FFF3DD",text:"#955B00",dot:"#B26A00"},
+      "Отвечает агент":{bg:"#EEF2FF",text:"#59647B",dot:"#6B7690"},
+      "Ждёт подтверждения":{bg:"#F3EFFF",text:"#685995",dot:"#7565A8"},
+      "В работе":{bg:"#EAF8EE",text:"#237A3B",dot:"#2FBF5B"},
+      "Ведёт агент":{bg:"#EEF4F7",text:"#526872",dot:"#6D8089"},
+      "Черновик":{bg:"#FFF0EE",text:"#E65C50",dot:"#E65C50"}
+    }[m]||{bg:"rgba(38,38,51,0.055)",text:"rgba(38,38,51,0.62)",dot:"#6B7280"}),
+    clientNarrow=typeof window!="undefined"&&window.innerWidth<768,
+    openClientConversation=m=>{setClientDialog(m);setClientOverlay("conversation");setClientSendConfirm(!1);setClientSent(!1);setClientHandoff(!1);setClientDraft(m.clientId==="client-58625"?"Даниела, спасибо за фотографии. Мы проверили заказ №58625 и готовы согласовать замену товара или возврат. Напишите, пожалуйста, какой вариант вам удобнее.":`${m.name.split(" ")[0]}, спасибо за сообщение. Мы проверяем детали и вернёмся с подтверждением следующего шага.`)},
+    closeClientOverlay=()=>{setClientOverlay(null);setClientSendConfirm(!1)},
+    createDemoClient=()=>{const m={clientId:"client-anna-petrova",conversationId:"conversation-anna-petrova",initials:"АП",name:"Анна Петрова",contact:"Telegram · @anna_petrova",context:"Новый клиент · передать Ярославе",owner:"Ярослава",ownerMeta:"ответственный менеджер",last:"Только что",state:"В работе",group:"working"};setClientCreated(m);setClientDialog(m);setClientOverlay(null);setClientSearch("");ie("all")},
     Q=m=>m==="clients"?o("clients"):m==="visits"?o("visits"):m==="team"?o("team"):null;
-  return e.jsx("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff"},children:e.jsxs("div",{style:{maxWidth:1180,margin:"0 auto",padding:"36px 56px 88px"},children:[
-    e.jsxs("div",{style:{marginBottom:24},children:[
+  return e.jsx("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff",backgroundImage:"radial-gradient(rgba(38,38,51,0.045) .7px, transparent .7px)",backgroundSize:"24px 24px"},children:e.jsxs("div",{style:{maxWidth:c==="clients"?1440:1180,margin:c==="clients"&&clientDialog&&typeof clientDialog==="object"?"0 404px 0 auto":"0 auto",padding:c==="clients"?"36px 32px 88px":"36px 56px 88px",transition:"margin 180ms ease"},children:[
+    c!=="clients"&&e.jsxs("div",{style:{marginBottom:24},children:[
       e.jsx("div",{style:{fontSize:28,lineHeight:1.06,fontWeight:600,color:k.text,letterSpacing:"-0.04em"},children:"CRM"}),
       e.jsx("div",{style:{marginTop:10,maxWidth:620,fontSize:15,lineHeight:1.5,color:k.muted},children:"Операционная часть бизнеса, которую Mary уже ведёт сама и передаёт команде только там, где нужен человек."})
     ]}),
-      e.jsxs("div",{style:{display:"inline-flex",alignItems:"center",gap:4,padding:0,borderRadius:999,background:"transparent",marginBottom:28},children:[
+      c!=="clients"&&e.jsxs("div",{style:{display:"inline-flex",alignItems:"center",gap:4,padding:0,borderRadius:999,background:"transparent",marginBottom:28},children:[
       e.jsx("button",{onClick:()=>o("overview"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 16px",border:"none",borderRadius:999,background:c==="overview"?"rgba(38,38,51,0.055)":"transparent",color:c==="overview"?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:c==="overview"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Обзор"}),
       e.jsx("button",{onClick:()=>o("clients"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 16px",border:"none",borderRadius:999,background:c==="clients"?"rgba(38,38,51,0.055)":"transparent",color:c==="clients"?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:c==="clients"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Клиенты"}),
       e.jsx("button",{onClick:()=>o("visits"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 16px",border:"none",borderRadius:999,background:c==="visits"?"rgba(38,38,51,0.055)":"transparent",color:c==="visits"?k.text:"rgba(38,38,51,0.5)",fontSize:13.5,fontWeight:c==="visits"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Записи"}),
@@ -165,63 +190,330 @@ function crmPage({depts:s,onOpenDept:d}){
         ]})
       ]})
     ]}),
-    c==="clients"&&e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"minmax(0,1fr) 300px",columnGap:24,rowGap:24},children:[
-      e.jsxs("div",{style:{padding:"22px 22px 24px",borderRadius:30,border:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
-        e.jsx("div",{style:{fontSize:18,lineHeight:1.1,fontWeight:500,color:k.text},children:"Клиенты"}),
-        e.jsx("div",{style:{marginTop:8,maxWidth:620,fontSize:14,lineHeight:1.5,color:"rgba(38,38,51,0.46)"},children:"Кто сейчас в работе у Mary, кто уже передан команде и где нужен ручной следующий шаг."}),
-        e.jsxs("div",{style:{marginTop:18,display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",columnGap:16,rowGap:16,marginBottom:18},children:[
-          H("Новые",String(V.filter(m=>m.state==="Новый клиент").length),"первый контакт"),
-          H("Ведёт Mary",String(V.filter(m=>m.owner==="Mary").length),"активные диалоги"),
-          H("Нужен человек",String(V.filter(m=>m.owner!=="Mary").length),"эскалации и апрувы")
-        ]}),
-        e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:18,marginBottom:18,flexWrap:"wrap"},children:[
-          e.jsxs("div",{style:{display:"flex",flexDirection:"column",gap:10,minWidth:0,flex:1},children:[
-            e.jsxs("div",{style:{display:"inline-flex",alignItems:"center",gap:4,padding:0,borderRadius:999,background:"transparent",flexWrap:"wrap"},children:[
-              e.jsx("button",{type:"button",onClick:()=>ie("all"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 14px",border:"none",borderRadius:999,background:L==="all"?"rgba(38,38,51,0.055)":"transparent",color:L==="all"?k.text:"rgba(38,38,51,0.48)",fontSize:13.5,fontWeight:L==="all"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Все"}),
-              e.jsx("button",{type:"button",onClick:()=>ie("mary"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 14px",border:"none",borderRadius:999,background:L==="mary"?"rgba(38,38,51,0.055)":"transparent",color:L==="mary"?k.text:"rgba(38,38,51,0.48)",fontSize:13.5,fontWeight:L==="mary"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Ведёт Mary"}),
-              e.jsx("button",{type:"button",onClick:()=>ie("human"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 14px",border:"none",borderRadius:999,background:L==="human"?"rgba(38,38,51,0.055)":"transparent",color:L==="human"?k.text:"rgba(38,38,51,0.48)",fontSize:13.5,fontWeight:L==="human"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Нужен человек"}),
-              e.jsx("button",{type:"button",onClick:()=>ie("new"),style:{display:"inline-flex",alignItems:"center",height:34,padding:"0 14px",border:"none",borderRadius:999,background:L==="new"?"rgba(38,38,51,0.055)":"transparent",color:L==="new"?k.text:"rgba(38,38,51,0.48)",fontSize:13.5,fontWeight:L==="new"?550:500,fontFamily:"inherit",cursor:"pointer"},children:"Новые"})
-            ]}),
-            e.jsxs("div",{style:{display:"inline-flex",alignItems:"center",gap:8,flexWrap:"wrap"},children:[
-              e.jsx("span",{style:{fontSize:13,color:"rgba(38,38,51,0.38)"},children:"Канал:"}),
-              ["all","Instagram","Telegram","WhatsApp"].map(m=>e.jsx("button",{type:"button",onClick:()=>ue(m),style:{display:"inline-flex",alignItems:"center",height:30,padding:"0 12px",border:"none",borderRadius:999,background:ce===m?"rgba(38,38,51,0.055)":"transparent",color:ce===m?k.text:"rgba(38,38,51,0.48)",fontSize:12.5,fontWeight:ce===m?550:500,fontFamily:"inherit",cursor:"pointer"},children:m==="all"?"Все":m},m))
-            ]})
+    c==="clients"&&e.jsxs("div",{style:{position:"relative",minHeight:760},children:[
+      e.jsxs("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:24,marginBottom:32,flexWrap:"wrap"},children:[
+        e.jsx("h1",{style:{margin:0,fontSize:32,lineHeight:1.06,fontWeight:600,letterSpacing:"-0.04em",color:k.text},children:"Клиенты"}),
+        e.jsxs("div",{style:{position:"relative",display:"flex",alignItems:"center",gap:10},children:[
+          e.jsxs("button",{type:"button",onClick:()=>{setClientDialog(null);setClientOverlay("add");setClientMaryInput("")},style:{display:"inline-flex",alignItems:"center",gap:8,height:42,padding:"0 18px",border:"none",borderRadius:999,background:k.text,color:"#fff",fontSize:13.5,fontWeight:550,fontFamily:"inherit",cursor:"pointer",boxShadow:"0 2px 8px rgba(38,38,51,0.12)",transition:Ge.fast},children:[
+            e.jsx(fe,{d:e.jsx("path",{d:"M12 5v14M5 12h14"}),size:15,stroke:2}),
+            "Добавить клиента"
           ]}),
-          e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,marginLeft:"auto"},children:[
-            e.jsx("button",{type:"button",style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:38,height:38,borderRadius:14,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:"rgba(38,38,51,0.5)",fontSize:16,cursor:"pointer"},children:"≡"}),
-            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,height:42,minWidth:280,padding:"0 14px",borderRadius:16,border:"1px solid rgba(38,38,51,0.08)",background:"#fff"},children:[
-              e.jsx("span",{style:{fontSize:16,color:"rgba(38,38,51,0.34)"},children:"⌕"}),
-              e.jsx("span",{style:{fontSize:14,color:"rgba(38,38,51,0.34)"},children:"Поиск: имя, телефон, @username"})
-            ]})
+          e.jsx("button",{type:"button","aria-label":"Ещё действия",onClick:()=>setClientMore(m=>!m),style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:42,height:42,borderRadius:999,border:"1px solid rgba(38,38,51,0.1)",background:"#fff",color:k.text,cursor:"pointer",fontFamily:"inherit"},children:e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("circle",{cx:"6",cy:"12",r:"1"}),e.jsx("circle",{cx:"12",cy:"12",r:"1"}),e.jsx("circle",{cx:"18",cy:"12",r:"1"})]}),size:17,fill:"currentColor",stroke:0})}),
+          clientMore&&e.jsxs("div",{style:{position:"absolute",right:0,top:50,zIndex:20,width:188,padding:6,border:"1px solid rgba(38,38,51,0.08)",borderRadius:14,background:"#fff",boxShadow:"0 14px 36px rgba(38,38,51,0.12)"},children:[
+            e.jsx("button",{type:"button",onClick:()=>setClientMore(!1),style:{width:"100%",height:36,padding:"0 12px",border:"none",borderRadius:999,background:"transparent",textAlign:"left",fontFamily:"inherit",fontSize:13,color:k.text,cursor:"pointer"},children:"Импортировать список"}),
+            e.jsx("button",{type:"button",onClick:()=>setClientMore(!1),style:{width:"100%",height:36,padding:"0 12px",border:"none",borderRadius:999,background:"transparent",textAlign:"left",fontFamily:"inherit",fontSize:13,color:k.text,cursor:"pointer"},children:"Экспортировать CSV"})
           ]})
-        ]}),
-        e.jsxs("div",{style:{border:"1px solid rgba(38,38,51,0.07)",borderRadius:24,overflow:"hidden",background:"#fff"},children:[
-          e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"1.6fr 1.5fr .9fr 1.1fr 1fr 1.6fr .9fr",gap:16,padding:"14px 18px",borderBottom:"1px solid rgba(38,38,51,0.07)",background:"rgba(38,38,51,0.02)"},children:[
-            O("Клиент","0"),
-            O("Контакт","0"),
-            O("Канал","0"),
-            O("Статус","0"),
-            O("Кто ведёт","0"),
-            O("Последний шаг","0"),
-            O("Действие","0")
-          ]}),
-          pe.map((m,h)=>e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"1.6fr 1.5fr .9fr 1.1fr 1fr 1.6fr .9fr",gap:16,alignItems:"center",padding:"16px 18px",borderBottom:h===pe.length-1?"none":"1px solid rgba(38,38,51,0.06)"},children:[
-            e.jsxs("div",{style:{minWidth:0},children:[
-              e.jsx("div",{style:{fontSize:15.5,fontWeight:500,color:k.text},children:m.name}),
-              e.jsx("div",{style:{marginTop:4,fontSize:13,lineHeight:1.4,color:"rgba(38,38,51,0.46)"},children:m.service})
-            ]}),
-            e.jsx("div",{style:{fontSize:13.5,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:m.contact}),
-            e.jsx("div",{style:{fontSize:13.5,color:"rgba(38,38,51,0.62)"},children:m.channel}),
-            e.jsx("div",{children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:28,padding:"0 10px",borderRadius:999,background:m.chip,color:m.chipText,fontSize:12,fontWeight:500,whiteSpace:"nowrap"},children:m.state})}),
-            e.jsx("div",{children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:28,padding:"0 10px",borderRadius:999,background:"rgba(38,38,51,0.05)",color:"rgba(38,38,51,0.62)",fontSize:12.5,fontWeight:500,whiteSpace:"nowrap"},children:m.owner})}),
-            e.jsx("div",{style:{fontSize:13,lineHeight:1.45,color:"rgba(38,38,51,0.46)"},children:m.last}),
-            e.jsx("div",{children:e.jsx("button",{type:"button",onClick:()=>u&&d(u.name),style:{height:32,padding:"0 14px",borderRadius:999,border:"1px solid rgba(38,38,51,0.08)",background:"#fff",color:k.text,fontSize:12.5,fontWeight:500,fontFamily:"inherit",cursor:"pointer"},children:"Открыть"})})
-          ]},m.name+h))
         ]})
       ]}),
-      e.jsxs("div",{style:{display:"grid",rowGap:16,alignContent:"start",position:"sticky",top:24,alignSelf:"start"},children:[
-        B("Нужно проверить","3 клиента уже переданы человеку: скидки, переносы и спорные кейсы.","сейчас"),
-        B("Что уже делает Mary","Ведёт первичный диалог, собирает услугу, дату, пожелания и отправляет клиента в следующий шаг.","18 активных")
+      e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"minmax(300px,1fr) minmax(220px,280px)",gap:12,marginBottom:22},children:[
+        e.jsxs("label",{style:{display:"flex",alignItems:"center",gap:10,height:46,padding:"0 14px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:14,background:"#fff"},children:[
+          e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("circle",{cx:"11",cy:"11",r:"7"}),e.jsx("path",{d:"M20 20l-4-4"})]}),size:17,stroke:1.8}),
+          e.jsx("input",{value:clientSearch,onChange:m=>{setClientSearch(m.target.value);setClientPage(1)},placeholder:"Имя, телефон или @username","aria-label":"Поиск клиентов",style:{width:"100%",minWidth:0,border:"none",outline:"none",background:"transparent",fontFamily:"inherit",fontSize:14,color:k.text}})
+        ]}),
+        e.jsxs("label",{style:{position:"relative",display:"flex",alignItems:"center",height:46,border:"1px solid rgba(38,38,51,0.1)",borderRadius:14,background:"#fff"},children:[
+          e.jsx("select",{value:ce,onChange:m=>{ue(m.target.value);setClientPage(1)},"aria-label":"Ответственный",style:{width:"100%",height:"100%",padding:"0 42px 0 14px",appearance:"none",border:"none",outline:"none",background:"transparent",fontFamily:"inherit",fontSize:14,color:k.text,cursor:"pointer"},children:[
+            e.jsx("option",{value:"all",children:"Все ответственные"}),
+            ...["Ярослава","Анастасия","Вероника","Агент поддержки","Агент заказов"].map(m=>e.jsx("option",{value:m,children:m},m))
+          ]}),
+          e.jsx("span",{style:{position:"absolute",right:14,pointerEvents:"none",display:"flex",color:k.muted},children:e.jsx(fe,{d:e.jsx("path",{d:"M7 10l5 5 5-5"}),size:15,stroke:1.8})})
+        ]})
+      ]}),
+      e.jsx("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:22,overflowX:"auto",scrollbarWidth:"none"},children:[
+        {key:"all",label:"Все",count:"3380"},
+        {key:"needs",label:"Нужен ответ",count:"12"},
+        {key:"working",label:"В работе",count:"26"},
+        {key:"agent",label:"Ведёт агент",count:"9"}
+      ].map(m=>e.jsxs("button",{type:"button",onClick:()=>{ie(m.key);setClientPage(1)},style:{display:"inline-flex",alignItems:"center",gap:10,height:36,padding:"0 14px",border:L===m.key?"1px solid transparent":"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:L===m.key?"rgba(38,38,51,0.075)":"#fff",color:L===m.key?k.text:"rgba(38,38,51,0.62)",fontFamily:"inherit",fontSize:13.5,fontWeight:L===m.key?550:500,whiteSpace:"nowrap",cursor:"pointer"},children:[m.label,e.jsx("span",{style:{color:L===m.key?k.text:"rgba(38,38,51,0.42)",fontSize:12.5},children:m.count})]},m.key))}),
+      e.jsx("div",{style:{overflowX:"auto",borderTop:"1px solid rgba(38,38,51,0.07)",borderBottom:"1px solid rgba(38,38,51,0.07)",background:"rgba(255,255,255,0.78)"},children:e.jsxs("div",{style:{minWidth:1020},children:[
+        e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"1.35fr 1.25fr 1fr .9fr 1fr 38px",gap:20,padding:"14px 0",borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+          O("Клиент","0"),O("Текущий контекст","0"),O("Кто ведёт","0"),O("Последний контакт","0"),O("Состояние","0"),e.jsx("div",{})
+        ]}),
+        pe.length===0?e.jsxs("div",{style:{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",minHeight:300,textAlign:"center"},children:[
+          e.jsx("div",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:40,height:40,borderRadius:14,background:"rgba(38,38,51,0.045)",color:k.muted},children:e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("circle",{cx:"11",cy:"11",r:"7"}),e.jsx("path",{d:"M20 20l-4-4"})]}),size:18,stroke:1.8})}),
+          e.jsx("div",{style:{marginTop:12,fontSize:14.5,fontWeight:550,color:k.text},children:"Клиенты не найдены"}),
+          e.jsx("div",{style:{marginTop:5,fontSize:13.5,color:k.muted},children:"Попробуй изменить запрос или фильтры."})
+        ]}):pe.map((m,h)=>e.jsxs("div",{onMouseEnter:p=>p.currentTarget.style.background="rgba(38,38,51,0.035)",onMouseLeave:p=>p.currentTarget.style.background=clientDialog&&typeof clientDialog==="object"&&clientDialog.name===m.name?"rgba(38,38,51,0.04)":"transparent",style:{display:"grid",gridTemplateColumns:"minmax(0,1fr) 38px",gap:20,alignItems:"stretch",width:"100%",minHeight:78,padding:"0",borderBottom:h===pe.length-1?"none":"1px solid rgba(38,38,51,0.06)",background:clientDialog&&typeof clientDialog==="object"&&clientDialog.name===m.name?"rgba(38,38,51,0.04)":"transparent",boxShadow:clientDialog&&typeof clientDialog==="object"&&clientDialog.name===m.name?`inset 2px 0 ${k.text}`:"none",transition:Ge.fast},children:[
+          e.jsxs("button",{type:"button","aria-expanded":!!(clientDialog&&typeof clientDialog==="object"&&clientDialog.name===m.name),"aria-controls":"client-side-panel",onClick:()=>{setClientDialog(m);setClientPanelSection(null)},style:{display:"grid",gridTemplateColumns:"1.35fr 1.25fr 1fr .9fr 1fr",gap:20,alignItems:"center",minWidth:0,padding:"14px 0",border:"none",background:"transparent",fontFamily:"inherit",textAlign:"left",cursor:"pointer"},children:[
+          e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:12,minWidth:0},children:[
+            e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:38,height:38,borderRadius:"50%",border:"1px solid rgba(38,38,51,0.09)",background:"#fff",color:k.text,fontSize:12.5,fontWeight:600,flexShrink:0},children:m.initials}),
+            e.jsxs("span",{style:{minWidth:0},children:[
+              e.jsx("span",{style:{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:14,fontWeight:550,color:k.text},children:m.name}),
+              e.jsx("span",{style:{display:"block",marginTop:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12.5,color:"rgba(38,38,51,0.46)"},children:m.contact})
+            ]})
+          ]}),
+          e.jsx("div",{style:{fontSize:13.5,lineHeight:1.45,color:k.text},children:m.context}),
+          e.jsxs("div",{children:[
+            e.jsx("div",{style:{fontSize:13.5,color:k.text},children:m.owner}),
+            e.jsx("div",{style:{marginTop:4,fontSize:11.5,color:"rgba(38,38,51,0.4)"},children:m.ownerMeta})
+          ]}),
+          e.jsx("div",{style:{fontSize:13,color:"rgba(38,38,51,0.58)"},children:m.last}),
+          e.jsx("div",{children:e.jsxs("span",{style:{display:"inline-flex",alignItems:"center",gap:6,height:28,padding:"0 11px",border:"1px solid transparent",borderRadius:999,background:clientTone(m.state).bg,color:clientTone(m.state).text,fontSize:11.5,fontWeight:550,whiteSpace:"nowrap"},children:[
+            e.jsx("span",{style:{width:5,height:5,borderRadius:"50%",background:clientTone(m.state).dot}}),m.state
+          ]})})
+          ]}),
+          e.jsx("button",{type:"button","aria-label":`Открыть переписку с ${m.name}`,onClick:()=>openClientConversation(m),style:{display:"flex",alignItems:"center",justifyContent:"center",width:38,minHeight:78,padding:0,border:"none",background:"transparent",color:"rgba(38,38,51,0.44)",cursor:"pointer"},children:e.jsx(fe,{d:e.jsx("path",{d:"M21 11.5a8.5 8.5 0 0 1-8.5 8.5c-1.35 0-2.62-.31-3.75-.86L3 21l1.86-5.75A8.5 8.5 0 1 1 21 11.5z"}),size:18,stroke:1.7})})
+        ]},m.name))
+      ]})}),
+      e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:20,marginTop:18,flexWrap:"wrap"},children:[
+        e.jsxs("div",{style:{fontSize:12.5,color:"rgba(38,38,51,0.44)"},children:["Показано ",pe.length," из 3380"]}),
+        e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:4},children:[
+          e.jsx("button",{type:"button","aria-label":"Предыдущая страница",disabled:clientPage===1,onClick:()=>setClientPage(m=>Math.max(1,m-1)),style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:34,height:34,border:"1px solid rgba(38,38,51,0.09)",borderRadius:999,background:"#fff",color:clientPage===1?"rgba(38,38,51,0.25)":k.text,cursor:clientPage===1?"default":"pointer"},children:e.jsx(fe,{d:e.jsx("path",{d:"M15 18l-6-6 6-6"}),size:15,stroke:1.8})}),
+          [1,2,3].map(m=>e.jsx("button",{type:"button",onClick:()=>setClientPage(m),style:{width:34,height:34,border:"none",borderRadius:999,background:clientPage===m?k.text:"transparent",color:clientPage===m?"#fff":k.text,fontFamily:"inherit",fontSize:13,cursor:"pointer"},children:m},m)),
+          e.jsx("span",{style:{padding:"0 6px",fontSize:13,color:k.muted},children:"…"}),
+          e.jsx("button",{type:"button",onClick:()=>setClientPage(564),style:{width:40,height:34,border:"none",borderRadius:999,background:clientPage===564?"rgba(38,38,51,0.07)":"transparent",color:k.text,fontFamily:"inherit",fontSize:13,cursor:"pointer"},children:"564"}),
+          e.jsx("button",{type:"button","aria-label":"Следующая страница",disabled:clientPage===564,onClick:()=>setClientPage(m=>Math.min(564,m+1)),style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:34,height:34,border:"1px solid rgba(38,38,51,0.09)",borderRadius:999,background:"#fff",color:clientPage===564?"rgba(38,38,51,0.25)":k.text,cursor:clientPage===564?"default":"pointer"},children:e.jsx(fe,{d:e.jsx("path",{d:"M9 18l6-6-6-6"}),size:15,stroke:1.8})})
+        ]})
+      ]}),
+      !clientOverlay&&e.jsxs("button",{type:"button",onClick:()=>setClientOverlay("mary"),style:{position:"fixed",right:clientDialog&&typeof clientDialog==="object"?420:30,bottom:26,zIndex:35,display:"inline-flex",alignItems:"center",gap:10,height:42,padding:"0 16px",border:"none",borderRadius:999,background:k.text,color:"#fff",fontFamily:"inherit",fontSize:13.5,fontWeight:550,cursor:"pointer",boxShadow:"0 8px 24px rgba(38,38,51,0.18)",transition:"right 180ms ease"},children:[
+        e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("path",{d:"M12 2l1.2 4.4L17 8l-3.8 1.6L12 14l-1.2-4.4L7 8l3.8-1.6L12 2z"}),e.jsx("path",{d:"M19 14l.7 2.3L22 17l-2.3.7L19 20l-.7-2.3L16 17l2.3-.7L19 14z"})]}),size:15,fill:"currentColor",stroke:0}),
+        "Спросить Mary",
+        e.jsx("span",{style:{fontSize:11.5,color:"rgba(255,255,255,0.58)"},children:"⌘M"})
+      ]}),
+      clientDialog&&typeof clientDialog==="object"&&e.jsxs("aside",{id:"client-side-panel",role:"dialog","aria-modal":"false","aria-label":"Карточка клиента",style:{position:"fixed",top:12,right:12,bottom:12,zIndex:40,width:"min(380px,calc(100vw - 28px))",display:"flex",flexDirection:"column",overflow:"hidden",border:"1px solid rgba(38,38,51,0.09)",borderRadius:22,background:"#fff",boxShadow:"none"},children:[
+        e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",height:68,padding:"0 22px",borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+          e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10},children:[
+            e.jsx(fe,{d:e.jsx("path",{d:"M14 18l-6-6 6-6"}),size:17,stroke:1.8}),
+            e.jsx("div",{style:{fontSize:14.5,fontWeight:600,color:k.text},children:"Карточка клиента"})
+          ]}),
+          e.jsx("button",{type:"button","aria-label":"Закрыть карточку клиента",onClick:()=>{setClientDialog(null);setClientPanelSection(null)},style:{display:"flex",alignItems:"center",justifyContent:"center",width:34,height:34,border:"none",borderRadius:999,background:"transparent",color:k.muted,cursor:"pointer"},children:e.jsx(fe,{d:e.jsx("path",{d:"M6 6l12 12M18 6L6 18"}),size:16,stroke:1.8})})
+        ]}),
+        e.jsxs("div",{style:{flex:1,overflowY:"auto",padding:"22px"},children:[
+          e.jsxs("section",{style:{paddingBottom:22,borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8,fontSize:12.5,fontWeight:550,color:k.muted},children:[
+              e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("circle",{cx:"12",cy:"8",r:"3"}),e.jsx("path",{d:"M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"})]}),size:15,stroke:1.7}),
+              "Клиент"
+            ]}),
+            e.jsx("div",{style:{marginTop:14,fontSize:18,fontWeight:600,color:k.text},children:clientDialog.name}),
+            e.jsx("div",{style:{marginTop:9,fontSize:13.5,lineHeight:1.5,color:"rgba(38,38,51,0.62)"},children:clientDialog.contact}),
+            e.jsx("div",{style:{marginTop:7,fontSize:13.5,color:k.text},children:"+7 (926) 123-45-67"})
+          ]}),
+          e.jsxs("section",{style:{padding:"22px 0",borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8,fontSize:12.5,fontWeight:550,color:k.muted},children:[
+              e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("path",{d:"M12 3l1.4 5.1L18 10l-4.6 1.9L12 17l-1.4-5.1L6 10l4.6-1.9L12 3z"})]}),size:15,stroke:1.7}),
+              "Сейчас важно"
+            ]}),
+            e.jsx("div",{style:{marginTop:13,fontSize:14.5,lineHeight:1.45,fontWeight:550,color:k.text},children:clientDialog.context}),
+            e.jsx("div",{style:{marginTop:7,fontSize:13,lineHeight:1.5,color:k.muted},children:clientDialog.group==="needs"?"Клиент ждёт решения: замена или возврат.":"Следующий шаг уже зафиксирован в текущем контексте."}),
+            e.jsx("button",{type:"button",onClick:()=>openClientConversation(clientDialog),style:{height:36,marginTop:16,padding:"0 15px",border:"none",borderRadius:999,background:k.text,color:"#fff",fontFamily:"inherit",fontSize:12.5,fontWeight:550,cursor:"pointer"},children:"Открыть переписку"})
+          ]}),
+          e.jsxs("section",{style:{padding:"22px 0",borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8,fontSize:12.5,fontWeight:550,color:k.muted},children:[
+              e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("circle",{cx:"12",cy:"8",r:"3"}),e.jsx("path",{d:"M6 20c0-3.3 2.7-6 6-6s6 2.7 6 6"})]}),size:15,stroke:1.7}),
+              "Кто ведёт"
+            ]}),
+            e.jsx("div",{style:{marginTop:13,fontSize:14.5,fontWeight:550,color:k.text},children:clientDialog.owner}),
+            e.jsx("div",{style:{marginTop:6,fontSize:12.5,color:k.muted},children:clientDialog.ownerMeta})
+          ]}),
+          e.jsxs("section",{style:{padding:"22px 0",borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8,fontSize:12.5,fontWeight:550,color:k.muted},children:[
+              e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("rect",{x:"4",y:"5",width:"16",height:"15",rx:"2"}),e.jsx("path",{d:"M8 3v4M16 3v4M4 10h16"})]}),size:15,stroke:1.7}),
+              "Ближайшие действия"
+            ]}),
+            e.jsxs("div",{style:{display:"grid",gap:10,marginTop:14},children:[
+              e.jsxs("div",{style:{display:"flex",justifyContent:"space-between",gap:12,fontSize:13,lineHeight:1.45,color:k.text},children:[e.jsx("span",{children:"Согласовать следующий шаг"}),e.jsx("span",{style:{color:k.muted,whiteSpace:"nowrap"},children:"сегодня 17:00"})]}),
+              e.jsxs("div",{style:{display:"flex",justifyContent:"space-between",gap:12,fontSize:13,lineHeight:1.45,color:k.text},children:[e.jsx("span",{children:"Проверить результат"}),e.jsx("span",{style:{color:k.muted,whiteSpace:"nowrap"},children:"завтра 12:00"})]})
+            ]})
+          ]}),
+          e.jsxs("section",{style:{padding:"22px 0",borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8,fontSize:12.5,fontWeight:550,color:k.muted},children:[
+              e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("circle",{cx:"12",cy:"12",r:"8"}),e.jsx("path",{d:"M12 8v4l3 2"})]}),size:15,stroke:1.7}),
+              "Последние события"
+            ]}),
+            e.jsxs("div",{style:{display:"grid",gap:13,marginTop:14},children:[
+              e.jsxs("div",{children:[e.jsx("div",{style:{fontSize:13,lineHeight:1.4,color:k.text},children:"Клиент отправил новые детали"}),e.jsx("div",{style:{marginTop:3,fontSize:11.5,color:k.muted},children:"Сегодня, 15:20"})]}),
+              e.jsxs("div",{children:[e.jsx("div",{style:{fontSize:13,lineHeight:1.4,color:k.text},children:`Команда проверила обращение ${clientDialog.context.includes("№")?clientDialog.context.slice(clientDialog.context.indexOf("№")):""}`}),e.jsx("div",{style:{marginTop:3,fontSize:11.5,color:k.muted},children:"Сегодня, 15:18"})]}),
+              e.jsxs("div",{children:[e.jsx("div",{style:{fontSize:13,lineHeight:1.4,color:k.text},children:`${clientDialog.owner} получила обращение`}),e.jsx("div",{style:{marginTop:3,fontSize:11.5,color:k.muted},children:"Сегодня, 15:15"})]})
+            ]})
+          ]}),
+          [
+            {key:"orders",label:"Заказы"},
+            {key:"files",label:"Файлы"}
+          ].map(m=>e.jsxs("div",{style:{borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+            e.jsxs("button",{type:"button","aria-expanded":clientPanelSection===m.key,"aria-controls":`client-panel-${m.key}`,onClick:()=>setClientPanelSection(clientPanelSection===m.key?null:m.key),style:{display:"flex",alignItems:"center",justifyContent:"space-between",width:"100%",height:46,padding:0,border:"none",background:"transparent",fontFamily:"inherit",fontSize:13.5,fontWeight:550,color:k.text,cursor:"pointer"},children:[
+              m.label,
+              e.jsx("span",{style:{display:"flex",transform:clientPanelSection===m.key?"rotate(90deg)":"rotate(0deg)",transition:"transform 160ms ease"},children:e.jsx(fe,{d:e.jsx("path",{d:"M9 18l6-6-6-6"}),size:15,stroke:1.8})})
+            ]}),
+            clientPanelSection===m.key&&e.jsx("div",{id:`client-panel-${m.key}`,style:{padding:"0 0 16px"},children:m.key==="orders"?e.jsxs("div",{style:{padding:14,borderRadius:14,background:"rgba(38,38,51,0.035)"},children:[
+              e.jsxs("div",{style:{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12},children:[
+                e.jsxs("div",{children:[
+                  e.jsx("div",{style:{fontSize:13.5,fontWeight:600,color:k.text},children:"Заказ №58625"}),
+                  e.jsx("div",{style:{marginTop:5,fontSize:12,color:k.muted},children:"Оформлен 23 июля · доставка"})
+                ]}),
+                e.jsxs("span",{style:{display:"inline-flex",alignItems:"center",gap:5,height:24,padding:"0 9px",border:"1px solid transparent",borderRadius:999,background:"#FFF3DD",fontSize:10.5,fontWeight:550,color:"#955B00",whiteSpace:"nowrap"},children:[
+                  e.jsx("span",{style:{width:5,height:5,borderRadius:"50%",background:"#A86600"}}),
+                  "На проверке"
+                ]})
+              ]}),
+              e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"1fr auto",gap:"8px 12px",marginTop:14,paddingTop:12,borderTop:"1px solid rgba(38,38,51,0.07)",fontSize:12.5},children:[
+                e.jsx("span",{style:{color:k.muted},children:"Товаров"}),
+                e.jsx("span",{style:{color:k.text},children:"3"}),
+                e.jsx("span",{style:{color:k.muted},children:"Сумма"}),
+                e.jsx("span",{style:{fontWeight:550,color:k.text},children:"18 900 ₽"}),
+                e.jsx("span",{style:{color:k.muted},children:"Следующий шаг"}),
+                e.jsx("span",{style:{color:k.text,textAlign:"right"},children:"Решение по замене"})
+              ]})
+            ]}):e.jsxs("div",{style:{display:"grid",gap:8},children:[
+              {name:"Фото дефекта.jpg",meta:"2,4 МБ · сегодня, 15:20",kind:"JPG"},
+              {name:"Чек заказа.pdf",meta:"184 КБ · 23 июля",kind:"PDF"}
+            ].map(h=>e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:11,minHeight:54,padding:"9px 10px",border:"1px solid rgba(38,38,51,0.07)",borderRadius:12,background:"#fff"},children:[
+              e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:34,height:34,borderRadius:10,background:"rgba(38,38,51,0.045)",color:k.muted,flexShrink:0},children:e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("path",{d:"M6 3h8l4 4v14H6z"}),e.jsx("path",{d:"M14 3v5h5"})]}),size:16,stroke:1.7})}),
+              e.jsxs("span",{style:{minWidth:0,flex:1},children:[
+                e.jsx("span",{style:{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12.5,fontWeight:550,color:k.text},children:h.name}),
+                e.jsx("span",{style:{display:"block",marginTop:3,fontSize:11,color:k.muted},children:h.meta})
+              ]}),
+              e.jsx("span",{style:{fontSize:9.5,fontWeight:600,color:"rgba(38,38,51,0.38)"},children:h.kind})
+            ]},h.name))
+          })})
+          ]},m.key))
+        ]}),
+        e.jsx("div",{style:{padding:"14px 22px 18px",borderTop:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:e.jsx("button",{type:"button",onClick:()=>setClientOverlay("mary"),style:{width:"100%",height:40,border:"1px solid rgba(38,38,51,0.12)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:13.5,fontWeight:550,cursor:"pointer"},children:"Изменить с Mary"})})
+      ]}),
+      clientOverlay==="conversation"&&clientDialog&&typeof clientDialog==="object"&&e.jsxs(e.Fragment,{children:[
+        e.jsx("button",{type:"button","aria-label":"Закрыть переписку",onClick:closeClientOverlay,style:{position:"fixed",inset:0,zIndex:42,border:"none",background:"rgba(20,20,28,0.18)",cursor:"default"}}),
+        e.jsxs("div",{role:"dialog","aria-modal":"true","aria-label":`Переписка с ${clientDialog.name}`,"data-client-id":clientDialog.clientId,"data-conversation-id":clientDialog.conversationId,onKeyDown:m=>{if(m.key==="Escape"){m.preventDefault();closeClientOverlay()}if(m.key==="Tab"){const h=[...m.currentTarget.querySelectorAll('button:not([disabled]),textarea:not([disabled]),input:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])')];if(h.length){const p=h[0],A=h[h.length-1];m.shiftKey&&document.activeElement===p&&(m.preventDefault(),A.focus());!m.shiftKey&&document.activeElement===A&&(m.preventDefault(),p.focus())}}},style:{position:"fixed",left:clientNarrow?0:"50%",top:clientNarrow?0:"50%",transform:clientNarrow?"none":"translate(-50%,-50%)",zIndex:45,width:clientNarrow?"100vw":"min(820px,calc(100vw - 40px))",height:clientNarrow?"100dvh":"min(720px,calc(100vh - 32px))",display:"flex",flexDirection:"column",overflow:"hidden",border:clientNarrow?"none":"1px solid rgba(38,38,51,0.09)",borderRadius:clientNarrow?0:22,background:"#fff",boxShadow:clientNarrow?"none":"0 24px 70px rgba(20,20,28,0.22)"},children:[
+          e.jsxs("header",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:18,minHeight:68,padding:"0 22px",borderBottom:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:12,minWidth:0},children:[
+              e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:36,height:36,borderRadius:"50%",border:"1px solid rgba(38,38,51,0.09)",background:"#fff",color:k.text,fontSize:12,fontWeight:600,flexShrink:0},children:clientDialog.initials}),
+              e.jsxs("div",{style:{minWidth:0},children:[
+                e.jsx("div",{style:{fontSize:14.5,fontWeight:600,color:k.text,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"},children:clientDialog.name}),
+                e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:7,marginTop:3,fontSize:11.5,color:k.muted},children:[
+                  e.jsx("span",{children:clientDialog.contact.split(" · ")[0]}),
+                  e.jsx("span",{children:"·"}),
+                  e.jsx("span",{children:clientHandoff?"Передано сотруднику":clientDialog.owner})
+                ]})
+              ]})
+            ]}),
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:9},children:[
+              e.jsxs("span",{style:{display:"inline-flex",alignItems:"center",gap:6,height:28,padding:"0 10px",borderRadius:999,background:clientTone(clientSent?"В работе":clientDialog.state).bg,color:clientTone(clientSent?"В работе":clientDialog.state).text,fontSize:11.5,fontWeight:550,whiteSpace:"nowrap"},children:[
+                e.jsx("span",{style:{width:5,height:5,borderRadius:"50%",background:clientTone(clientSent?"В работе":clientDialog.state).dot}}),
+                clientSent?"Ответ отправлен":clientDialog.state
+              ]}),
+              e.jsx("button",{type:"button",autoFocus:!0,"aria-label":"Закрыть переписку",onClick:closeClientOverlay,style:{display:"flex",alignItems:"center",justifyContent:"center",width:36,height:36,border:"none",borderRadius:999,background:"transparent",color:k.muted,cursor:"pointer"},children:e.jsx(fe,{d:e.jsx("path",{d:"M6 6l12 12M18 6L6 18"}),size:16,stroke:1.8})})
+            ]})
+          ]}),
+          e.jsxs("div",{style:{flex:1,overflowY:"auto",padding:clientNarrow?"18px 16px":"24px 28px",background:"rgba(38,38,51,0.018)"},children:[
+            e.jsx("div",{style:{display:"flex",justifyContent:"center",marginBottom:20},children:e.jsx("span",{style:{display:"inline-flex",alignItems:"center",height:26,padding:"0 10px",borderRadius:999,background:"rgba(38,38,51,0.045)",color:k.muted,fontSize:11.5},children:"Сегодня"})}),
+            e.jsxs("div",{style:{display:"flex",gap:10,alignItems:"flex-start",maxWidth:560,marginBottom:18},children:[
+              e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:"50%",background:"#EEF2FF",color:"#59647B",fontSize:9.5,fontWeight:700,flexShrink:0},children:"AI"}),
+              e.jsxs("div",{style:{minWidth:0},children:[
+                e.jsx("div",{style:{fontSize:11.5,fontWeight:550,color:k.muted},children:"Агент поддержки · 15:14"}),
+                e.jsx("div",{style:{marginTop:6,padding:"10px 12px",border:"1px solid rgba(38,38,51,0.07)",borderRadius:"6px 16px 16px 16px",background:"#fff",fontSize:13,lineHeight:1.5,color:k.text},children:"Получил обращение, нашёл заказ №58625 и запросил фотографии дефекта."})
+              ]})
+            ]}),
+            e.jsxs("div",{style:{display:"flex",justifyContent:"flex-end",marginBottom:18},children:e.jsxs("div",{style:{maxWidth:520},children:[
+              e.jsx("div",{style:{padding:"11px 13px",borderRadius:"16px 6px 16px 16px",background:k.text,color:"#fff",fontSize:13,lineHeight:1.5},children:"Прикладываю фотографии. На товаре заметная трещина, пользоваться им нельзя."}),
+              e.jsx("div",{style:{marginTop:5,textAlign:"right",fontSize:10.5,color:k.muted},children:"Даниела · 15:20"})
+            ]})}),
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:9,margin:"18px 0",fontSize:11.5,color:k.muted},children:[
+              e.jsx("span",{style:{height:1,flex:1,background:"rgba(38,38,51,0.07)"}}),
+              e.jsx("span",{children:clientHandoff?"Ярослава приняла обращение":"Агент передал обращение Ярославе"}),
+              e.jsx("span",{style:{height:1,flex:1,background:"rgba(38,38,51,0.07)"}})
+            ]}),
+            e.jsxs("div",{style:{display:"flex",gap:10,alignItems:"flex-start",maxWidth:570},children:[
+              e.jsx("span",{style:{display:"inline-flex",alignItems:"center",justifyContent:"center",width:28,height:28,borderRadius:"50%",background:"rgba(38,38,51,0.07)",color:k.text,fontSize:9.5,fontWeight:700,flexShrink:0},children:"Я"}),
+              e.jsxs("div",{style:{minWidth:0},children:[
+                e.jsx("div",{style:{fontSize:11.5,fontWeight:550,color:k.muted},children:"Ярослава · 15:32"}),
+                e.jsx("div",{style:{marginTop:6,padding:"10px 12px",border:"1px solid rgba(38,38,51,0.07)",borderRadius:"6px 16px 16px 16px",background:"#fff",fontSize:13,lineHeight:1.5,color:k.text},children:"Спасибо, вижу фотографии. Проверяю заказ и доступные варианты решения."})
+              ]})
+            ]}),
+            clientSent&&e.jsxs("div",{style:{display:"flex",justifyContent:"flex-end",marginTop:18},children:e.jsxs("div",{style:{maxWidth:560},children:[
+              e.jsx("div",{style:{padding:"11px 13px",borderRadius:"16px 6px 16px 16px",background:k.text,color:"#fff",fontSize:13,lineHeight:1.5},children:clientDraft}),
+              e.jsx("div",{style:{marginTop:5,textAlign:"right",fontSize:10.5,color:k.muted},children:"Отправлено · только что"})
+            ]})})
+          ]}),
+          e.jsxs("footer",{style:{position:"relative",padding:clientNarrow?"12px 14px calc(12px + env(safe-area-inset-bottom))":"14px 18px 18px",borderTop:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+            clientSendConfirm&&e.jsxs("div",{role:"alertdialog","aria-label":"Подтвердить отправку",style:{position:"absolute",left:18,right:18,bottom:"calc(100% + 10px)",padding:14,border:"1px solid rgba(38,38,51,0.09)",borderRadius:16,background:"#fff",boxShadow:"0 14px 36px rgba(38,38,51,0.14)"},children:[
+              e.jsx("div",{style:{fontSize:13.5,fontWeight:600,color:k.text},children:"Отправить сообщение клиенту?"}),
+              e.jsx("div",{style:{marginTop:5,fontSize:12.5,lineHeight:1.45,color:k.muted},children:`Сообщение уйдёт в ${clientDialog.contact.split(" · ")[0]} и сохранится в истории обращения.`}),
+              e.jsxs("div",{style:{display:"flex",justifyContent:"flex-end",gap:8,marginTop:12},children:[
+                e.jsx("button",{type:"button",onClick:()=>setClientSendConfirm(!1),style:{height:34,padding:"0 13px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:12.5,cursor:"pointer"},children:"Отмена"}),
+                e.jsx("button",{type:"button",onClick:()=>{setClientSent(!0);setClientSendConfirm(!1)},style:{height:34,padding:"0 14px",border:"none",borderRadius:999,background:k.text,color:"#fff",fontFamily:"inherit",fontSize:12.5,fontWeight:550,cursor:"pointer"},children:"Отправить"})
+              ]})
+            ]}),
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,marginBottom:10,flexWrap:"wrap"},children:[
+              e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8},children:[
+                e.jsx("span",{style:{fontSize:11.5,fontWeight:550,color:k.muted},children:clientSent?"Сообщение отправлено":"Черновик ответа"}),
+                !clientSent&&e.jsxs("span",{style:{display:"inline-flex",alignItems:"center",gap:5,height:24,padding:"0 9px",borderRadius:999,background:"#FFF0EE",color:"#E65C50",fontSize:10.5,fontWeight:600},children:[
+                  e.jsx("span",{style:{width:5,height:5,borderRadius:"50%",background:"#E65C50"}}),
+                  "Черновик"
+                ]})
+              ]}),
+              e.jsx("span",{style:{fontSize:11.5,color:k.muted},children:"Подготовила Mary по обращению №58625"})
+            ]}),
+            e.jsx("textarea",{value:clientDraft,onChange:m=>{setClientDraft(m.target.value);setClientSent(!1)},disabled:clientSent,"aria-label":"Черновик сообщения",style:{width:"100%",minHeight:clientNarrow?74:82,boxSizing:"border-box",padding:"12px 13px",resize:"none",border:"1px solid rgba(38,38,51,0.1)",borderRadius:14,background:clientSent?"rgba(38,38,51,0.025)":"#fff",fontFamily:"inherit",fontSize:13.5,lineHeight:1.5,color:k.text,outline:"none"}}),
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginTop:10,flexWrap:"wrap"},children:[
+              e.jsxs("div",{style:{display:"flex",gap:8},children:[
+                e.jsx("button",{type:"button",onClick:()=>setClientOverlay("mary"),style:{height:36,padding:"0 13px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:12.5,cursor:"pointer"},children:"Изменить с Mary"}),
+                e.jsx("button",{type:"button",disabled:clientHandoff,onClick:()=>setClientHandoff(!0),style:{height:36,padding:"0 13px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:clientHandoff?k.muted:k.text,fontFamily:"inherit",fontSize:12.5,cursor:clientHandoff?"default":"pointer"},children:clientHandoff?"Передано Ярославе":"Передать"})
+              ]}),
+              e.jsx("button",{type:"button",disabled:!clientDraft.trim()||clientSent,onClick:()=>setClientSendConfirm(!0),style:{height:38,padding:"0 16px",border:"none",borderRadius:999,background:!clientDraft.trim()||clientSent?"rgba(38,38,51,0.12)":k.text,color:!clientDraft.trim()||clientSent?k.muted:"#fff",fontFamily:"inherit",fontSize:12.5,fontWeight:550,cursor:!clientDraft.trim()||clientSent?"default":"pointer"},children:clientSent?"Отправлено":"Подтвердить и отправить"})
+            ]})
+          ]})
+        ]})
+      ]}),
+      (clientOverlay==="add"||clientOverlay==="mary")&&e.jsxs(e.Fragment,{children:[
+        e.jsxs("div",{role:"dialog","aria-modal":"false","aria-label":clientOverlay==="add"?"Mary · Новый клиент":`Mary · Клиент ${clientDialog&&typeof clientDialog==="object"?clientDialog.name:""}`,style:{position:"fixed",right:clientNarrow?0:clientDialog&&typeof clientDialog==="object"?404:12,bottom:clientNarrow?0:12,zIndex:45,width:clientNarrow?"100vw":"380px",height:clientNarrow?"100dvh":clientOverlay==="add"?"min(700px,calc(100dvh - 24px))":"min(620px,calc(100dvh - 24px))",display:"flex",flexDirection:"column",overflow:"hidden",border:clientNarrow?"none":"1px solid rgba(38,38,51,0.1)",borderRadius:clientNarrow?0:20,background:"#fff",boxShadow:clientNarrow?"none":"0 14px 40px rgba(20,20,28,0.14)",transition:"right 180ms ease"},children:[
+          e.jsxs("header",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",minHeight:58,padding:"0 14px",borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+            e.jsxs("div",{style:{display:"flex",flexDirection:"column",alignItems:"flex-start",minWidth:0},children:[
+              e.jsx("img",{src:"/brand_logo.png",alt:"Mary",style:{width:58,height:18,objectFit:"contain",objectPosition:"left center"}}),
+              e.jsx("div",{style:{marginTop:2,fontSize:10.5,color:k.muted,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"},children:clientOverlay==="add"?"Клиенты · Новый клиент":`Клиенты · ${clientDialog&&typeof clientDialog==="object"?clientDialog.name.split(" ")[0]:"Контекст страницы"}`})
+            ]}),
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:4},children:[
+              e.jsx("button",{type:"button","aria-label":"Свернуть Mary",onClick:closeClientOverlay,style:{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,border:"none",borderRadius:999,background:"transparent",color:k.muted,cursor:"pointer"},children:e.jsx(fe,{d:e.jsx("path",{d:"M7 12h10"}),size:15,stroke:1.8})}),
+              e.jsx("button",{type:"button","aria-label":"Закрыть Mary",onClick:closeClientOverlay,style:{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,border:"none",borderRadius:999,background:"transparent",color:k.muted,cursor:"pointer"},children:e.jsx(fe,{d:e.jsx("path",{d:"M6 6l12 12M18 6L6 18"}),size:15,stroke:1.8})})
+            ]})
+          ]}),
+          e.jsxs("div",{style:{flex:1,overflowY:"auto",padding:"12px 14px 16px",background:"#fff"},children:clientOverlay==="add"?[
+            e.jsx("div",{style:{padding:"10px 12px",borderRadius:"14px 14px 14px 5px",background:"rgba(38,38,51,0.045)",fontSize:12.5,lineHeight:1.45,color:k.text},children:"Давайте добавим клиента. Напишите данные одной фразой или прикрепите контакт."},"add-intro"),
+            e.jsx("div",{style:{display:"grid",gap:6,marginTop:8},children:[
+              {label:"Вставить имя и телефон",icon:"M8 12h8M12 8v8"},
+              {label:"Отправить ссылку на профиль",icon:"M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.1 1.1M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1"},
+              {label:"Прикрепить файл со списком",icon:"M6 3h8l4 4v14H6zM14 3v5h5"}
+            ].map(m=>e.jsxs("button",{type:"button",onClick:()=>setClientMaryInput(m.label),style:{display:"inline-flex",alignItems:"center",gap:8,width:"fit-content",minHeight:32,padding:"0 11px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:11.5,cursor:"pointer"},children:[
+              e.jsx(fe,{d:e.jsx("path",{d:m.icon}),size:14,stroke:1.7}),m.label
+            ]},m.label))},"add-actions"),
+            e.jsx("div",{style:{display:"flex",justifyContent:"flex-end",marginTop:14},children:e.jsx("div",{style:{maxWidth:"88%",padding:"9px 11px",borderRadius:"14px 5px 14px 14px",background:"rgba(38,38,51,0.075)",fontSize:12.5,lineHeight:1.45,color:k.text},children:"Анна Петрова, +375 29 555-12-34, пишет в Telegram. Передай Ярославе."})},"add-user"),
+            e.jsx("div",{style:{marginTop:10,padding:"9px 11px",borderRadius:"14px 14px 14px 5px",background:"rgba(38,38,51,0.045)",fontSize:12.5,lineHeight:1.45,color:k.text},children:"Нашла Telegram-профиль @anna_petrova. Проверьте данные."},"add-reply"),
+            e.jsxs("div",{style:{marginTop:8,border:"1px solid rgba(38,38,51,0.08)",borderRadius:14,overflow:"hidden"},children:[
+              [["Имя","Анна Петрова"],["Телефон","+375 29 555-12-34"],["Канал","Telegram"],["Ответственная","Ярослава"]].map((m,h)=>e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"1fr 1.1fr",gap:10,padding:"9px 11px",borderBottom:h===3?"none":"1px solid rgba(38,38,51,0.07)",fontSize:11.5},children:[
+                e.jsx("span",{style:{color:k.muted},children:m[0]}),e.jsx("span",{style:{fontWeight:550,color:k.text},children:m[1]})
+              ]},m[0]))
+            ]},"add-summary"),
+            e.jsxs("div",{style:{display:"flex",gap:8,marginTop:10},children:[
+              e.jsx("button",{type:"button",onClick:createDemoClient,style:{height:36,padding:"0 15px",border:"none",borderRadius:999,background:k.text,color:"#fff",fontFamily:"inherit",fontSize:12,fontWeight:550,cursor:"pointer"},children:"Добавить клиента"}),
+              e.jsx("button",{type:"button",onClick:()=>setClientMaryInput("Исправить данные клиента"),style:{height:36,padding:"0 14px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:12,cursor:"pointer"},children:"Исправить"})
+            ]},"add-buttons"),
+            e.jsx("div",{style:{marginTop:9,fontSize:10.5,color:k.muted},children:"После добавления откроется карточка клиента."},"add-note")
+          ]:[
+            e.jsx("div",{style:{padding:"10px 12px",borderRadius:"14px 14px 14px 5px",background:"rgba(38,38,51,0.045)",fontSize:12.5,lineHeight:1.45,color:k.text},children:`Вижу карточку ${clientDialog&&typeof clientDialog==="object"?clientDialog.name.split(" ")[0]:"клиента"} и жалобу на заказ №58625. Что хотите сделать?`},"mary-intro"),
+            e.jsx("div",{style:{display:"grid",gap:6,marginTop:8},children:[
+              "Подготовить ответ",
+              "Создать задачу Ярославе",
+              "Показать историю заказов"
+            ].map(m=>e.jsx("button",{type:"button",onClick:()=>setClientMaryInput(m),style:{width:"fit-content",minHeight:31,padding:"0 11px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:11.5,textAlign:"left",cursor:"pointer"},children:m},m))},"mary-actions"),
+            e.jsx("div",{style:{display:"flex",justifyContent:"flex-end",marginTop:14},children:e.jsx("div",{style:{maxWidth:"88%",padding:"9px 11px",borderRadius:"14px 5px 14px 14px",background:"rgba(38,38,51,0.075)",fontSize:12.5,lineHeight:1.45,color:k.text},children:"Создай задачу Ярославе согласовать замену сегодня до 17:00."})},"mary-user"),
+            e.jsx("div",{style:{marginTop:10,padding:"9px 11px",borderRadius:"14px 14px 14px 5px",background:"rgba(38,38,51,0.045)",fontSize:12.5,lineHeight:1.45,color:k.text},children:"Задача для Ярославы создана."},"mary-reply"),
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:8,marginTop:8,padding:"9px 10px",border:"1px solid rgba(38,38,51,0.09)",borderRadius:13,background:"#fff"},children:[
+              e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:22,height:22,borderRadius:"50%",background:"rgba(38,38,51,0.055)",color:k.text},children:e.jsx(fe,{d:e.jsx("path",{d:"M7 12l3 3 7-7"}),size:13,stroke:1.8})}),
+              e.jsx("span",{style:{flex:1,fontSize:10.5,color:k.text},children:"Согласовать замену товара"}),
+              e.jsx("span",{style:{fontSize:9.5,color:k.muted},children:"Сегодня, 17:00 · Ярослава"})
+            ]},"mary-task"),
+            e.jsxs("div",{style:{marginTop:10,padding:"10px 11px",borderRadius:14,background:"rgba(38,38,51,0.035)"},children:[
+              e.jsx("div",{style:{fontSize:12,lineHeight:1.4,color:k.text},children:"Такие жалобы повторились 12 раз за месяц. Настроить автоматическую подготовку ответа?"}),
+              e.jsxs("div",{style:{display:"flex",gap:7,marginTop:9},children:[
+                e.jsx("button",{type:"button",onClick:()=>setClientMaryInput("Настроить автоматическую подготовку ответа"),style:{height:32,padding:"0 13px",border:"none",borderRadius:999,background:k.text,color:"#fff",fontFamily:"inherit",fontSize:11,cursor:"pointer"},children:"Настроить"}),
+                e.jsx("button",{type:"button",onClick:closeClientOverlay,style:{height:32,padding:"0 13px",border:"1px solid rgba(38,38,51,0.09)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:11,cursor:"pointer"},children:"Не сейчас"})
+              ]})
+            ]},"mary-suggestion")
+          ]}),
+          e.jsxs("footer",{style:{padding:"10px 12px calc(12px + env(safe-area-inset-bottom))",borderTop:"1px solid rgba(38,38,51,0.07)",background:"#fff"},children:[
+            e.jsx("textarea",{value:clientMaryInput,onChange:m=>setClientMaryInput(m.target.value),placeholder:clientOverlay==="add"?"Расскажите о клиенте…":"Спросить Mary о клиенте…","aria-label":clientOverlay==="add"?"Данные нового клиента":"Сообщение Mary",style:{width:"100%",minHeight:58,boxSizing:"border-box",padding:"10px 42px 10px 11px",resize:"none",border:"1px solid rgba(38,38,51,0.1)",borderRadius:15,background:"#fff",fontFamily:"inherit",fontSize:12.5,lineHeight:1.4,color:k.text,outline:"none"}}),
+            e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:-34,padding:"0 8px 4px",pointerEvents:"none"},children:[
+              e.jsx("span",{style:{display:"flex",gap:12,color:k.muted},children:e.jsx(fe,{d:e.jsx("path",{d:"M21.4 11.6l-8.5 8.5a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 1 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"}),size:16,stroke:1.6})}),
+              e.jsx("button",{type:"button","aria-label":"Отправить Mary",disabled:!clientMaryInput.trim(),onClick:()=>setClientMaryInput(""),style:{display:"flex",alignItems:"center",justifyContent:"center",width:32,height:32,border:"none",borderRadius:"50%",background:clientMaryInput.trim()?k.text:"rgba(38,38,51,0.12)",color:"#fff",cursor:clientMaryInput.trim()?"pointer":"default",pointerEvents:"auto"},children:e.jsx(fe,{d:e.jsx("path",{d:"M12 18V6M7 11l5-5 5 5"}),size:15,stroke:1.9})})
+            ]})
+          ]})
+        ]})
       ]})
     ]}),
     c==="visits"&&e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"minmax(0,1fr) 300px",columnGap:24,rowGap:24},children:[
@@ -307,6 +599,16 @@ function crmPage({depts:s,onOpenDept:d}){
         B("Кому Mary отдаёт кейсы","Сначала администратору, потом мастеру или поддержке, если случай уже спорный.","живой маршрут"),
         B("Что можно улучшить","Если описать скидки, переносы и исключения, часть этой ручной работы уйдёт обратно Mary.","следующий шаг")
       ]})
+    ]})
+  ]})})
+}
+function menuPage({title:s,description:d}){
+  return e.jsx("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff"},children:e.jsxs("div",{style:{maxWidth:920,margin:"0 auto",padding:"56px 44px 88px"},children:[
+    e.jsx("h1",{style:{margin:0,fontSize:32,lineHeight:1.08,fontWeight:600,letterSpacing:"-0.04em",color:k.text},children:s}),
+    e.jsx("p",{style:{maxWidth:620,margin:"14px 0 0",fontSize:16,lineHeight:1.55,color:k.muted},children:d}),
+    e.jsxs("div",{style:{marginTop:32,padding:"24px",border:"1px solid rgba(38,38,51,0.07)",borderRadius:24,background:"rgba(38,38,51,0.018)"},children:[
+      e.jsx("div",{style:{fontSize:15,fontWeight:550,color:k.text},children:"Раздел готов к наполнению"}),
+      e.jsx("div",{style:{marginTop:8,maxWidth:560,fontSize:14,lineHeight:1.5,color:"rgba(38,38,51,0.48)"},children:"Навигация уже работает. Данные и рабочие сценарии добавим следующим шагом, не смешивая их с демонстрационными метриками."})
     ]})
   ]})})
 }

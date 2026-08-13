@@ -1,0 +1,27 @@
+e.jsx("style",{children:"@media (max-width:720px){.mary-app-shell{padding:0!important;gap:0!important}.mary-sidebar{display:none!important}.mary-content-shell{border:0!important;border-radius:0!important}.mary-mobile-nav-trigger{display:flex!important}}"}),
+e.jsx("button",{type:"button",className:"mary-mobile-nav-trigger","aria-label":"Открыть меню",onClick:()=>setMobileNavOpen(!0),style:{position:"fixed",left:14,bottom:"calc(14px + env(safe-area-inset-bottom))",zIndex:75,width:44,height:44,display:"none",alignItems:"center",justifyContent:"center",border:"1px solid rgba(38,38,51,0.1)",borderRadius:"50%",background:"#111116",color:"#fff",boxShadow:"0 8px 24px rgba(20,20,28,0.18)",fontSize:18,cursor:"pointer"},children:"☰"}),
+mobileNavOpen&&e.jsxs("div",{role:"dialog","aria-modal":!0,"aria-label":"Навигация Mary",style:{position:"fixed",inset:0,zIndex:100,display:"flex",flexDirection:"column",padding:"calc(18px + env(safe-area-inset-top)) 16px calc(18px + env(safe-area-inset-bottom))",background:"#F9F9F9"},children:[
+  e.jsxs("div",{style:{height:48,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 4px"},children:[
+    e.jsx(D1,{height:22}),
+    e.jsx("button",{type:"button","aria-label":"Закрыть меню",onClick:()=>setMobileNavOpen(!1),style:{width:40,height:40,border:"none",borderRadius:"50%",background:"rgba(38,38,51,0.055)",color:k.text,fontSize:22,cursor:"pointer"},children:"×"})
+  ]}),
+  e.jsx("nav",{style:{display:"grid",gap:4},children:[
+    ["home","Главная"],
+    ["chat","Чат"],
+    ["inbox","Входящие"],
+    ["automations","Процессы"],
+    ["crm:clients","Клиенты"],
+    ["tasks","Задачи"],
+    ["calendar","Календарь"],
+    ["analytics","Аналитика"],
+    ["kb","База знаний"],
+    ["crm:team","Команда"],
+    ["integrations","Интеграции"],
+    ["settings","Настройки"]
+  ].map(m=>e.jsx("button",{type:"button",onClick:()=>{le(m[0]);m[0]==="chat"&&D(null);setMobileNavOpen(!1)},style:{height:46,padding:"0 14px",border:"none",borderRadius:10,background:te===m[0]?"rgba(73,79,92,0.065)":"transparent",color:"#494F5C",fontFamily:"inherit",fontSize:16,fontWeight:te===m[0]?550:450,textAlign:"left",cursor:"pointer"},children:m[1]},m[0]))}),
+  e.jsx("div",{style:{flex:1}}),
+  e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,padding:"10px 12px"},children:[
+    e.jsx("span",{style:{width:38,height:38,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",background:"#F0F0F2",color:"#494F5C",fontSize:13,fontWeight:550},children:"ВА"}),
+    e.jsx("span",{style:{fontSize:16,color:"#494F5C"},children:"Аккаунт"})
+  ]})
+]}),

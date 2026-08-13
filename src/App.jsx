@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import "./intreatment.css";
 import "./figma-nav.css";
 
@@ -59,17 +59,14 @@ function Logo() { return <a className="logo" href="#top" aria-label="InTreatment
 function Button({ children, variant = "primary", className = "", ...props }) { return <button className={`button button--${variant} ${className}`} {...props}>{children}</button>; }
 function Header({ onHome, compact = false }) { return <header className="site-header"><Logo /><nav aria-label="Основная навигация">{!compact && <button className="text-link" onClick={onHome}>Как это работает</button>}<span className="login-copy">Уже есть аккаунт?</span><Button variant="quiet">Войти</Button></nav></header>; }
 function Avatar({ person, large = false }) { return <div className={`avatar ${large ? "avatar--large" : ""}`} aria-hidden="true">{person.photo ? <img src={person.photo} alt="" /> : person.initials}</div>; }
-function BadgeIcon({ type }) {
-  if (type === "fit") return <svg viewBox="0 0 14 14" aria-hidden="true"><path d="M7 1.25a4.75 4.75 0 1 0 4.75 4.75" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><path d="M7 3.15a2.85 2.85 0 1 0 2.85 2.85" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><path d="m7 7 3.55-3.55" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /><circle cx="10.55" cy="3.45" r=".9" fill="currentColor" /></svg>;
-  return <svg viewBox="0 0 14 14" aria-hidden="true"><path d="m7 1.4 1.55 3.15 3.48.5-2.52 2.46.6 3.46L7 9.35l-3.11 1.62.6-3.46L1.97 5.05l3.48-.5L7 1.4Z" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round" /></svg>;
-}
-function MetaBadge({ type, children }) { return <span><BadgeIcon type={type} />{children}</span>; }
 function CloseIcon() { return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>; }
 
 function FigmaAssistantBlock({ className = "", text, time = "10:45" }) { return <div className={`figma-assistant ${className}`.trim()}><div className="figma-assistant__head"><span><img src="/intreatment-figma/asset-6.svg" alt="" /></span><div><b>Ассистент</b><small>ИИ-помощник Intreatment</small></div></div><div className="journey-assistant-copy">{text}</div><time>{time}</time></div>; }
 function JourneyUserMessage({ className = "", text, time = "10:45" }) { return <div className={`journey-user-message ${className}`.trim()}><div className="journey-user-bubble">{text}</div><time>{time}</time></div>; }
-function JourneyRecommendationCard({ person, onOpen }) { return <article className="journey-recommendation-card"><div className="journey-recommendation-card__top"><div className="journey-recommendation-card__person"><Avatar person={person} /><div><h3>{person.name}</h3><p>{person.role}</p><div className="journey-recommendation-card__badges"><MetaBadge type="fit">{person.fit}</MetaBadge><MetaBadge type="experience">{person.experience}</MetaBadge></div></div></div><div className="journey-recommendation-card__meta"><span>{person.price.toLocaleString("ru-RU")} ₽ · 50 минут</span><span>{person.slots.length ? "Ближайшая запись: сегодня, 18:30" : "Нет ближайших слотов"}</span></div></div><p className="journey-recommendation-card__quote">«{person.quote}»</p><div className="journey-recommendation-card__actions"><button className="journey-recommendation-card__link" type="button" onClick={onOpen}>Подробнее о психологе</button><Button onClick={onOpen}>{person.slots.length ? "Выбрать время" : "Посмотреть профиль"}</Button></div></article>; }
+function JourneyRecommendationCard({ person, onOpen }) { return <article className="journey-recommendation-card"><div className="journey-recommendation-card__top"><div className="journey-recommendation-card__person"><Avatar person={person} /><div><h3>{person.name}</h3><p>{person.role}</p></div></div><div className="journey-recommendation-card__meta"><span>{person.price.toLocaleString("ru-RU")} ₽ · 50 минут</span><span>{person.slots.length ? "Ближайшая запись: сегодня, 18:30" : "Нет ближайших слотов"}</span></div></div><p className="journey-recommendation-card__quote">«{person.quote}»</p><div className="journey-recommendation-card__actions"><button className="journey-recommendation-card__link" type="button" onClick={onOpen}>Подробнее о психологе</button><Button onClick={onOpen}>{person.slots.length ? "Выбрать время" : "Посмотреть профиль"}</Button></div></article>; }
 function ProfileModal({ person, onClose, onChoose, onNext }) {
+  const modalRef = useRef(null);
+  const closeButtonRef = useRef(null);
   const days = [
     { dow: "пн", date: "3", label: "Пн, 3 августа" },
     { dow: "вт", date: "4", label: "Вт, 4 августа" },
@@ -77,14 +74,14 @@ function ProfileModal({ person, onClose, onChoose, onNext }) {
     { dow: "чт", date: "6", label: "Чт, 6 августа" },
     { dow: "пт", date: "7", label: "Пт, 7 августа" },
     { dow: "сб", date: "8", label: "Сб, 8 августа" },
-    { dow: "вс", date: "9", label: "Вс, 9 августа", muted: true },
-    { dow: "", date: "10", label: "Пн, 10 августа" },
-    { dow: "", date: "11", label: "Вт, 11 августа" },
-    { dow: "", date: "12", label: "Ср, 12 августа" },
-    { dow: "", date: "13", label: "Чт, 13 августа" },
-    { dow: "", date: "14", label: "Пт, 14 августа" },
-    { dow: "", date: "15", label: "Сб, 15 августа" },
-    { dow: "", date: "16", label: "Вс, 16 августа", muted: true },
+    { dow: "вс", date: "9", label: "Вс, 9 августа", muted: true, status: "Отпуск" },
+    { dow: "пн", date: "10", label: "Пн, 10 августа" },
+    { dow: "вт", date: "11", label: "Вт, 11 августа" },
+    { dow: "ср", date: "12", label: "Ср, 12 августа" },
+    { dow: "чт", date: "13", label: "Чт, 13 августа" },
+    { dow: "пт", date: "14", label: "Пт, 14 августа" },
+    { dow: "сб", date: "15", label: "Сб, 15 августа" },
+    { dow: "вс", date: "16", label: "Вс, 16 августа", muted: true, status: "Отпуск" },
   ];
   const slotsByDay = useMemo(() => {
     if (!person.slots.length) {
@@ -109,20 +106,64 @@ function ProfileModal({ person, onClose, onChoose, onNext }) {
     };
   }, [person.slots]);
   const initialDayIndex = Math.max(0, days.findIndex((day) => day.date === "7"));
+  const [weekIndex, setWeekIndex] = useState(0);
   const [selectedDayIndex, setSelectedDayIndex] = useState(initialDayIndex);
   const selectedDay = days[selectedDayIndex];
   const availableSlots = slotsByDay[selectedDay.date] || [];
   const [selectedSlot, setSelectedSlot] = useState(availableSlots[0] || "");
+  const visibleDays = days.slice(weekIndex * 7, weekIndex * 7 + 7);
+  const weekRange = weekIndex === 0 ? "3–9 августа" : "10–16 августа";
+
+  const moveWeek = (direction) => {
+    const nextWeek = Math.min(1, Math.max(0, weekIndex + direction));
+    if (nextWeek === weekIndex) return;
+    const nextStart = nextWeek * 7;
+    const nextDayOffset = days.slice(nextStart, nextStart + 7).findIndex((day) => !day.muted);
+    setWeekIndex(nextWeek);
+    setSelectedDayIndex(nextStart + Math.max(0, nextDayOffset));
+  };
+
+  const handleModalKeyDown = (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab" || !modalRef.current) return;
+    const focusable = [...modalRef.current.querySelectorAll("button:not([disabled]), [href], input:not([disabled])")];
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  useEffect(() => {
+    const previousFocus = document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus?.();
+    };
+  }, []);
+
   useEffect(() => {
     setSelectedSlot(availableSlots[0] || "");
   }, [selectedDayIndex, person.id]);
-  return <div className="profile-modal-overlay" role="dialog" aria-modal="true" aria-label={`Профиль психолога ${person.name}`}>
-    <div className="profile-modal">
-      <button className="profile-modal__close" type="button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
+  return <div className="profile-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div className="profile-modal" ref={modalRef} onKeyDown={handleModalKeyDown}>
+      <button ref={closeButtonRef} className="profile-modal__close" type="button" aria-label="Закрыть" onClick={onClose}><CloseIcon /></button>
       <div className="profile-modal__hero">
         <Avatar person={person} large />
         <div className="profile-modal__hero-copy">
-          <h2>{person.name}</h2>
+          <h2 id="profile-modal-title">{person.name}</h2>
           <p>{person.role} · {person.tags.join(" · ").toLowerCase()}</p>
           <div className="profile-modal__meta">
             <span>{person.price.toLocaleString("ru-RU")} ₽ · 50 минут</span>
@@ -143,16 +184,19 @@ function ProfileModal({ person, onClose, onChoose, onNext }) {
         <h3>Расписание</h3>
         <p>Ваше время: Минск, Беларусь</p>
         <div className="profile-modal__calendar-head">
-          <button type="button" aria-label="Предыдущая неделя">‹</button>
-          <strong>3–16 августа</strong>
-          <button type="button" aria-label="Следующая неделя">›</button>
+          <button type="button" aria-label="Предыдущая неделя" disabled={weekIndex === 0} onClick={() => moveWeek(-1)}>‹</button>
+          <strong aria-live="polite">{weekRange}</strong>
+          <button type="button" aria-label="Следующая неделя" disabled={weekIndex === 1} onClick={() => moveWeek(1)}>›</button>
         </div>
         <div className="profile-modal__calendar-grid">
-          {days.map((day, index) => <button key={`${day.dow}-${day.date}`} type="button" disabled={day.muted} aria-pressed={selectedDayIndex === index} className={`${selectedDayIndex === index ? "is-selected" : ""} ${day.muted ? "is-muted" : ""}`.trim()} onClick={() => !day.muted && setSelectedDayIndex(index)}><small>{day.dow}</small><span>{day.date}</span></button>)}
+          {visibleDays.map((day, visibleIndex) => {
+            const dayIndex = weekIndex * 7 + visibleIndex;
+            return <button key={`${day.dow}-${day.date}`} type="button" disabled={day.muted} aria-label={`${day.label}${day.status ? `, ${day.status}` : ""}`} aria-pressed={selectedDayIndex === dayIndex} className={`${selectedDayIndex === dayIndex ? "is-selected" : ""} ${day.muted ? "is-muted" : ""}`.trim()} onClick={() => !day.muted && setSelectedDayIndex(dayIndex)}><small>{day.dow}</small><span>{day.date}</span>{day.status ? <em>{day.status}</em> : null}</button>;
+          })}
         </div>
         <div className="profile-modal__slots">
-          <h4>Выберите время</h4>
-          <div>{availableSlots.length ? availableSlots.map((slot) => <button key={slot} type="button" className={selectedSlot === slot ? "is-selected" : ""} onClick={() => setSelectedSlot(slot)}>{slot}</button>) : <button type="button" className="is-selected">Нет слотов</button>}</div>
+          <h4>Выберите время <span>{selectedDay.label}</span></h4>
+          <div>{availableSlots.length ? availableSlots.map((slot) => <button key={slot} type="button" aria-pressed={selectedSlot === slot} className={selectedSlot === slot ? "is-selected" : ""} onClick={() => setSelectedSlot(slot)}>{slot}</button>) : <p className="profile-modal__empty-slots" role="status">На этот день нет свободного времени.</p>}</div>
         </div>
       </section>
       <div className="profile-modal__footer">
@@ -391,15 +435,168 @@ function CheckoutDetails({ booking, onBack, onNext }) {
 }
 
 function AuthChoice({ booking, onBack, onNext }) {
-  const [provider, setProvider] = useState("");
-  return <div className="copied-first-screen journey-page"><PlatformNav onStart={() => {}} /><main className="flow-page"><section className="payment"><button className="back-link" onClick={onBack}>← Назад</button><div className="eyebrow">Регистрация</div><h1>Войдите, чтобы открыть платформу</h1><p>Оплата уже подтверждена. Остался последний шаг: выбрать провайдера входа и перейти в личный кабинет.</p><div className="payment-panel"><div className="order"><Avatar person={booking.person} /><div><strong>{booking.person.name}</strong><span>{booking.day.label}, {booking.slot} · 50 минут</span></div><b>{booking.person.price.toLocaleString("ru-RU")} ₽</b></div><div className="providers"><button className={provider === "yandex" ? "selected" : ""} onClick={() => setProvider("yandex")}>Войти через Яндекс ID</button><button className={provider === "vk" ? "selected" : ""} onClick={() => setProvider("vk")}>Войти через VK ID</button></div><div className="payment-actions"><Button disabled={!provider} onClick={() => onNext(provider)}>Открыть платформу</Button><small>Это интерфейсный сценарий: вход реально не выполняется.</small></div></div></section></main></div>;
+  return (
+    <div className="copied-first-screen journey-page">
+      <PlatformNav onStart={() => {}} />
+      <main className="flow-page simple-flow-screen">
+        <section className="simple-auth" aria-labelledby="registration-title">
+          <button className="back-link" type="button" onClick={onBack}>← Назад</button>
+          <div className="simple-auth__status" aria-hidden="true">✓</div>
+          <h1 id="registration-title">Создайте аккаунт</h1>
+          <p>Оплата прошла. Зарегистрируйтесь, чтобы сохранить запись и получить ссылку на встречу.</p>
+
+          <div className="simple-auth__booking">
+            <Avatar person={booking.person} />
+            <div>
+              <strong>{booking.person.name}</strong>
+              <span>{booking.day.label}, {booking.slot} · онлайн, 50 минут</span>
+            </div>
+          </div>
+
+          <div className="simple-auth__providers" aria-label="Способ регистрации">
+            <button type="button" onClick={() => onNext("yandex")}>
+              <span>Продолжить с Яндекс ID</span>
+            </button>
+            <button type="button" onClick={() => onNext("vk")}>
+              <span>Продолжить с VK ID</span>
+            </button>
+          </div>
+
+          <small>Продолжая, вы соглашаетесь с условиями сервиса и политикой конфиденциальности.</small>
+        </section>
+      </main>
+    </div>
+  );
 }
 
 function Payment({ booking, onBack, onSuccess }) {
-  return <div className="copied-first-screen journey-page"><PlatformNav onStart={() => {}} /><main className="flow-page"><section className="payment"><button className="back-link" onClick={onBack}>← К оформлению</button><div className="eyebrow">Демо-оплата</div><h1>Подтвердите запись</h1><p>Ниже — демонстрационная точка оплаты. Кнопка завершает пользовательский путь без реального списания.</p><div className="payment-panel"><div className="order"><Avatar person={booking.person} /><div><strong>{booking.person.name}</strong><span>{booking.day.label}, {booking.slot} · 50 минут</span></div><b>{booking.person.price.toLocaleString("ru-RU")} ₽</b></div><div className="payment-summary"><div><span>Формат</span><strong>Онлайн-встреча</strong></div><div><span>Длительность</span><strong>50 минут</strong></div><div><span>Дата и время</span><strong>{booking.day.label}, {booking.slot}</strong></div><div><span>К оплате</span><strong>{booking.person.price.toLocaleString("ru-RU")} ₽</strong></div></div><div className="payment-actions"><Button onClick={onSuccess}>Оплатить {booking.person.price.toLocaleString("ru-RU")} ₽</Button><small>Деньги не списываются. Это только демонстрация checkout-сценария.</small></div></div></section></main></div>;
+  const [cardNumber, setCardNumber] = useState("");
+  const [expiry, setExpiry] = useState("");
+  const [cvc, setCvc] = useState("");
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState("");
+
+  const formatCardNumber = (value) => value.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})(?=\d)/g, "$1 ");
+  const formatExpiry = (value) => {
+    const digits = value.replace(/\D/g, "").slice(0, 4);
+    return digits.length > 2 ? `${digits.slice(0, 2)} / ${digits.slice(2)}` : digits;
+  };
+  const fillDemoPaymentData = () => {
+    if (cardNumber) return;
+    setCardNumber("4242 4242 4242 4242");
+    setExpiry("12 / 30");
+    setCvc("123");
+    setEmail("demo@intreatment.ru");
+    setError("");
+  };
+
+  const submitPayment = (event) => {
+    event.preventDefault();
+    const cardDigits = cardNumber.replace(/\D/g, "");
+    if (cardDigits.length !== 16 || expiry.replace(/\D/g, "").length !== 4 || cvc.length !== 3 || !email.includes("@")) {
+      setError("Проверьте данные карты и email.");
+      return;
+    }
+    setError("");
+    onSuccess();
+  };
+
+  return (
+    <div className="copied-first-screen journey-page">
+      <PlatformNav onStart={() => {}} />
+      <main className="flow-page simple-flow-screen">
+        <section className="simple-payment" aria-labelledby="payment-title">
+          <button className="back-link" type="button" onClick={onBack}>← Назад к выбору времени</button>
+          <div className="simple-payment__heading">
+            <div>
+              <h1 id="payment-title">Оплата</h1>
+              <p>Введите данные карты, чтобы подтвердить запись.</p>
+            </div>
+            <span>Шаг 1 из 2</span>
+          </div>
+
+          <div className="simple-payment__layout">
+            <form className="simple-payment__form" onSubmit={submitPayment} noValidate>
+              <h2>Данные карты</h2>
+              <label className="simple-field">
+                <span>Номер карты</span>
+                <input
+                  inputMode="numeric"
+                  autoComplete="cc-number"
+                  value={cardNumber}
+                  onFocus={fillDemoPaymentData}
+                  onChange={(event) => setCardNumber(formatCardNumber(event.target.value))}
+                  placeholder="0000 0000 0000 0000"
+                  aria-invalid={Boolean(error)}
+                />
+              </label>
+              <div className="simple-payment__field-row">
+                <label className="simple-field">
+                  <span>Срок действия</span>
+                  <input
+                    inputMode="numeric"
+                    autoComplete="cc-exp"
+                    value={expiry}
+                    onChange={(event) => setExpiry(formatExpiry(event.target.value))}
+                    placeholder="ММ / ГГ"
+                    aria-invalid={Boolean(error)}
+                  />
+                </label>
+                <label className="simple-field">
+                  <span>CVC</span>
+                  <input
+                    inputMode="numeric"
+                    autoComplete="cc-csc"
+                    value={cvc}
+                    onChange={(event) => setCvc(event.target.value.replace(/\D/g, "").slice(0, 3))}
+                    placeholder="000"
+                    aria-invalid={Boolean(error)}
+                  />
+                </label>
+              </div>
+              <label className="simple-field">
+                <span>Email для чека</span>
+                <input
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="name@example.com"
+                  aria-invalid={Boolean(error)}
+                />
+              </label>
+              {error ? <p className="simple-payment__error" role="alert">{error}</p> : null}
+              <Button type="submit">Оплатить {booking.person.price.toLocaleString("ru-RU")} ₽</Button>
+              <small>Это демонстрационный экран — деньги не списываются.</small>
+            </form>
+
+            <aside className="simple-payment__summary" aria-label="Ваша запись">
+              <h2>Ваша запись</h2>
+              <div className="simple-payment__person">
+                <Avatar person={booking.person} />
+                <div>
+                  <strong>{booking.person.name}</strong>
+                  <span>{booking.person.role}</span>
+                </div>
+              </div>
+              <dl>
+                <div><dt>Дата</dt><dd>{booking.day.label}</dd></div>
+                <div><dt>Время</dt><dd>{booking.slot}</dd></div>
+                <div><dt>Формат</dt><dd>Онлайн · 50 минут</dd></div>
+              </dl>
+              <div className="simple-payment__total">
+                <span>Итого</span>
+                <strong>{booking.person.price.toLocaleString("ru-RU")} ₽</strong>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+  );
 }
 function PlatformHome({ booking, onRestart }) {
   return <div className="copied-first-screen journey-page"><PlatformNav onStart={() => {}} /><main className="flow-page"><section className="platform-home platform-dashboard"><aside className="platform-dashboard__sidebar"><div className="platform-dashboard__brand"><span className="platform-dashboard__brand-mark">●</span><strong>InTreatment</strong></div><div className="platform-dashboard__group"><span>Основное</span><button className="is-active" type="button">Ближайшая встреча</button><button type="button">История встреч</button><button type="button">Повторный подбор</button></div><div className="platform-dashboard__group"><span>Сервис</span><button type="button">Оплаты и документы</button><button type="button">Сообщения</button><button type="button">Поддержка</button></div><div className="platform-dashboard__profile"><Avatar person={booking.person} /><div><strong>{booking.person.name}</strong><span>Клиент платформы</span></div></div></aside><div className="platform-dashboard__main"><div className="platform-home__head"><h1>Встреча запланирована</h1><p>Ваш кабинет уже создан. Здесь будет ближайшая запись, история встреч, оплаты и повторный подбор специалиста.</p></div><div className="platform-dashboard__hero"><div className="platform-dashboard__hero-top"><span className="platform-dashboard__pill">Ближайшая запись</span><span className="platform-dashboard__pill">Онлайн · 50 минут</span></div><div className="platform-dashboard__session-card"><div className="order"><Avatar person={booking.person} /><div><strong>{booking.person.name}</strong><span>{booking.day.label}, {booking.slot} · 50 минут</span></div><b>{booking.person.price.toLocaleString("ru-RU")} ₽</b></div><p>Перед встречей пришлём ссылку на видеозвонок и напоминание. Если планы изменятся, запись можно будет перенести или отменить внутри платформы.</p><div className="platform-dashboard__hero-actions"><Button>Открыть детали записи</Button><Button variant="quiet" onClick={onRestart}>Выбрать другого психолога</Button></div></div></div><div className="platform-shell"><div className="platform-card"><h2>Что дальше</h2><ul className="platform-list"><li>За 15 минут до начала пришлём ссылку на видеовстречу.</li><li>После первой встречи здесь появится история следующих записей.</li><li>Все подтверждения и чеки будут доступны в разделе оплат.</li></ul></div><div className="platform-card"><h2>Быстрые действия</h2><div className="platform-actions"><button type="button">Перенести встречу</button><button type="button">Скачать чек</button><button type="button">Написать в поддержку</button></div></div><div className="platform-card"><h2>Структура платформы</h2><ul className="platform-list"><li>Ближайшая запись</li><li>История встреч</li><li>Оплаты и документы</li><li>Повторный подбор специалиста</li></ul></div></div></div></section></main></div>;
 }
 
-export default function App() { const [screen, setScreen] = useState("landing"); const [selected, setSelected] = useState(null); const [booking, setBooking] = useState(null); const [authProvider, setAuthProvider] = useState(""); const home = () => { setScreen("landing"); setSelected(null); setBooking(null); setAuthProvider(""); }; if (screen === "results") return <Recommendations onProfile={p => { setSelected(p); setScreen("profile"); }} onRestart={() => setScreen("landing")} />; if (screen === "profile") return <Profile person={selected} onBook={p => { setSelected(p); setScreen("booking"); }} onBack={() => setScreen("results")} />; if (screen === "booking") return <Booking person={selected} onBack={() => setScreen("profile")} onConfirm={b => { setBooking(b); setScreen("checkout"); }} />; if (screen === "checkout") return <CheckoutDetails booking={booking} onBack={() => setScreen("booking")} onNext={() => setScreen("payment")} />; if (screen === "payment") return <Payment booking={booking} onBack={() => setScreen("checkout")} onSuccess={() => setScreen("auth")} />; if (screen === "auth") return <AuthChoice booking={booking} onBack={() => setScreen("payment")} onNext={(provider) => { setAuthProvider(provider); setScreen("platform"); }} />; if (screen === "platform") return <PlatformHome booking={booking} onRestart={() => setScreen("landing")} />; return <Landing onBook={(b) => { setSelected(b.person); setBooking(b); setScreen("checkout"); }} />; }
+export default function App() { const [screen, setScreen] = useState("landing"); const [selected, setSelected] = useState(null); const [booking, setBooking] = useState(null); const [authProvider, setAuthProvider] = useState(""); const home = () => { setScreen("landing"); setSelected(null); setBooking(null); setAuthProvider(""); }; if (screen === "results") return <Recommendations onProfile={p => { setSelected(p); setScreen("profile"); }} onRestart={() => setScreen("landing")} />; if (screen === "profile") return <Profile person={selected} onBook={p => { setSelected(p); setScreen("booking"); }} onBack={() => setScreen("results")} />; if (screen === "booking") return <Booking person={selected} onBack={() => setScreen("profile")} onConfirm={b => { setBooking(b); setScreen("payment"); }} />; if (screen === "payment") return <Payment booking={booking} onBack={() => setScreen("booking")} onSuccess={() => setScreen("auth")} />; if (screen === "auth") return <AuthChoice booking={booking} onBack={() => setScreen("payment")} onNext={(provider) => { setAuthProvider(provider); setScreen("platform"); }} />; if (screen === "platform") return <PlatformHome booking={booking} onRestart={() => setScreen("landing")} />; return <Landing onBook={(b) => { setSelected(b.person); setBooking(b); setScreen("payment"); }} />; }

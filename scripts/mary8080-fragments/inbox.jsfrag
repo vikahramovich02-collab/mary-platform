@@ -1,0 +1,281 @@
+function hm({items:s,onResolve:d}){
+  const conversations=[
+    {id:"conversation-daniela",clientId:"client-daniela",name:"Даниела",handle:"@dorofeeva_daniela",channel:"telegram",preview:"Хочу перенести запись\nна пятницу",time:"2 мин",status:"Ведёт Mary",group:"mary",service:"Окрашивание",booking:"четверг, 17:00",agent:"Агент записи"},
+    {id:"conversation-oksana",clientId:"client-oksana",name:"Оксана Дранеевич",handle:"@oksana_draneevich",channel:"instagram",preview:"Подскажите, есть ли\nсвободное время?",time:"5 мин",status:"Новое",group:"new",service:"Маникюр",booking:"запись не выбрана",agent:"Агент записи"},
+    {id:"conversation-marina",clientId:"client-marina",name:"Марина",handle:"+375 29 555-40-18",channel:"whatsapp",preview:"Спасибо, всё получилось",time:"12 мин",status:"Можно закрыть",group:"working",service:"Стрижка",booking:"сегодня, 14:30",agent:"Агент поддержки"},
+    {id:"conversation-guest",clientId:null,name:"Гость ь6866",handle:"неизвестный клиент",channel:"chat",preview:"Не прошла оплата",time:"18 мин",status:"Нужен сотрудник",group:"human",service:"Оплата",booking:"нет записи",agent:"Агент поддержки"},
+    {id:"conversation-katerina",clientId:"client-katerina",name:"Катерина Ковальчук",handle:"@kovalchuk_k",channel:"instagram",preview:"Можно изменить адрес?",time:"27 мин",status:"Ведёт Mary",group:"mary",service:"Доставка",booking:"заказ №64018",agent:"Агент заказов"}
+  ],
+  [filter,setFilter]=g.useState("all"),
+  [query,setQuery]=g.useState(""),
+  [activeId,setActiveId]=g.useState(conversations[0].id),
+  [sent,setSent]=g.useState(!1),
+  [transferred,setTransferred]=g.useState(!1),
+  [composer,setComposer]=g.useState(""),
+  [messages,setMessages]=g.useState([]),
+  [contextOpen,setContextOpen]=g.useState(!0),
+  [maryOpen,setMaryOpen]=g.useState(!1),
+  [mobileThread,setMobileThread]=g.useState(!1),
+  active=conversations.find(m=>m.id===activeId)||conversations[0],
+  visible=conversations.filter(m=>filter==="all"||m.group===filter).filter(m=>{const h=query.trim().toLowerCase();return!h||`${m.name} ${m.handle} ${m.preview}`.toLowerCase().includes(h)}),
+  icon=m=>m==="telegram"?"/icons/integrations/telegram.svg":m==="instagram"?"/icons/integrations/instagram.svg":m==="whatsapp"?"/icons/integrations/whatsapp.svg":"/icons/figma-menu/chat.svg",
+  tone=m=>({
+    "Ведёт Mary":{bg:"#EAF8F0",text:"#3E9B70"},
+    "Новое":{bg:"#F2EAFB",text:"#9B63C8"},
+    "Можно закрыть":{bg:"#EAF4FE",text:"#4396D0"},
+    "Нужен сотрудник":{bg:"#FFF2E6",text:"#E78A34"}
+  }[m]||{bg:"#F2F2F4",text:"#6E6D76"}),
+  choose=m=>{setActiveId(m.id);setSent(!1);setTransferred(!1);setMobileThread(!0)},
+  sendMessage=()=>{const m=composer.trim();if(!m)return;setMessages(h=>[...h,{id:`local-${Date.now()}`,text:m}]);setComposer("")};
+  return e.jsxs("div",{className:`mary-inbox${mobileThread?" mobile-thread":""}`,children:[
+    e.jsx("style",{children:`
+      .mary-inbox{--ink:#252530;--muted:#9999a3;--line:rgba(37,37,48,.09);flex:1;min-width:0;height:100%;overflow:auto;background:#fff;color:var(--ink)}
+      .mary-inbox *{box-sizing:border-box}
+      .mary-inbox button,.mary-inbox input,.mary-inbox textarea{font:inherit}
+      .mary-inbox button:focus-visible,.mary-inbox input:focus-visible,.mary-inbox textarea:focus-visible{outline:2px solid #4f62ff;outline-offset:2px}
+      .mary-inbox-page{max-width:1420px;margin:0 auto;padding:38px 40px 34px}
+      .mary-inbox-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px}
+      .mary-inbox-title{font-size:31px;line-height:1.08;font-weight:600;letter-spacing:-.035em}
+      .mary-inbox-sub{margin-top:9px;font-size:14px;line-height:1.45;color:var(--muted)}
+      .mary-inbox-actions{display:flex;align-items:center;gap:14px}
+      .mary-icon-btn{width:46px;height:46px;display:grid;place-items:center;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+      .mary-icon-btn img{width:18px;height:18px;display:block}
+      .mary-primary{height:46px;padding:0 24px;border:0;border-radius:999px;background:#191922;color:#fff;cursor:pointer;font-weight:550}
+      .mary-inbox-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:650px;margin-top:24px;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+      .mary-inbox-stat{display:flex;align-items:center;gap:16px;min-height:82px;padding:14px 22px}
+      .mary-inbox-stat+ .mary-inbox-stat{border-left:1px solid var(--line)}
+      .mary-inbox-stat-icon{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--line);border-radius:11px;background:#fff}
+      .mary-inbox-stat-icon img{width:18px;height:18px}
+      .mary-inbox-stat-value{font-size:23px;line-height:1;font-weight:580}
+      .mary-inbox-stat-label{margin-top:5px;font-size:12.5px;color:var(--muted)}
+      .mary-inbox-tools{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-top:24px}
+      .mary-inbox-tabs{display:flex;align-items:center;padding:3px;border-radius:14px;background:#f5f5f6}
+      .mary-inbox-tab{height:38px;padding:0 17px;border:0;border-radius:11px;background:transparent;color:#585861;cursor:pointer;white-space:nowrap}
+      .mary-inbox-tab[aria-selected="true"]{background:#1d1d26;color:#fff}
+      .mary-tab-count{display:inline-grid;place-items:center;min-width:23px;height:21px;margin-left:8px;padding:0 6px;border-radius:999px;background:rgba(37,37,48,.06);font-size:11px}
+      .mary-inbox-tab[aria-selected="true"] .mary-tab-count{background:rgba(255,255,255,.15)}
+      .mary-inbox-search{width:min(320px,100%);height:48px;display:flex;align-items:center;gap:12px;padding:0 17px;border:1px solid var(--line);border-radius:15px;background:#fff}
+      .mary-inbox-search img{width:18px;height:18px;opacity:.7}
+      .mary-inbox-search input{width:100%;border:0;outline:0;background:transparent;color:var(--ink)}
+      .mary-inbox-search input::placeholder{color:#aaaab2}
+      .mary-inbox-workspace{display:grid;grid-template-columns:300px minmax(420px,1fr) 340px;min-height:660px;margin-top:18px;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff}
+      .mary-queue{min-width:0;border-right:1px solid var(--line);background:#fff}
+      .mary-queue-list{list-style:none;margin:0;padding:0}
+      .mary-queue-row{width:100%;min-height:124px;display:flex;gap:13px;padding:18px 16px;border:0;border-bottom:1px solid var(--line);background:#fff;text-align:left;cursor:pointer}
+      .mary-queue-row:hover{background:#fafafa}
+      .mary-queue-row[aria-current="true"]{background:#f6f6f7}
+      .mary-channel-icon{width:34px;height:34px;flex:0 0 auto;display:block}
+      .mary-queue-copy{min-width:0;flex:1}
+      .mary-queue-top{display:flex;justify-content:space-between;gap:8px}
+      .mary-queue-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:620}
+      .mary-queue-time{font-size:11px;color:var(--muted);white-space:nowrap}
+      .mary-queue-preview{margin-top:5px;white-space:pre-line;font-size:12.5px;line-height:1.45;color:#8d8d96}
+      .mary-status{display:inline-flex;align-items:center;min-height:25px;margin-top:11px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:550}
+      .mary-queue-footer{padding:15px;text-align:center;color:var(--muted);font-size:11.5px}
+      .mary-show-more{height:34px;margin-top:10px;padding:0 16px;border:1px solid var(--line);border-radius:10px;background:#fff;color:#55555f;cursor:pointer}
+      .mary-thread{min-width:0;display:flex;flex-direction:column;background:#fff}
+      .mary-thread-head{min-height:70px;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 17px;border-bottom:1px solid var(--line)}
+      .mary-thread-person{display:flex;align-items:center;gap:12px;min-width:0}
+      .mary-thread-person strong{display:block;font-size:14px}
+      .mary-thread-handle{margin-top:3px;font-size:11.5px;color:var(--muted)}
+      .mary-thread-actions{display:flex;align-items:center;gap:8px}
+      .mary-outline{height:38px;padding:0 14px;border:1px solid var(--line);border-radius:12px;background:#fff;color:#45454f;cursor:pointer}
+      .mary-thread-body{flex:1;min-height:0;overflow:auto;padding:24px 20px 16px;background:#fff}
+      .mary-message{width:max-content;max-width:76%;margin-bottom:16px;padding:10px 14px;border-radius:13px;background:#f3f3f5;font-size:12.5px;line-height:1.42}
+      .mary-message.client{margin-left:auto;background:#f0f0f2}
+      .mary-message.system{margin-left:auto;margin-right:auto;background:#f4f3ff;color:#5d5b70}
+      .mary-message-time{display:inline-block;margin-left:10px;color:#aaaab2;font-size:10px;white-space:nowrap}
+      .mary-agent-message{display:flex;align-items:flex-start;gap:12px;margin:12px 0}
+      .mary-agent-logo{width:28px;height:28px;object-fit:contain}
+      .mary-agent-message .mary-message{margin:0}
+      .mary-confirm-card{max-width:330px;margin:14px 0 16px 42px;padding:16px;border:1px solid var(--line);border-radius:14px;background:#fff}
+      .mary-confirm-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+      .mary-draft-pill{padding:3px 8px;border-radius:999px;background:#f2f2f4;color:#7c7b85;font-size:10px;font-weight:500}
+      .mary-confirm-row{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12.5px}
+      .mary-confirm-row img{width:17px;height:17px;opacity:.75}
+      .mary-confirm-button{width:100%;height:40px;margin-top:14px;border:0;border-radius:10px;background:#1c1c25;color:#fff;cursor:pointer}
+      .mary-confirm-note{display:flex;align-items:center;gap:7px;margin-top:11px;font-size:10.5px;color:#aaaab2}
+      .mary-confirm-note img{width:14px;height:14px;opacity:.6}
+      .mary-thread-composer{display:flex;align-items:flex-end;gap:10px;padding:13px;border-top:1px solid var(--line)}
+      .mary-composer-plus{width:40px;height:40px;flex:0 0 auto;display:grid;place-items:center;border:1px solid var(--line);border-radius:12px;background:#fff;cursor:pointer}
+      .mary-composer-plus img{width:19px;height:19px;opacity:.7}
+      .mary-composer-field{min-width:0;flex:1;display:flex;align-items:flex-end;gap:8px;padding:9px 10px 9px 14px;border:1px solid var(--line);border-radius:13px;background:#fff}
+      .mary-composer-field textarea{min-width:0;flex:1;height:24px;max-height:80px;resize:none;border:0;outline:0;color:var(--ink)}
+      .mary-composer-field textarea::placeholder{color:#aaaab2}
+      .mary-composer-field img{width:18px;height:18px;opacity:.65}
+      .mary-send{width:42px;height:42px;flex:0 0 auto;display:grid;place-items:center;border:0;border-radius:12px;background:#1b1b24;cursor:pointer}
+      .mary-send img{width:18px;height:18px;filter:brightness(0) invert(1)}
+      .mary-context{min-width:0;border-left:1px solid var(--line);background:#fff}
+      .mary-context-head{display:flex;align-items:center;justify-content:space-between;padding:18px 18px 16px;border-bottom:1px solid var(--line);font-size:14px;font-weight:600}
+      .mary-context-toggle{width:28px;height:28px;border:0;background:transparent;cursor:pointer;color:#777781}
+      .mary-context-body{padding:4px 18px 20px}
+      .mary-context-section{padding:18px 0;border-bottom:1px solid var(--line)}
+      .mary-context-section:last-child{border-bottom:0}
+      .mary-context-grid{display:grid;grid-template-columns:104px 1fr;gap:20px 10px;font-size:12px}
+      .mary-context-label{color:var(--muted)}
+      .mary-context-value{font-weight:520}
+      .mary-context-channel{display:flex;align-items:center;gap:8px}
+      .mary-context-channel img{width:19px;height:19px}
+      .mary-context-heading{font-size:13px;font-weight:600}
+      .mary-used{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:15px;font-size:12px}
+      .mary-used-main{display:flex;align-items:center;gap:10px}
+      .mary-used-main img{width:22px;height:22px;object-fit:contain}
+      .mary-mary-rec{display:flex;align-items:flex-start;gap:10px}
+      .mary-mary-rec img{width:19px;height:19px;object-fit:contain}
+      .mary-mary-rec p{margin:11px 0 0;font-size:12px;line-height:1.55}
+      .mary-empty{padding:40px 22px;color:var(--muted);font-size:13px;text-align:center}
+      .mary-mobile-back{display:none}
+      .mary-dialog-backdrop{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:20px;background:rgba(22,22,28,.28)}
+      .mary-dialog{width:min(500px,100%);padding:24px;border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 20px 70px rgba(20,20,28,.18)}
+      .mary-dialog-top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+      .mary-dialog h2{margin:0;font-size:22px}
+      .mary-dialog p{margin:10px 0 18px;color:var(--muted);font-size:13px;line-height:1.5}
+      .mary-dialog textarea{width:100%;min-height:120px;padding:14px;border:1px solid var(--line);border-radius:14px;resize:vertical}
+      .mary-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
+      @media(max-width:1180px){
+        .mary-inbox-page{padding:30px 24px}
+        .mary-inbox-workspace{grid-template-columns:280px minmax(400px,1fr)}
+        .mary-context{display:none}
+      }
+      @media(max-width:820px){
+        .mary-inbox-page{padding:22px 16px}
+        .mary-inbox-head{align-items:center}
+        .mary-inbox-sub,.mary-inbox-actions .mary-icon-btn{display:none}
+        .mary-inbox-title{font-size:27px}
+        .mary-primary{height:40px;padding:0 17px;font-size:13px}
+        .mary-inbox-stats{max-width:none}
+        .mary-inbox-stat{min-height:70px;padding:10px}
+        .mary-inbox-stat-icon{display:none}
+        .mary-inbox-tools{align-items:stretch;flex-direction:column}
+        .mary-inbox-tabs{overflow:auto}
+        .mary-inbox-search{width:100%}
+        .mary-inbox-workspace{grid-template-columns:1fr;min-height:620px}
+        .mary-queue{display:block;border-right:0}
+        .mary-thread{display:none}
+        .mary-inbox.mobile-thread .mary-queue{display:none}
+        .mary-inbox.mobile-thread .mary-thread{display:flex}
+        .mary-mobile-back{display:grid}
+        .mary-thread-head{padding-left:10px}
+      }
+      @media(max-width:520px){
+        .mary-inbox-page{padding:18px 10px}
+        .mary-inbox-actions{gap:8px}
+        .mary-primary{padding:0 14px}
+        .mary-inbox-stats{grid-template-columns:repeat(3,1fr)}
+        .mary-inbox-stat{display:block;text-align:center}
+        .mary-inbox-stat-value{font-size:20px}
+        .mary-inbox-stat-label{font-size:10.5px}
+        .mary-inbox-tab{padding:0 13px}
+        .mary-inbox-workspace{margin-top:14px}
+        .mary-confirm-card{margin-left:0}
+        .mary-message{max-width:88%}
+      }
+      @media(prefers-reduced-motion:reduce){.mary-inbox *{scroll-behavior:auto!important;transition:none!important}}
+    `}),
+    e.jsxs("div",{className:"mary-inbox-page",children:[
+      e.jsxs("div",{className:"mary-inbox-head",children:[
+        e.jsxs("div",{children:[
+          e.jsx("div",{className:"mary-inbox-title",children:"Входящие"}),
+          e.jsx("div",{className:"mary-inbox-sub",children:"Обращения из всех каналов. Mary отвечает сама и передаёт сотруднику только важные случаи."})
+        ]}),
+        e.jsxs("div",{className:"mary-inbox-actions",children:[
+          e.jsx("button",{type:"button",className:"mary-icon-btn","aria-label":"Обновить обращения",children:e.jsx("img",{src:"/icons/knowledge/refresh.svg",alt:""})}),
+          e.jsx("button",{type:"button",className:"mary-primary",onClick:()=>setMaryOpen(!0),children:"Настроить с Mary"})
+        ]})
+      ]}),
+      e.jsxs("div",{className:"mary-inbox-stats","aria-label":"Сводка обращений",children:[
+        e.jsxs("div",{className:"mary-inbox-stat",children:[e.jsx("div",{className:"mary-inbox-stat-icon",children:e.jsx("img",{src:"/icons/figma-menu/chat.svg",alt:""})}),e.jsxs("div",{children:[e.jsx("div",{className:"mary-inbox-stat-value",children:"12"}),e.jsx("div",{className:"mary-inbox-stat-label",children:"новых"})]})]}),
+        e.jsxs("div",{className:"mary-inbox-stat",children:[e.jsx("div",{className:"mary-inbox-stat-icon",children:e.jsx("img",{src:"/brand_logo.png",alt:""})}),e.jsxs("div",{children:[e.jsx("div",{className:"mary-inbox-stat-value",children:"8"}),e.jsx("div",{className:"mary-inbox-stat-label",children:"ведёт Mary"})]})]}),
+        e.jsxs("div",{className:"mary-inbox-stat",children:[e.jsx("div",{className:"mary-inbox-stat-icon",children:e.jsx("img",{src:"/icons/knowledge/users.svg",alt:""})}),e.jsxs("div",{children:[e.jsx("div",{className:"mary-inbox-stat-value",children:"4"}),e.jsx("div",{className:"mary-inbox-stat-label",children:"нужен сотрудник"})]})]})
+      ]}),
+      e.jsxs("div",{className:"mary-inbox-tools",children:[
+        e.jsx("div",{className:"mary-inbox-tabs",role:"tablist","aria-label":"Фильтр обращений",children:[
+          ["all","Все",null],["new","Новые","12"],["mary","В работе","18"],["human","Нужен сотрудник","4"]
+        ].map(m=>e.jsxs("button",{type:"button",role:"tab","aria-selected":filter===m[0],className:"mary-inbox-tab",onClick:()=>setFilter(m[0]),children:[m[1],m[2]&&e.jsx("span",{className:"mary-tab-count",children:m[2]})]},m[0]))}),
+        e.jsxs("label",{className:"mary-inbox-search",children:[e.jsx("img",{src:"/icons/knowledge/search.svg",alt:""}),e.jsx("input",{value:query,onChange:m=>setQuery(m.target.value),placeholder:"Искать обращение","aria-label":"Искать обращение"})]})
+      ]}),
+      e.jsxs("div",{className:`mary-inbox-workspace`,children:[
+        e.jsxs("nav",{className:"mary-queue","aria-label":"Очередь обращений",children:[
+          visible.length?e.jsx("ul",{className:"mary-queue-list",children:visible.map(m=>{const h=tone(m.status);return e.jsx("li",{children:e.jsxs("button",{type:"button",className:"mary-queue-row","aria-current":activeId===m.id?"true":void 0,onClick:()=>choose(m),children:[
+            e.jsx("img",{className:"mary-channel-icon",src:icon(m.channel),alt:m.channel==="telegram"?"Telegram":m.channel==="instagram"?"Instagram":m.channel==="whatsapp"?"WhatsApp":"Чат"}),
+            e.jsxs("span",{className:"mary-queue-copy",children:[
+              e.jsxs("span",{className:"mary-queue-top",children:[e.jsx("span",{className:"mary-queue-name",children:m.name}),e.jsx("span",{className:"mary-queue-time",children:m.time})]}),
+              e.jsx("span",{className:"mary-queue-preview",children:m.preview}),
+              e.jsx("span",{className:"mary-status",style:{background:h.bg,color:h.text},children:m.status})
+            ]})
+          ]})},m.id)})}):e.jsx("div",{className:"mary-empty",children:"По этому фильтру обращений нет"}),
+          e.jsxs("div",{className:"mary-queue-footer",children:[e.jsx("div",{children:`Показано ${visible.length} из 36`}),e.jsx("button",{type:"button",className:"mary-show-more",children:"Показать ещё"})]})
+        ]}),
+        e.jsxs("section",{className:"mary-thread","aria-label":`Переписка с ${active.name}`,children:[
+          e.jsxs("header",{className:"mary-thread-head",children:[
+            e.jsxs("div",{className:"mary-thread-person",children:[
+              e.jsx("button",{type:"button",className:"mary-icon-btn mary-mobile-back","aria-label":"Назад к обращениям",onClick:()=>setMobileThread(!1),children:e.jsx("img",{src:"/icons/knowledge/back.svg",alt:""})}),
+              e.jsx("img",{className:"mary-channel-icon",src:icon(active.channel),alt:""}),
+              e.jsxs("div",{children:[e.jsx("strong",{children:active.name}),e.jsx("div",{className:"mary-thread-handle",children:active.handle})]}),
+              e.jsx("span",{className:"mary-status",style:{marginTop:0,background:"#EAF8F0",color:"#3E9B70"},children:transferred?"Передано сотруднику":"Mary ведёт диалог"})
+            ]}),
+            e.jsxs("div",{className:"mary-thread-actions",children:[
+              e.jsx("button",{type:"button",className:"mary-outline",onClick:()=>setTransferred(!0),children:transferred?"Передано":"Передать сотруднику"}),
+              e.jsx("button",{type:"button",className:"mary-icon-btn","aria-label":"Другие действия",children:e.jsx("img",{src:"/icons/knowledge/more.svg",alt:""})})
+            ]})
+          ]}),
+          e.jsxs("div",{className:"mary-thread-body","aria-live":"polite",children:[
+            e.jsxs("div",{className:"mary-message",children:["Здравствуйте! Хочу перенести окрашивание с четверга на пятницу после 16:00",e.jsx("span",{className:"mary-message-time",children:"11:08"})]}),
+            e.jsxs("div",{className:"mary-message system",children:["Mary нашла запись в YCLIENTS и проверяет расписание Анны",e.jsx("span",{className:"mary-message-time",children:"11:09"})]}),
+            e.jsxs("div",{className:"mary-agent-message",children:[e.jsx("img",{className:"mary-agent-logo",src:"/brand_logo.png",alt:"Mary"}),e.jsxs("div",{className:"mary-message",children:["На пятницу у Анны свободно в 16:30 и 18:00. Какое время вам удобнее?",e.jsx("span",{className:"mary-message-time",children:"11:10"})]})]}),
+            e.jsxs("div",{className:"mary-message client",children:["Давайте в 18:00",e.jsx("span",{className:"mary-message-time",children:"11:10"})]}),
+            !sent&&e.jsxs("div",{className:"mary-agent-message",children:[
+              e.jsx("img",{className:"mary-agent-logo",src:"/brand_logo.png",alt:"Mary"}),
+              e.jsxs("div",{className:"mary-confirm-card",children:[
+                e.jsxs("div",{className:"mary-confirm-title",children:["Изменение готово",e.jsx("span",{className:"mary-draft-pill",children:"Черновик"})]}),
+                e.jsxs("div",{className:"mary-confirm-row",children:[e.jsx("img",{src:"/icons/knowledge/users.svg",alt:""}),e.jsx("span",{children:"Окрашивание · Анна"})]}),
+                e.jsxs("div",{className:"mary-confirm-row",children:[e.jsx("img",{src:"/icons/icon_main-7.png",alt:""}),e.jsx("span",{children:"Пятница, 18:00"})]}),
+                e.jsxs("div",{className:"mary-confirm-row",children:[e.jsx("img",{src:"https://www.yclients.com/favicon.ico",alt:"YCLIENTS"}),e.jsx("span",{children:"YCLIENTS"})]}),
+                e.jsx("button",{type:"button",className:"mary-confirm-button",onClick:()=>setSent(!0),children:"Подтвердить перенос"}),
+                e.jsxs("div",{className:"mary-confirm-note",children:[e.jsx("img",{src:"/icons/knowledge/info.svg",alt:""}),e.jsx("span",{children:"Изменение ещё не применено"})]})
+              ]})
+            ]}),
+            sent&&e.jsxs("div",{className:"mary-agent-message",children:[e.jsx("img",{className:"mary-agent-logo",src:"/brand_logo.png",alt:"Mary"}),e.jsxs("div",{className:"mary-message",children:["Запись перенесена на пятницу, 18:00. Клиенту отправлено подтверждение.",e.jsx("span",{className:"mary-message-time",children:"сейчас"})]})]}),
+            messages.map(m=>e.jsx("div",{className:"mary-message client",children:m.text},m.id))
+          ]}),
+          e.jsxs("div",{className:"mary-thread-composer",children:[
+            e.jsx("button",{type:"button",className:"mary-composer-plus","aria-label":"Добавить",children:e.jsx("img",{src:"https://unpkg.com/@tabler/icons@3.34.1/icons/outline/plus.svg",alt:""})}),
+            e.jsxs("div",{className:"mary-composer-field",children:[
+              e.jsx("textarea",{value:composer,onChange:m=>setComposer(m.target.value),onKeyDown:m=>{if((m.metaKey||m.ctrlKey)&&m.key==="Enter"){m.preventDefault();sendMessage()}},placeholder:"Ответить клиенту или попросить Mary…","aria-label":"Сообщение"}),
+              e.jsx("img",{src:"/icons/knowledge/paperclip.svg",alt:"Прикрепить"}),
+              e.jsx("img",{src:"/icons/knowledge/mic.svg",alt:"Голос"})
+            ]}),
+            e.jsx("button",{type:"button",className:"mary-send","aria-label":"Отправить",onClick:sendMessage,children:e.jsx("img",{src:"/icons/knowledge/arrow-up.svg",alt:""})})
+          ]})
+        ]}),
+        e.jsxs("aside",{className:"mary-context","aria-label":"Контекст обращения",children:[
+          e.jsxs("div",{className:"mary-context-head",children:[e.jsx("span",{children:"Контекст обращения"}),e.jsx("button",{type:"button",className:"mary-context-toggle","aria-label":contextOpen?"Свернуть контекст":"Развернуть контекст","aria-expanded":contextOpen,onClick:()=>setContextOpen(!contextOpen),children:e.jsx("img",{src:"/icons/knowledge/back.svg",alt:"",style:{width:15,height:15,transform:contextOpen?"rotate(90deg)":"rotate(-90deg)"}})})]}),
+          contextOpen&&e.jsxs("div",{className:"mary-context-body",children:[
+            e.jsx("div",{className:"mary-context-section",children:e.jsxs("div",{className:"mary-context-grid",children:[
+              e.jsx("div",{className:"mary-context-label",children:"Клиент"}),e.jsx("div",{className:"mary-context-value",children:active.name}),
+              e.jsx("div",{className:"mary-context-label",children:"Канал"}),e.jsxs("div",{className:"mary-context-channel",children:[e.jsx("img",{src:icon(active.channel),alt:""}),e.jsx("span",{children:active.channel==="telegram"?"Telegram":active.channel==="instagram"?"Instagram":active.channel==="whatsapp"?"WhatsApp":"Чат"})]}),
+              e.jsx("div",{className:"mary-context-label",children:"Запись"}),e.jsx("div",{className:"mary-context-value",children:`${active.service} · ${active.booking}`}),
+              e.jsx("div",{className:"mary-context-label",children:"Ответственный"}),e.jsxs("div",{className:"mary-context-value",children:[active.agent,e.jsx("img",{src:"/brand_logo.png",alt:"Mary",style:{width:18,height:18,marginLeft:8,verticalAlign:"middle"}})]}),
+              e.jsx("div",{className:"mary-context-label",children:"Статус"}),e.jsx("div",{children:e.jsx("span",{className:"mary-status",style:{marginTop:0,background:"#FFF2E6",color:"#E78A34"},children:sent?"Перенос подтверждён":"Ожидает подтверждения"})})
+            ]})}),
+            e.jsxs("div",{className:"mary-context-section",children:[
+              e.jsx("div",{className:"mary-context-heading",children:"Использовано"}),
+              e.jsxs("div",{className:"mary-used",children:[e.jsxs("div",{className:"mary-used-main",children:[e.jsx("img",{src:"https://www.yclients.com/favicon.ico",alt:"YCLIENTS"}),e.jsx("span",{children:"YCLIENTS"})]}),e.jsx("img",{src:"/icons/knowledge/back.svg",alt:"",style:{width:14,height:14,transform:"rotate(180deg)"}})]}),
+              e.jsxs("div",{className:"mary-used",children:[e.jsxs("div",{className:"mary-used-main",children:[e.jsx("img",{src:"/icons/knowledge/web.svg",alt:""}),e.jsx("span",{children:"Правила записи и отмены"})]}),e.jsx("img",{src:"/icons/knowledge/back.svg",alt:"",style:{width:14,height:14,transform:"rotate(180deg)"}})]})
+            ]}),
+            e.jsx("div",{className:"mary-context-section",children:e.jsxs("div",{className:"mary-mary-rec",children:[
+              e.jsx("img",{src:"/brand_logo.png",alt:"Mary"}),
+              e.jsxs("div",{children:[e.jsx("div",{className:"mary-context-heading",children:"Рекомендация Mary"}),e.jsx("p",{children:sent?"Запись обновлена, клиент получил новые детали.":"После подтверждения обновлю запись и отправлю клиенту детали."})]})
+            ]})})
+          ]})
+        ]})
+      ]})
+    ]}),
+    maryOpen&&e.jsx("div",{className:"mary-dialog-backdrop",onMouseDown:m=>{m.target===m.currentTarget&&setMaryOpen(!1)},children:e.jsxs("div",{className:"mary-dialog",role:"dialog","aria-modal":"true","aria-labelledby":"mary-inbox-dialog-title",children:[
+      e.jsxs("div",{className:"mary-dialog-top",children:[e.jsx("h2",{id:"mary-inbox-dialog-title",children:"Настроить входящие с Mary"}),e.jsx("button",{type:"button",className:"mary-icon-btn","aria-label":"Закрыть",onClick:()=>setMaryOpen(!1),children:e.jsx("img",{src:"/icons/knowledge/close.svg",alt:""})})]}),
+      e.jsx("p",{children:"Опишите, какие обращения Mary может вести сама и в каких случаях нужно сразу подключать сотрудника."}),
+      e.jsx("textarea",{placeholder:"Например: перенос записи подтверждай у администратора…","aria-label":"Правило для Mary"}),
+      e.jsxs("div",{className:"mary-dialog-actions",children:[e.jsx("button",{type:"button",className:"mary-outline",onClick:()=>setMaryOpen(!1),children:"Отмена"}),e.jsx("button",{type:"button",className:"mary-primary",onClick:()=>setMaryOpen(!1),children:"Продолжить с Mary"})]})
+    ]})})
+  ]})
+}

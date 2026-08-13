@@ -150,39 +150,18 @@ body,
   font-size: 14px;
   line-height: 16.8px;
 }
-.journey-recommendation-card__badges {
-  display: flex;
-  gap: 10px;
-  margin-top: 21px;
-}
-.journey-recommendation-card__badges span,
 .journey-recommendation-card__meta span {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: #f6f6f5;
-  color: #000;
-  font-size: 13px;
-  line-height: 13px;
-  white-space: nowrap;
-}
-.journey-recommendation-card__badges span {
   min-height: 26px;
   padding: 5px 10px;
   border: 1px solid rgba(18,16,16,.2);
   border-radius: 6px;
   background: #fff;
-  color: rgba(37,36,35,.4);
+  color: rgba(37,36,35,.56);
   font-size: 12px;
-  line-height: 12px;
-  gap: 6px;
-}
-.journey-recommendation-card__badges span svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
+  line-height: 14px;
+  white-space: nowrap;
 }
 .journey-recommendation-card__meta {
   display: flex;
@@ -191,6 +170,7 @@ body,
   align-content: flex-start;
   justify-content: flex-end;
 }
+
 .journey-recommendation-card__quote {
   max-width: 361px;
   margin: 40px 0 0;
@@ -1848,4 +1828,808 @@ body,
   .copied-nav__logo:hover .copied-nav__logo-icon img,
   .copied-nav__logo:focus-visible .copied-nav__logo-icon img { animation: none; }
   .copied-nav__logo > span:last-child::after { transition: none; }
+}
+
+/* Compact payment and registration flow */
+.simple-flow-screen {
+  min-height: 100vh;
+  padding: 124px 24px 64px;
+  background: #fff;
+  color: #252423;
+}
+
+.simple-payment {
+  width: min(984px, 100%);
+  margin: 0 auto;
+}
+
+.simple-payment .back-link,
+.simple-auth .back-link {
+  margin-bottom: 32px;
+}
+
+.simple-payment__heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+
+.simple-payment__heading h1,
+.simple-auth h1 {
+  margin: 0;
+  color: #252423;
+  font-size: 40px;
+  line-height: 1.05;
+  font-weight: 400;
+  letter-spacing: -.025em;
+}
+
+.simple-payment__heading p,
+.simple-auth > p {
+  margin: 10px 0 0;
+  color: rgba(37,36,35,.62);
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.simple-payment__heading > span {
+  flex: 0 0 auto;
+  color: rgba(37,36,35,.48);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.simple-payment__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+.simple-payment__form,
+.simple-payment__summary,
+.simple-auth {
+  border: 1px solid rgba(37,36,35,.12);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.simple-payment__form,
+.simple-payment__summary {
+  padding: 24px;
+}
+
+.simple-payment__form h2,
+.simple-payment__summary h2 {
+  margin: 0 0 22px;
+  color: #252423;
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.simple-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.simple-field > span {
+  color: rgba(37,36,35,.76);
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.simple-field input {
+  width: 100%;
+  height: 52px;
+  padding: 0 16px;
+  border: 1px solid rgba(37,36,35,.2);
+  border-radius: 10px;
+  outline: none;
+  background: #fff;
+  color: #252423;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.simple-field input::placeholder {
+  color: rgba(37,36,35,.34);
+}
+
+.simple-field input:hover {
+  border-color: rgba(37,36,35,.36);
+}
+
+.simple-field input:focus-visible {
+  border-color: #252423;
+  box-shadow: 0 0 0 3px rgba(37,36,35,.1);
+}
+
+.simple-field input[aria-invalid="true"] {
+  border-color: #9b3f35;
+}
+
+.simple-payment__field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.copied-first-screen.journey-page .simple-payment__form .button.button--primary {
+  appearance: none;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 4px;
+  padding: 0 20px;
+  border: 1px solid #181616;
+  border-radius: 10px;
+  background: #181616;
+  box-shadow: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  transform: none;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.copied-first-screen.journey-page .simple-payment__form .button.button--primary:hover {
+  border-color: #000;
+  background: #000;
+  box-shadow: none;
+  color: #fff;
+  transform: none;
+}
+
+.copied-first-screen.journey-page .simple-payment__form .button.button--primary:focus-visible {
+  border-color: #181616;
+  background: #181616;
+  box-shadow: 0 0 0 3px rgba(24,22,22,.16);
+  color: #fff;
+  outline: none;
+  transform: none;
+}
+
+.copied-first-screen.journey-page .simple-payment__form .button.button--primary:active {
+  border-color: #000;
+  background: #000;
+  box-shadow: none;
+  color: #fff;
+  transform: none;
+}
+
+.simple-payment__form > small,
+.simple-auth > small {
+  display: block;
+  margin-top: 12px;
+  color: rgba(37,36,35,.48);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.simple-payment__error {
+  margin: -4px 0 14px;
+  color: #8b332d;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.simple-payment__person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(37,36,35,.09);
+}
+
+.simple-payment__person .avatar,
+.simple-auth__booking .avatar {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+}
+
+.simple-payment__person > div,
+.simple-auth__booking > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.simple-payment__person strong,
+.simple-auth__booking strong {
+  color: #252423;
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 500;
+}
+
+.simple-payment__person span,
+.simple-auth__booking span {
+  color: rgba(37,36,35,.56);
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.simple-payment__summary dl {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.simple-payment__summary dl > div,
+.simple-payment__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.simple-payment__summary dt,
+.simple-payment__summary dd,
+.simple-payment__total span {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+.simple-payment__summary dt {
+  color: rgba(37,36,35,.5);
+}
+
+.simple-payment__summary dd {
+  color: rgba(37,36,35,.78);
+  text-align: right;
+}
+
+.simple-payment__total {
+  padding-top: 18px;
+  border-top: 1px solid rgba(37,36,35,.09);
+}
+
+.simple-payment__total span {
+  color: rgba(37,36,35,.68);
+}
+
+.simple-payment__total strong {
+  color: #252423;
+  font-size: 22px;
+  line-height: 1.1;
+  font-weight: 500;
+}
+
+.simple-auth {
+  width: min(520px, 100%);
+  margin: 0 auto;
+  padding: 28px;
+}
+
+.simple-auth__status {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 20px;
+  border-radius: 50%;
+  background: #252423;
+  color: #fff;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.simple-auth__booking {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid rgba(37,36,35,.1);
+  border-radius: 12px;
+}
+
+.simple-auth__providers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.simple-auth__providers button {
+  width: 100%;
+  min-height: 52px;
+  padding: 0 18px;
+  border: 1px solid rgba(37,36,35,.2);
+  border-radius: 10px;
+  outline: none;
+  background: #fff;
+  color: #252423;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  transition: background 140ms ease, border-color 140ms ease, transform 100ms ease;
+}
+
+.simple-auth__providers button:hover {
+  border-color: rgba(37,36,35,.4);
+  background: #f7f7f6;
+}
+
+.simple-auth__providers button:focus-visible {
+  border-color: #252423;
+  box-shadow: 0 0 0 3px rgba(37,36,35,.1);
+}
+
+.simple-auth__providers button:active {
+  transform: scale(.995);
+}
+
+@media (max-width: 760px) {
+  .simple-flow-screen {
+    padding: 100px 16px 40px;
+  }
+
+  .simple-payment .back-link,
+  .simple-auth .back-link {
+    margin-bottom: 24px;
+  }
+
+  .simple-payment__heading {
+    align-items: flex-start;
+  }
+
+  .simple-payment__heading h1,
+  .simple-auth h1 {
+    font-size: 34px;
+  }
+
+  .simple-payment__layout {
+    grid-template-columns: 1fr;
+  }
+
+  .simple-payment__summary {
+    grid-row: 1;
+  }
+
+  .simple-payment__form,
+  .simple-payment__summary,
+  .simple-auth {
+    padding: 20px;
+    border-radius: 14px;
+  }
+}
+
+@media (max-width: 420px) {
+  .simple-payment__heading > span {
+    display: none;
+  }
+
+  .simple-payment__field-row {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simple-field input,
+  .simple-auth__providers button {
+    transition: none;
+  }
+}
+
+/* Chat controls and compact specialist profile */
+.journey-page .journey-answers {
+  padding: 10px 0 12px;
+  background: #fff;
+}
+
+.journey-page .journey-answers::before {
+  position: absolute;
+  top: -16px;
+  bottom: -154px;
+  left: 50%;
+  width: 100vw;
+  height: auto;
+  transform: translateX(-50%);
+  background: #fff;
+}
+
+.journey-page .journey-answers button {
+  border-color: transparent;
+  background: #f3f3f1;
+  color: rgba(37,36,35,.78);
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.journey-page .journey-answers button:hover {
+  background: #e9e9e6;
+  color: #252423;
+}
+
+.journey-page .journey-answers button:focus-visible {
+  border-color: rgba(37,36,35,.48);
+  background: #f0f0ed;
+  color: #252423;
+  outline: 2px solid transparent;
+  box-shadow: 0 0 0 3px rgba(37,36,35,.1);
+}
+
+.journey-page .journey-answers button:active {
+  background: #dfdfdb;
+}
+
+.journey-page .journey-input {
+  border-color: rgba(37,36,35,.22);
+  background: #fff;
+}
+
+.profile-modal-overlay {
+  padding: 32px;
+  background: rgba(18,16,16,.2);
+}
+
+.profile-modal {
+  width: min(880px, calc(100vw - 64px));
+  max-height: calc(100vh - 64px);
+  padding: 28px 30px 20px;
+  border-radius: 18px;
+  box-shadow: 0 18px 48px rgba(18,16,16,.12);
+  overscroll-behavior: contain;
+}
+
+.profile-modal__close {
+  top: 14px;
+  right: 14px;
+  width: 40px;
+  height: 40px;
+}
+
+.profile-modal__close svg {
+  width: 20px;
+  height: 20px;
+}
+
+.profile-modal__hero {
+  grid-template-columns: 112px 1fr;
+  gap: 20px;
+  padding-right: 48px;
+}
+
+.profile-modal__hero .avatar {
+  width: 112px;
+  height: 112px;
+}
+
+.profile-modal__hero-copy h2 {
+  margin: 4px 0 7px;
+  font-size: 30px;
+}
+
+.profile-modal__hero-copy > p {
+  font-size: 15px;
+}
+
+.profile-modal__meta {
+  margin-top: 16px;
+}
+
+.profile-modal__section {
+  margin-top: 24px;
+}
+
+.profile-modal__section h3 {
+  margin-bottom: 12px;
+  font-size: 20px;
+}
+
+.profile-modal__section p {
+  max-width: 720px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.profile-modal__tags {
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.profile-modal__tags span {
+  min-height: 36px;
+  padding: 0 13px;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.profile-modal__section--schedule {
+  margin-top: 24px;
+  padding-top: 22px;
+}
+
+.profile-modal__calendar-head {
+  grid-template-columns: 36px 1fr 36px;
+  margin-top: 18px;
+}
+
+.profile-modal__calendar-head button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(37,36,35,.12);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 26px;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.profile-modal__calendar-head button:hover:not(:disabled) {
+  border-color: rgba(37,36,35,.28);
+  background: #f6f6f5;
+}
+
+.profile-modal__calendar-head button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37,36,35,.1);
+}
+
+.profile-modal__calendar-head button:disabled {
+  color: rgba(37,36,35,.22);
+  cursor: default;
+}
+
+.profile-modal__calendar-head strong {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.profile-modal__calendar-grid {
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.profile-modal__calendar-grid button {
+  position: relative;
+  min-height: 58px;
+  gap: 5px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.profile-modal__calendar-grid button:hover:not(:disabled):not(.is-selected) {
+  border-color: rgba(37,36,35,.12);
+  background: #f6f6f5;
+}
+
+.profile-modal__calendar-grid button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37,36,35,.1);
+}
+
+.profile-modal__calendar-grid button em {
+  color: rgba(37,36,35,.36);
+  font-size: 9px;
+  font-style: normal;
+  line-height: 1;
+}
+
+.profile-modal__calendar-grid button.is-muted {
+  text-decoration: none;
+  cursor: not-allowed;
+}
+
+.profile-modal__slots {
+  margin-top: 20px;
+}
+
+.profile-modal__slots h4 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+
+.profile-modal__slots h4 span {
+  color: rgba(37,36,35,.48);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.profile-modal__slots > div {
+  gap: 8px;
+}
+
+.profile-modal__slots button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.profile-modal__slots button:hover:not(.is-selected) {
+  border-color: rgba(37,36,35,.16);
+}
+
+.profile-modal__slots button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37,36,35,.1);
+}
+
+.profile-modal__empty-slots {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f6f6f5;
+  color: rgba(37,36,35,.58) !important;
+  font-size: 14px !important;
+}
+
+.profile-modal__footer {
+  position: sticky;
+  z-index: 2;
+  bottom: -20px;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 16px 0 20px;
+}
+
+.profile-modal__footer .button {
+  appearance: none;
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1px solid #181616;
+  border-radius: 10px;
+  background: #181616;
+  box-shadow: none;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.profile-modal__footer .button:hover:not(:disabled) {
+  border-color: #000;
+  background: #000;
+}
+
+.profile-modal__footer .button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(24,22,22,.14);
+}
+
+.profile-modal__footer .button[disabled] {
+  border-color: transparent;
+  background: #efefef;
+  color: rgba(37,36,35,.35);
+  cursor: not-allowed;
+}
+
+.profile-modal__footer .button.button--quiet {
+  border-color: rgba(18,16,16,.14);
+  background: #fff;
+  color: #252423;
+}
+
+.profile-modal__footer .button.button--quiet:hover {
+  border-color: rgba(18,16,16,.3);
+  background: #f6f6f5;
+}
+
+@media (max-width: 900px) {
+  .profile-modal-overlay {
+    padding: 12px;
+  }
+
+  .profile-modal {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    padding: 22px 18px 16px;
+    border-radius: 18px 18px 12px 12px;
+  }
+
+  .profile-modal__hero {
+    grid-template-columns: 84px 1fr;
+    gap: 14px;
+    padding-right: 28px;
+  }
+
+  .profile-modal__hero .avatar {
+    width: 84px;
+    height: 84px;
+  }
+
+  .profile-modal__hero-copy h2 {
+    font-size: 24px;
+  }
+
+  .profile-modal__meta {
+    margin-top: 12px;
+  }
+
+  .profile-modal__calendar-grid {
+    gap: 4px;
+  }
+
+  .profile-modal__calendar-grid button {
+    min-height: 54px;
+  }
+
+  .profile-modal__footer {
+    bottom: -16px;
+    flex-direction: row;
+    padding-bottom: 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .journey-page .journey-answers,
+  .journey-page .figma-input,
+  .journey-page .figma-safety {
+    width: calc(100vw - 32px);
+  }
+
+  .profile-modal__hero {
+    grid-template-columns: 64px 1fr;
+  }
+
+  .profile-modal__hero .avatar {
+    width: 64px;
+    height: 64px;
+  }
+
+  .profile-modal__hero-copy h2 {
+    padding-right: 20px;
+    font-size: 21px;
+  }
+
+  .profile-modal__meta span {
+    min-height: 34px;
+    font-size: 12px;
+  }
+
+  .profile-modal__calendar-grid button {
+    min-height: 48px;
+  }
+
+  .profile-modal__calendar-grid button small {
+    font-size: 10px;
+  }
+
+  .profile-modal__calendar-grid button span {
+    font-size: 14px;
+  }
+
+  .profile-modal__calendar-grid button em {
+    display: none;
+  }
+
+  .profile-modal__footer {
+    flex-direction: column;
+  }
+
+  .profile-modal__footer .button {
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-page .journey-answers button,
+  .profile-modal__calendar-head button,
+  .profile-modal__calendar-grid button,
+  .profile-modal__slots button {
+    transition: none;
+  }
 }

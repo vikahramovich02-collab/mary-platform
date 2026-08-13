@@ -1,33 +1,52 @@
 function dm({depts:s,onConnect:d}){
-  const[c,o]=g.useState(""),[u,f]=g.useState("all");
+  const[c,o]=g.useState(""),[u,f]=g.useState("all"),[selected,setSelected]=g.useState(null),[step,setStep]=g.useState(1),[disconnecting,setDisconnecting]=g.useState(null),[provider,setProvider]=g.useState("YCLIENTS");
+  const BrandIcon=({src:m,bg:h})=>e.jsx("span",{style:{width:30,height:30,display:"inline-flex",alignItems:"center",justifyContent:"center",borderRadius:9,background:h,boxShadow:"inset 0 1px rgba(255,255,255,0.28), 0 1px 2px rgba(20,20,28,0.1)"},children:e.jsx("img",{src:m,alt:"",width:18,height:18,style:{display:"block",filter:"brightness(0) invert(1)"}})});
+  const icons={
+    instagram:e.jsx(BrandIcon,{src:"/icons/integrations/instagram.svg",bg:"linear-gradient(145deg,#7C3AED 0%,#E1306C 52%,#FCAF45 100%)"}),
+    telegram:e.jsx(BrandIcon,{src:"/icons/integrations/telegram.svg",bg:"linear-gradient(145deg,#51BDF1 0%,#188BC9 100%)"}),
+    whatsapp:e.jsx(BrandIcon,{src:"/icons/integrations/whatsapp.svg",bg:"linear-gradient(145deg,#45E277 0%,#1FA855 100%)"}),
+    calendar:e.jsx(BrandIcon,{src:"/icons/integrations/google-calendar.svg",bg:"linear-gradient(145deg,#5B8CFF 0%,#3367D6 100%)"}),
+    sheets:e.jsx(BrandIcon,{src:"/icons/integrations/google-sheets.svg",bg:"linear-gradient(145deg,#45B96B 0%,#188B45 100%)"}),
+    crm:e.jsx("span",{style:{width:30,height:30,display:"inline-flex",alignItems:"center",justifyContent:"center",borderRadius:9,background:"linear-gradient(145deg,#F0F1F4 0%,#D8DBE2 100%)",color:"#545A68",boxShadow:"inset 0 1px rgba(255,255,255,0.55), 0 1px 2px rgba(20,20,28,0.08)"},children:e.jsx(fe,{d:e.jsxs(e.Fragment,{children:[e.jsx("ellipse",{cx:"12",cy:"6",rx:"7",ry:"3"}),e.jsx("path",{d:"M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"}),e.jsx("path",{d:"M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"})]}),size:18,stroke:1.6})})
+  };
   const base=[
-    {id:"instagram",name:"Instagram",desc:"Сообщения в Direct и новые обращения",dept:s[0]?s[0].name:null,group:"Подключено",connected:s.some(m=>m.channel==="Instagram")},
-    {id:"telegram",name:"Telegram",desc:"Сообщения, каналы и входящие заявки",dept:s[0]?s[0].name:null,group:"Подключено",connected:s.some(m=>m.channel==="Telegram")},
-    {id:"whatsapp",name:"WhatsApp",desc:"Диалоги и быстрые повторные записи",dept:s[0]?s[0].name:null,group:"Можно подключить",connected:s.some(m=>m.channel==="WhatsApp")},
-    {id:"calendar",name:"Google Calendar",desc:"Свободные окна и занятость мастеров",dept:s[0]?s[0].name:null,group:"Можно подключить",connected:!1},
-    {id:"sheets",name:"Google Sheets",desc:"Таблицы, статусы и журнал записей",dept:s[0]?s[0].name:null,group:"Подключено",connected:!0},
-    {id:"crm",name:"Ваша CRM / таблица",desc:"Клиенты, статусы и история обращений",dept:s[0]?s[0].name:null,group:"Можно подключить",connected:!1}
+    {id:"instagram",name:"Instagram",desc:"Сообщения в Direct и новые обращения",dept:s[0]?s[0].name:null,connected:s.some(m=>m.channel==="Instagram"),auth:"Вход через Meta Business",account:"@mary_beauty · Meta Business",data:["Сообщения и вложения из Direct","Имя, username и контекст диалога"],actions:["Отвечать в Direct после разрешения","Создавать обращения и связывать клиента"],permissions:["Читать входящие сообщения","Отправлять ответы","Читать данные бизнес-профиля"],uses:["Обращения","Запись клиентов","Поддержка клиентов"],result:"Новые сообщения появятся в Обращениях, а Mary сможет вести диалог по правилам компании."},
+    {id:"telegram",name:"Telegram",desc:"Сообщения, каналы и входящие заявки",dept:s[0]?s[0].name:null,connected:s.some(m=>m.channel==="Telegram"),auth:"Подключение бота через BotFather",account:"@mary_salon_bot",data:["Сообщения, файлы и username","Источник обращения и история диалога"],actions:["Отвечать от имени бота","Передавать сложные случаи сотруднику"],permissions:["Получать сообщения бота","Отправлять сообщения","Получать файлы из диалога"],uses:["Обращения","Поддержка клиентов"],result:"Mary проверит бота тестовым сообщением и только потом начнёт принимать реальные обращения."},
+    {id:"whatsapp",name:"WhatsApp",desc:"Диалоги и быстрые повторные записи",dept:s[0]?s[0].name:null,connected:s.some(m=>m.channel==="WhatsApp"),auth:"Вход через Meta Business и подтверждение номера",account:"+375 29 000-00-00",data:["Сообщения и номер клиента","Статус доставки и ответа"],actions:["Отправлять согласованные ответы","Напоминать о записи по активному диалогу"],permissions:["Читать входящие сообщения","Отправлять сообщения","Использовать выбранные шаблоны"],uses:["Обращения","Напоминание о визите"],result:"До первого сообщения Mary покажет шаблоны и правила окна переписки WhatsApp."},
+    {id:"calendar",name:"Google Calendar",desc:"Свободные окна и занятость мастеров",dept:s[0]?s[0].name:null,connected:!1,auth:"Вход через Google",account:"calendar@mary-beauty.by",data:["Занятость выбранных календарей","Название, время и участники записи"],actions:["Проверять свободные окна","Создавать и переносить события после подтверждения"],permissions:["Просматривать выбранные календари","Создавать и изменять события","Не читать личные календари"],uses:["Запись клиентов","Напоминание о визите"],result:"Вы выберете рабочие календари и отдельно зададите, где Mary может только читать, а где — создавать записи."},
+    {id:"sheets",name:"Google Sheets",desc:"Таблицы, статусы и журнал записей",dept:s[0]?s[0].name:null,connected:!0,auth:"Вход через Google",account:"Записи салона · Лист «Визиты»",data:["Строки выбранного листа","Колонки клиента, статуса и времени"],actions:["Добавлять новые строки","Обновлять только разрешённые колонки"],permissions:["Доступ только к выбранному файлу","Чтение сопоставленных колонок","Изменение статуса и времени"],uses:["Запись клиентов","Контроль оплаты"],result:"Перед запуском Mary покажет сопоставление колонок и тестовую строку без изменения рабочей таблицы."},
+    {id:"crm",name:"YCLIENTS / CRM",desc:"Клиенты, записи и история без полного переноса базы",dept:s[0]?s[0].name:null,connected:!1,auth:"Авторизация в выбранной CRM",account:"Салон Mary · филиал на Немиге",data:["Карточка клиента по запросу","Записи, услуги и статусы визита"],actions:["Находить клиента по телефону","Создавать или менять запись после подтверждения"],permissions:["Читать клиентов и записи","Создавать записи","Не выгружать всю базу в Mary"],uses:["Обращения","Запись клиентов","Карточка клиента"],result:"База остаётся в CRM. Mary хранит внешний ID и только оперативный контекст, нужный для текущего обращения."}
   ];
   const[state,setState]=g.useState(()=>Object.fromEntries(base.map(m=>[m.id,m.connected])));
   const q=c.trim().toLowerCase();
-  const items=base.map(m=>({...m,connected:state[m.id]??m.connected})).filter(m=>(u==="all"?!0:u==="connected"?m.connected:!m.connected)&&(!q||m.name.toLowerCase().includes(q)||m.desc.toLowerCase().includes(q)));
+  const items=base.map(m=>({...m,connected:state[m.id]??m.connected})).filter(m=>(u==="all"?!0:u==="connected"?m.connected:!m.connected)&&(!q||`${m.name} ${m.desc}`.toLowerCase().includes(q)));
   const connectedCount=Object.values(state).filter(Boolean).length;
   const tabs=[
     {id:"all",label:"Все"},
-    {id:"connected",label:"Подключённые "+connectedCount},
+    {id:"connected",label:"Подключённые",count:connectedCount},
     {id:"available",label:"Можно подключить"}
   ];
   const groups=u==="all"?["Подключено","Можно подключить"]:u==="connected"?["Подключено"]:["Можно подключить"];
+  const openIntegration=m=>{setSelected(m);setStep(m.connected?4:1)};
+  const completeConnection=()=>{if(!selected)return;setState(m=>({...m,[selected.id]:!0}));setSelected(m=>({...m,connected:!0}));setStep(4)};
+  const confirmDisconnect=()=>{if(!disconnecting)return;setState(m=>({...m,[disconnecting.id]:!1}));selected&&selected.id===disconnecting.id&&setSelected(m=>({...m,connected:!1}));setDisconnecting(null);setStep(1)};
+  const SectionTitle=({children:m})=>e.jsx("div",{style:{fontSize:12.5,fontWeight:550,color:"rgba(38,38,51,0.45)",marginBottom:10},children:m});
+  const BulletList=({items:m})=>e.jsx("div",{style:{display:"grid",gap:9},children:m.map(h=>e.jsxs("div",{style:{display:"flex",alignItems:"flex-start",gap:9,fontSize:13.5,lineHeight:1.45,color:k.text},children:[
+    e.jsx("span",{style:{width:18,height:18,marginTop:1,display:"inline-flex",alignItems:"center",justifyContent:"center",borderRadius:"50%",background:"rgba(38,38,51,0.055)",color:"rgba(38,38,51,0.58)",fontSize:11,flexShrink:0},children:"✓"}),h
+  ]},h))});
   return e.jsx("div",{style:{flex:1,minWidth:0,overflow:"auto",background:"#fff"},children:e.jsxs("div",{style:{maxWidth:1080,margin:"0 auto",padding:"56px 28px 88px"},children:[
     e.jsxs("div",{style:{marginBottom:26},children:[
-      e.jsx("div",{style:{fontSize:24,lineHeight:1.08,fontWeight:600,color:k.text,letterSpacing:"-0.04em"},children:"Интеграции"}),
+      e.jsx("div",{style:{fontSize:24,lineHeight:1.08,fontWeight:600,color:k.text,letterSpacing:"-0.04em"},children:"Подключения"}),
       e.jsx("div",{style:{marginTop:10,maxWidth:700,fontSize:15,lineHeight:1.5,color:k.muted},children:"Подключи каналы и сервисы, чтобы Mary не просто отвечала в чате, а реально доводила процесс до результата."})
     ]}),
-    e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:18,marginBottom:34,flexWrap:"wrap"},children:[
-      e.jsx("div",{style:{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"},children:tabs.map(m=>e.jsx("button",{onClick:()=>f(m.id),style:{display:"inline-flex",alignItems:"center",justifyContent:"center",height:54,padding:"0 28px",border:"none",borderRadius:999,background:u===m.id?"rgba(38,38,51,0.045)":"transparent",boxShadow:"none",color:u===m.id?k.text:"rgba(38,38,51,0.42)",fontSize:18,fontWeight:u===m.id?550:500,fontFamily:"inherit",cursor:"pointer",transition:"all 160ms ease"},children:m.label},m.id))}),
+    e.jsxs("div",{style:{display:"flex",alignItems:"center",justifyContent:"space-between",gap:18,marginBottom:22,flexWrap:"wrap"},children:[
+      e.jsx("div",{style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"},children:tabs.map(m=>e.jsxs("button",{type:"button",onClick:()=>f(m.id),style:{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:10,height:36,padding:"0 14px",border:u===m.id?"1px solid transparent":"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:u===m.id?"rgba(38,38,51,0.075)":"#fff",boxShadow:"none",color:u===m.id?k.text:"rgba(38,38,51,0.62)",fontSize:13.5,fontWeight:u===m.id?550:500,fontFamily:"inherit",whiteSpace:"nowrap",cursor:"pointer",transition:"background-color 160ms ease,color 160ms ease"},children:[
+        m.label,
+        m.count!=null&&e.jsx("span",{style:{fontSize:12.5,color:u===m.id?k.text:"rgba(38,38,51,0.42)"},children:m.count})
+      ]},m.id))}),
       e.jsxs("label",{style:{width:"min(100%, 320px)",display:"flex",alignItems:"center",gap:10,padding:"0 14px",height:42,borderRadius:15,border:"1px solid rgba(38,38,51,0.10)",background:"#fff",color:"rgba(38,38,51,0.42)"},children:[
         e.jsxs("svg",{width:16,height:16,viewBox:"0 0 24 24",fill:"none",stroke:"currentColor",strokeWidth:1.8,strokeLinecap:"round",strokeLinejoin:"round",children:[e.jsx("circle",{cx:"11",cy:"11",r:"7"}),e.jsx("path",{d:"m20 20-3.5-3.5"})]}),
-        e.jsx("input",{value:c,onChange:m=>o(m.target.value),placeholder:"Искать интеграции",style:{flex:1,border:"none",outline:"none",background:"transparent",color:k.text,fontSize:15,fontFamily:"inherit"}})
+        e.jsx("input",{value:c,onChange:m=>o(m.target.value),"aria-label":"Поиск подключений",placeholder:"Искать подключения",style:{flex:1,minWidth:0,border:"none",outline:"none",background:"transparent",color:k.text,fontSize:15,fontFamily:"inherit"}})
       ]})
     ]}),
     items.length===0?e.jsx("div",{style:{padding:"30px 8px",color:"rgba(38,38,51,0.5)",fontSize:15},children:"Ничего не найдено. Попробуй другой запрос или переключи фильтр."}):groups.map(group=>{
@@ -35,15 +54,71 @@ function dm({depts:s,onConnect:d}){
       if(!rows.length)return null;
       return e.jsxs("section",{style:{marginBottom:28},children:[
         e.jsx("div",{style:{fontSize:15.5,fontWeight:500,color:k.text,marginBottom:10,paddingBottom:14,borderBottom:"1px solid rgba(38,38,51,0.08)"},children:group}),
-        e.jsx("div",{style:{display:"flex",flexDirection:"column"},children:rows.map((m,idx)=>e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:18,padding:"18px 0",borderBottom:idx===rows.length-1?"none":"1px solid rgba(38,38,51,0.07)"},children:[
-          e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:52,height:52,borderRadius:16,flexShrink:0,background:"#fff",border:"1px solid rgba(38,38,51,0.08)",color:k.text},children:wc}),
-          e.jsxs("div",{style:{minWidth:0,flex:1},children:[
-            e.jsx("div",{style:{fontSize:18,lineHeight:1.2,fontWeight:500,color:k.text},children:m.name}),
-            e.jsx("div",{style:{marginTop:5,fontSize:14,lineHeight:1.45,color:"rgba(38,38,51,0.5)"},children:m.desc})
+        e.jsx("div",{style:{display:"flex",flexDirection:"column"},children:rows.map((m,idx)=>e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:18,padding:"18px 0",borderBottom:idx===rows.length-1?"none":"1px solid rgba(38,38,51,0.07)",transition:"background-color 140ms ease"},onMouseEnter:h=>h.currentTarget.style.background="rgba(38,38,51,0.018)",onMouseLeave:h=>h.currentTarget.style.background="transparent",children:[
+          e.jsx("span",{"aria-hidden":!0,style:{display:"flex",alignItems:"center",justifyContent:"center",width:44,height:44,borderRadius:13,flexShrink:0,background:"linear-gradient(145deg,#fff 0%,#F8F8F9 100%)",border:"1px solid rgba(38,38,51,0.08)",boxShadow:"0 1px 2px rgba(20,20,28,0.025)"},children:icons[m.id]}),
+          e.jsxs("button",{type:"button",onClick:()=>openIntegration(m),style:{minWidth:0,flex:1,padding:0,border:"none",background:"transparent",fontFamily:"inherit",textAlign:"left",cursor:"pointer"},children:[
+            e.jsx("span",{style:{display:"block",fontSize:18,lineHeight:1.2,fontWeight:500,color:k.text},children:m.name}),
+            e.jsx("span",{style:{display:"block",marginTop:5,fontSize:14,lineHeight:1.45,color:"rgba(38,38,51,0.5)"},children:m.desc}),
+            m.connected&&e.jsxs("span",{style:{display:"flex",alignItems:"center",gap:6,marginTop:6,fontSize:11.5,color:"rgba(38,38,51,0.42)"},children:[e.jsx("span",{style:{width:6,height:6,borderRadius:"50%",background:"#2FBF5B"}}),"Работает · синхронизация 4 мин назад"]})
           ]}),
-          e.jsx("button",{onClick:()=>{const next=!(state[m.id]??m.connected);setState(v=>({...v,[m.id]:next}));next&&m.dept&&d(m.dept,m.name)},style:{position:"relative",width:56,height:34,border:"none",borderRadius:999,background:(state[m.id]??m.connected)?"#5B66FF":"#E3E5EB",cursor:"pointer",padding:0,flexShrink:0,transition:"background 160ms ease",fontFamily:"inherit"},children:e.jsx("span",{style:{position:"absolute",top:4,left:(state[m.id]??m.connected)?26:4,width:26,height:26,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(20,20,28,0.16)",transition:"left 160ms ease"}})})
+          e.jsx("button",{type:"button",role:"switch","aria-checked":!!m.connected,"aria-label":`${m.connected?"Отключить":"Подключить"} ${m.name}`,onClick:()=>m.connected?setDisconnecting(m):openIntegration(m),style:{position:"relative",width:56,height:34,border:"none",borderRadius:999,background:m.connected?"#5B66FF":"#E3E5EB",cursor:"pointer",padding:0,flexShrink:0,transition:"background-color 160ms ease,transform 140ms cubic-bezier(0.23,1,0.32,1)"},onMouseDown:h=>h.currentTarget.style.transform="scale(.96)",onMouseUp:h=>h.currentTarget.style.transform="scale(1)",children:e.jsx("span",{style:{position:"absolute",top:4,left:m.connected?26:4,width:26,height:26,borderRadius:"50%",background:"#fff",boxShadow:"0 1px 3px rgba(20,20,28,0.16)",transition:"left 180ms cubic-bezier(0.23,1,0.32,1)"}})})
         ]},m.id))})
       ]},group)
-    })
+    }),
+    selected&&e.jsxs("aside",{role:"dialog","aria-modal":!1,"aria-label":`Подключение ${selected.name}`,style:{position:"fixed",top:12,right:12,bottom:12,zIndex:70,width:"min(410px,calc(100vw - 24px))",display:"flex",flexDirection:"column",overflow:"hidden",border:"1px solid rgba(38,38,51,0.1)",borderRadius:22,background:"#fff",boxShadow:"none"},children:[
+      e.jsxs("header",{style:{minHeight:68,display:"flex",alignItems:"center",gap:12,padding:"0 18px",borderBottom:"1px solid rgba(38,38,51,0.07)"},children:[
+        e.jsx("span",{style:{display:"flex",alignItems:"center",justifyContent:"center",width:40,height:40,borderRadius:12,background:"#FAFAFB",border:"1px solid rgba(38,38,51,0.07)"},children:icons[selected.id]}),
+        e.jsxs("div",{style:{flex:1,minWidth:0},children:[e.jsx("div",{style:{fontSize:15,fontWeight:600,color:k.text},children:selected.name}),e.jsx("div",{style:{marginTop:3,fontSize:11.5,color:k.muted},children:step===4?"Подключение работает":`Подключение · шаг ${step} из 3`})]}),
+        e.jsx("button",{type:"button","aria-label":"Закрыть карточку подключения",onClick:()=>setSelected(null),style:{width:34,height:34,border:"none",borderRadius:"50%",background:"transparent",color:k.muted,fontSize:21,cursor:"pointer"},children:"×"})
+      ]}),
+      step<4&&e.jsx("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:5,padding:"12px 18px 0"},children:[1,2,3].map(m=>e.jsx("span",{style:{height:3,borderRadius:999,background:m<=step?k.text:"rgba(38,38,51,0.09)"},children:""},m))}),
+      e.jsxs("div",{style:{flex:1,overflowY:"auto",padding:18},children:[
+        step===1&&e.jsxs(e.Fragment,{children:[
+          e.jsx("div",{style:{padding:14,borderRadius:16,background:"rgba(38,38,51,0.035)",fontSize:13.5,lineHeight:1.5,color:k.text},children:selected.result}),
+          e.jsx("div",{style:{marginTop:20},children:e.jsxs(e.Fragment,{children:[e.jsx(SectionTitle,{children:"Mary получит"}),e.jsx(BulletList,{items:selected.data})]})}),
+          e.jsx("div",{style:{marginTop:20},children:e.jsxs(e.Fragment,{children:[e.jsx(SectionTitle,{children:"Mary сможет"}),e.jsx(BulletList,{items:selected.actions})]})}),
+          e.jsxs("div",{style:{marginTop:20,padding:14,border:"1px solid rgba(38,38,51,0.08)",borderRadius:16},children:[e.jsx("div",{style:{fontSize:12.5,color:k.muted},children:"Как подключается"}),e.jsx("div",{style:{marginTop:6,fontSize:14,fontWeight:550,color:k.text},children:selected.auth})]})
+        ]}),
+        step===2&&e.jsxs(e.Fragment,{children:[
+          selected.id==="crm"&&e.jsxs("div",{style:{marginBottom:20},children:[e.jsx(SectionTitle,{children:"Выберите систему"}),e.jsx("div",{style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8},children:["YCLIENTS","amoCRM","Битрикс24","Другая CRM"].map(m=>e.jsx("button",{type:"button",onClick:()=>setProvider(m),style:{height:40,border:provider===m?"1px solid #262633":"1px solid rgba(38,38,51,0.1)",borderRadius:12,background:provider===m?"rgba(38,38,51,0.045)":"#fff",color:k.text,fontFamily:"inherit",fontSize:13,cursor:"pointer"},children:m},m))})]}),
+          e.jsx(SectionTitle,{children:"Разрешения"}),
+          e.jsx("div",{style:{display:"grid",gap:8},children:selected.permissions.map(m=>e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,minHeight:42,padding:"8px 11px",border:"1px solid rgba(38,38,51,0.08)",borderRadius:12},children:[e.jsx("span",{style:{width:20,height:20,display:"inline-flex",alignItems:"center",justifyContent:"center",borderRadius:6,background:k.text,color:"#fff",fontSize:11},children:"✓"}),e.jsx("span",{style:{fontSize:13,lineHeight:1.4,color:k.text},children:m})]},m))}),
+          selected.id==="crm"&&e.jsx("div",{style:{marginTop:14,padding:13,borderRadius:14,background:"#F5F6F8",fontSize:12.5,lineHeight:1.5,color:"rgba(38,38,51,0.58)"},children:"Полная база не копируется. Mary обращается к YCLIENTS только когда нужно найти клиента, проверить запись или выполнить разрешённое действие."})
+        ]}),
+        step===3&&e.jsxs(e.Fragment,{children:[
+          e.jsx("div",{style:{fontSize:17,fontWeight:600,color:k.text},children:"Проверим перед запуском"}),
+          e.jsx("div",{style:{marginTop:8,fontSize:13.5,lineHeight:1.55,color:k.muted},children:"Тест не отправит сообщения клиентам и не изменит рабочие данные."}),
+          e.jsxs("div",{style:{marginTop:18,border:"1px solid rgba(38,38,51,0.08)",borderRadius:16,overflow:"hidden"},children:[
+            [["Авторизация",selected.auth],["Аккаунт",selected.id==="crm"?`${provider} · ${selected.account}`:selected.account],["Будут использовать",selected.uses.join(", ")]].map((m,h)=>e.jsxs("div",{style:{display:"grid",gridTemplateColumns:"112px 1fr",gap:10,padding:"12px 13px",borderBottom:h===2?"none":"1px solid rgba(38,38,51,0.07)",fontSize:12.5,lineHeight:1.45},children:[e.jsx("span",{style:{color:k.muted},children:m[0]}),e.jsx("span",{style:{color:k.text,fontWeight:500},children:m[1]})]},m[0]))
+          ]}),
+          e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:10,marginTop:16,padding:13,borderRadius:14,background:"#EDF8F0",color:"#237A3B"},children:[e.jsx("span",{style:{width:20,height:20,display:"inline-flex",alignItems:"center",justifyContent:"center",borderRadius:"50%",background:"#fff",fontSize:11},children:"✓"}),e.jsx("span",{style:{fontSize:13,fontWeight:550},children:"Тестовое подключение готово"})]})
+        ]}),
+        step===4&&e.jsxs(e.Fragment,{children:[
+          e.jsxs("div",{style:{display:"flex",alignItems:"center",gap:9,padding:14,borderRadius:16,background:"#EDF8F0",color:"#237A3B"},children:[e.jsx("span",{style:{width:9,height:9,borderRadius:"50%",background:"#2FBF5B"}}),e.jsx("span",{style:{fontSize:13.5,fontWeight:600},children:"Подключение работает"})]}),
+          e.jsxs("div",{style:{marginTop:18,border:"1px solid rgba(38,38,51,0.08)",borderRadius:16,overflow:"hidden"},children:[
+            [["Аккаунт",selected.id==="crm"?`${provider} · ${selected.account}`:selected.account],["Последняя синхронизация","4 минуты назад"],["Используется",selected.uses.join(", ")]].map((m,h)=>e.jsxs("div",{style:{padding:"12px 13px",borderBottom:h===2?"none":"1px solid rgba(38,38,51,0.07)"},children:[e.jsx("div",{style:{fontSize:11.5,color:k.muted},children:m[0]}),e.jsx("div",{style:{marginTop:5,fontSize:13.5,lineHeight:1.45,color:k.text,fontWeight:500},children:m[1]})]},m[0]))
+          ]}),
+          e.jsx("div",{style:{marginTop:20},children:e.jsxs(e.Fragment,{children:[e.jsx(SectionTitle,{children:"Разрешённые действия"}),e.jsx(BulletList,{items:selected.actions})]})}),
+          e.jsx("button",{type:"button",onClick:()=>d&&selected.dept&&d(selected.dept,selected.name),style:{height:38,marginTop:20,padding:"0 15px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:13,cursor:"pointer"},children:"Настроить с Mary"}),
+          e.jsx("button",{type:"button",onClick:()=>setDisconnecting(selected),style:{height:38,marginTop:20,padding:"0 15px",border:"none",borderRadius:999,background:"transparent",color:"#B55252",fontFamily:"inherit",fontSize:13,cursor:"pointer"},children:"Отключить"})
+        ]})
+      ]}),
+      step<4&&e.jsxs("footer",{style:{display:"flex",justifyContent:"space-between",gap:8,padding:14,borderTop:"1px solid rgba(38,38,51,0.07)"},children:[
+        e.jsx("button",{type:"button",onClick:()=>step===1?setSelected(null):setStep(m=>m-1),style:{height:38,padding:"0 15px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:13,cursor:"pointer"},children:step===1?"Отмена":"Назад"}),
+        e.jsx("button",{type:"button",onClick:()=>step===3?completeConnection():setStep(m=>m+1),style:{height:38,padding:"0 17px",border:"none",borderRadius:999,background:k.text,color:"#fff",fontFamily:"inherit",fontSize:13,fontWeight:550,cursor:"pointer"},children:step===1?"Продолжить":step===2?"Проверить":"Подключить"})
+      ]})
+    ]}),
+    disconnecting&&e.jsxs("div",{role:"alertdialog","aria-modal":!0,"aria-labelledby":"disconnect-title",style:{position:"fixed",inset:0,zIndex:95,display:"flex",alignItems:"center",justifyContent:"center",padding:20,background:"rgba(20,20,28,0.22)"},children:[
+      e.jsx("button",{type:"button","aria-label":"Закрыть подтверждение",onClick:()=>setDisconnecting(null),style:{position:"absolute",inset:0,border:"none",background:"transparent"}}),
+      e.jsxs("div",{style:{position:"relative",width:"min(430px,100%)",padding:24,borderRadius:20,background:"#fff",border:"1px solid rgba(38,38,51,0.1)",boxShadow:"0 20px 60px rgba(20,20,28,0.18)"},children:[
+        e.jsx("div",{id:"disconnect-title",style:{fontSize:20,fontWeight:600,color:k.text},children:`Отключить ${disconnecting.name}?`}),
+        e.jsx("div",{style:{marginTop:10,fontSize:14,lineHeight:1.55,color:k.muted},children:`Новые данные перестанут поступать. Процессы «${disconnecting.uses.join("», «")}» могут потребовать участия сотрудника.`}),
+        e.jsx("div",{style:{marginTop:12,padding:12,borderRadius:13,background:"rgba(38,38,51,0.04)",fontSize:12.5,lineHeight:1.5,color:k.text},children:"Уже полученная история сохранится. Подключение можно восстановить позже."}),
+        e.jsxs("div",{style:{display:"flex",justifyContent:"flex-end",gap:8,marginTop:20},children:[
+          e.jsx("button",{type:"button",onClick:()=>setDisconnecting(null),style:{height:38,padding:"0 15px",border:"1px solid rgba(38,38,51,0.1)",borderRadius:999,background:"#fff",color:k.text,fontFamily:"inherit",fontSize:13,cursor:"pointer"},children:"Оставить"}),
+          e.jsx("button",{type:"button",onClick:confirmDisconnect,style:{height:38,padding:"0 16px",border:"none",borderRadius:999,background:"#B55252",color:"#fff",fontFamily:"inherit",fontSize:13,fontWeight:550,cursor:"pointer"},children:"Отключить"})
+        ]})
+      ]})
+    ]})
   ]})})
 }
